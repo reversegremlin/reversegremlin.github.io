@@ -1,6 +1,6 @@
 {
-  "short_name": "",
-  "name": "",
+  "short_name": "reversegremlin_games",
+  "name": "reversegremlin's game demos",
   "icons": [{
     "src": "icon.png",
     "type": "image/png",
