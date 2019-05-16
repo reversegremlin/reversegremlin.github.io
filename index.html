@@ -1,53 +1,178 @@
-<!doctype html>
-<html class="no-js" lang="">
-
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>reversegremlin's game demos</title>
-  <meta name="description" content="Unity3D game demos">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="manifest" href="site.webmanifest">
-  <link rel="apple-touch-icon" href="icon.png">
-  <!-- Place favicon.ico in the root directory -->
-
-  <link rel="stylesheet" href="css/normalize.css">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
-
-  <meta name="theme-color" content="#C6E2FF">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="fibonacci.css">
+	<link rel="stylesheet"
+	      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/default.min.css">
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
 </head>
-
 <body>
-  <!--[if IE]>
-    <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
-  <![endif]-->
 
-  <!-- Add your site or application content here -->
-  <h1>Game Dev Demos</h1>
+<header class="header">
+	<a href="index.html" class="logo">
+		Nadia Morris - Game Dev Blog
+	</a>
+	<nav>
+		<ul>
+			<li>
+				<a href="index.html">home</a>
+			</li>
+			<li>
+				<a href="contact.html">contact</a>
+			</li>
+			<li>
+				<a href="about.html">about</a>
+			</li>
+		</ul>
+	</nav>
+</header>
 
-  <p>
-  
-    <a href="/calamari_revenge/index.html"><img border="0" alt="calamari preview gif" src="calamari_preview.gif" width="600" height="400"></a><br>
-    <a href="/calamari_revenge/index.html">Calamari's Revenge</a><br>
-    <a href="https://github.com/reversegremlin/CalamariRevenge">Source Code</a>
-    </p>
+<main class="main">
+	<article>
+		<h1>Latest Posts</h1>
 
-  <p>
-  
-  <a href="/boost/index.html"><img border="0" alt="boost gif" src="boost.gif" width="600" height="400"></a><br>
-  <a href="/boost/index.html">My First Unity3d Game! Rocket Boost</a><br>
-  <a href="https://github.com/reversegremlin/RocketBoost">Source Code</a>
-  </p>
+		<article>
+			<header>
+				<div class="author">
+					<img src="assets/nadia_mini.png" width="80"/>
+					<span>Nadia Morris</span>
+					<span class="role">Code Monkey</span>
+				</div>
 
-  
-  
-  <script src="js/vendor/modernizr-3.7.1.min.js"></script>
-  <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-  <script>window.jQuery || document.write('<script src="js/vendor/jquery-3.3.1.min.js"><\/script>')</script>
-  <script src="js/plugins.js"></script>
-  <script src="js/main.js"></script>
+				<h2><a href="detail.html">Calamari's Revenge</a></h2>
 
+				<div class="post-meta">
+					<div class="posted-date">
+						<span class="icon calendar"></span>
+						<span>May 12, 2019 4:00 PM</span>
+					</div>
+					<div class="tagged-in">
+						<span class="icon tag"></span>
+						<ul>
+							<li>
+								<a href="#">#unity</a>
+							</li>
+							<li>
+								<a href="#">#c-sharp</a>
+							</li>
+							<li>
+								<a href="#">#gaming</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</header>
+
+			<figure class="poster-image">
+				<img src="assets/calamari_preview.gif">
+			</figure>
+
+			<p>
+				I'm really enjoying the <a href="https://www.udemy.com/unitycourse2/" target="_blank">Unity3D Developer course on Udemy.</a> The third section really got things going with a rails shooter. Growing up with <a href="https://www.wikiwand.com/en/After_Burner" target="_blank">After Burner</a> in the 80's, these games have nostalgia for me. Check out the game <a href="https://reversegremlin.github.io/calamari_revenge/index.html" target="_blank">here</a>. If you're interested in perusing the <a href="https://github.com/reversegremlin/CalamariRevenge" target="_blank">code</a>, enjoy.
+			</p>
+
+			<p>
+				Things I learned in this section: terrain, bump, height, and normal maps, skybox, background music and audio tracks, animations & tmelines, singletons, cross-platform inputs, particles, triggers & collisions, sending messages, managing game objects in code, and last but not least UI.
+			</p>
+		</article>
+
+		<article>
+			<header>
+				<div class="author">
+					<img src="assets/nadia_mini.png" width="80"/>
+					<span>Nadia Morris</span>
+					<span class="role">Code Monkey</span>
+				</div>
+
+				<h2><a href="detail.html">Rocket Boost</a></h2>
+
+				<div class="post-meta">
+					<div class="posted-date">
+						<span class="icon calendar"></span>
+						<span>April 12, 2019 4:00 PM</span>
+					</div>
+					<div class="tagged-in">
+						<span class="icon tag"></span>
+						<ul>
+							<li>
+								<a href="#">#unity</a>
+							</li>
+							<li>
+								<a href="#">#c-sharp</a>
+							</li>
+							<li>
+								<a href="#">#games</a>
+							</li>
+						</ul>
+				</div>
+			</header>
+
+			<figure class="poster-image">
+				<img src="assets/boost.gif">
+			</figure>
+
+			<p>
+				The first real project was this platformer, creating a game to test the skills of a rocket pilot.
+			</p>
+
+			<p>
+				Great place to start, I learned how to build a 3d world from primitives. It focused on h ow to generate and configure lighting, connecting game objects to C# code, basic controls, and collisions. It's not the most compelling game in the world, but I learned tons, and enjoyed making it.
+				Get the game <a href="https://reversegremlin.github.io/boost/index.html" target="_blank">here</a>, and if you want to check out the code, head over to <a href="https://github.com/reversegremlin/RocketBoost" target="_blank">GitHub</a>.
+			</p>
+		</article>
+
+		<article>
+			<header>
+				<div class="author">
+					<img src="assets/nadia_mini.png" width="80"/>
+					<span>Nadia Morris</span>
+					<span class="role">Code Monkey</span>
+				</div>
+
+				<h2><a href="detail.html">Learning Unity3D</a></h2>
+
+				<div class="post-meta">
+					<div class="posted-date">
+						<span class="icon calendar"></span>
+						<span>Feb 12, 2019 4:00 PM</span>
+					</div>
+					<div class="tagged-in">
+						<span class="icon tag"></span>
+						<ul>
+							<li>
+								<a href="#">#unity</a>
+							</li>
+							<li>
+								<a href="#">#c-sharp</a>
+							</li>
+							<li>
+								<a href="#">#game-dev</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</header>
+
+			<figure class="poster-image">
+				<img src="assets/unity_screenshot.png">
+			</figure>
+
+			<p>
+				After building my first Skyrim mod, I realized my time could be better spent learning to make games myself. After debating the pros and cons of each, I decided to learn Unity3D. I already knew C#, so it was an easier transition than learning C++ as well as Unreal.
+			</p>
+
+			<p>
+				I'm taking the Udemy <a href="https://www.udemy.com/unitycourse2/" target="_blank">Complete Unity3D development course</a> taught by <a href="https://twitter.com/BenTristem" target="_blank">Ben Tristem</a>. 
+			</p>
+		</article>
+	</article>
+</main>
+
+<footer class="footer">
+	&copy; 2019 &middot; All Rights Reserved
+</footer>
+<script>hljs.initHighlightingOnLoad();</script>
 </body>
-
 </html>
