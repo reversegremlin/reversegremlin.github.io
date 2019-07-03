@@ -31,6 +31,51 @@
 
 <main class="main">
 	<article>
+			<article>
+					<header>
+						<div class="author">
+							<img src="assets/nadia_mini.png" width="80"/>
+							<span>Nadia Morris</span>
+							<span class="role">Code Monkey</span>
+						</div>
+		
+						<h2><a href="detail.html">Farm Defender</a></h2>
+		
+						<div class="post-meta">
+							<div class="posted-date">
+								<span class="icon calendar"></span>
+								<span>July 04, 2019 9:00 AM</span>
+							</div>
+							<div class="tagged-in">
+								<span class="icon tag"></span>
+								<ul>
+									<li>
+										<a href="#">#unity</a>
+									</li>
+									<li>
+										<a href="#">#c-sharp</a>
+									</li>
+									<li>
+										<a href="#">#gaming</a>
+									</li>
+								</ul>
+							</div>
+						</div>
+					</header>
+		
+					<figure class="poster-image">
+						<img src="assets/farm_defender.gif">
+					</figure>
+		
+					<p>
+						I'm on the next to last section in GameDev.tv's <a href="https://www.udemy.com/unitycourse2/" target="_blank">Unity3D Developer course on Udemy.</a> This section's project focused on making a Tower Defense game. I have neveer really played those much, but enjoyed making one and once I customized it to my liking. I didn't invest the time into menus or finalizing the game loop because honestly I have no desire to make a Tower Defense game, but I can always go back and add that later if the mood strikes me. Check out the game <a href="https://reversegremlin.github.io/FarmDefender/index.html" target="_blank">here</a>. Just click on open (brown) tiles, and if the tile you click isn't in the path, you can place a tower there. The towers shoot water at the egg bombs the evil chicken is hurling at the farm. It is your job to protect the farm! If you're interested in perusing the <a href="https://github.com/reversegremlin/Farm-Defender" target="_blank">code</a>, enjoy.
+					</p>
+		
+					<p>
+						The most impoortant thing I learned in this section: how to implement breadth first search for path planning. I really think games are the way to teach folks this, it makes it so real. I know most of my games will probably use Unity's built in navmesh path planning which uses A*, but for what this game needed, BFS was perfect. The other cool nugget was how to build custom editor code. While building the world, it places a Text Mesh on top of the boxes, which was amazingly helpful for testing and troubleshooting the path planning. It also took care of the snapping, a much better experience than trying to remembver to use Unity's built in snap tool. Oh, one more thing, using a ring buffer to cycle the Towers, brilliant way of being efficient while letting the player move Towers around.
+					</p>
+				</article>
+		
 		<h1>Latest Posts</h1>
 		<article>
 			<header>
