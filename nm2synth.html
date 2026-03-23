@@ -39,13 +39,16 @@ body{background:#060610;font-family:'Courier New',monospace;color:#ccc;min-heigh
 #edit-mode-btn.on{background:#ffaa0022;border-color:#ffaa00;color:#ffaa00;box-shadow:0 0 8px #ffaa0044;}
 #edit-mode-btn.on:hover{border-color:#ffcc44;color:#ffcc44;}
 body.edit-mode #rack{border-color:#ffaa0055;box-shadow:0 0 40px #ffaa0022,inset 0 0 60px rgba(0,0,0,.4);}
-body.edit-mode .module{border-color:#ffaa0044;transition:border-color .15s;}
-body.edit-mode .module:hover{border-color:#ffaa00bb;box-shadow:0 0 12px #ffaa0033;}
-body.edit-mode .module-label{cursor:grab;background:linear-gradient(to bottom,#ffaa0014,transparent);border-bottom-color:#ffaa0044;}
+body.edit-mode .module{border-color:#ffaa0044;}
+body.edit-mode .module:hover{border-color:#ffaa00bb;box-shadow:0 0 14px #ffaa0033;}
+body.edit-mode .module-label{cursor:grab;background:linear-gradient(to bottom,#ffaa0018,transparent);border-bottom-color:#ffaa0044;}
 body.edit-mode .module-label:active{cursor:grabbing;}
-body.edit-mode .module.drag-target{outline:1px dashed #ffaa0088;}
 .module-drag-handle{display:none;font-size:9px;color:#ffaa0088;margin-right:3px;pointer-events:none;line-height:1;vertical-align:middle;}
 body.edit-mode .module-drag-handle{display:inline;}
+/* drop placeholder */
+@keyframes phGlow{0%,100%{border-color:#ffaa0055;background:rgba(255,170,0,.06);}50%{border-color:#ffaa00aa;background:rgba(255,170,0,.13);}}
+.module-drop-ph{background:rgba(255,170,0,.06);border:2px dashed #ffaa0077;border-radius:4px;animation:phGlow 1s ease-in-out infinite;position:relative;display:flex;align-items:center;justify-content:center;}
+.module-drop-ph::after{content:'DROP HERE';font-size:7px;letter-spacing:2px;color:#ffaa0077;font-family:'Courier New',monospace;pointer-events:none;}
 /* ── Module picker ── */
 #mod-picker{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#04040e;border:1px solid #ff00ff44;border-radius:4px;padding:16px;z-index:900;min-width:280px;box-shadow:0 8px 32px #000a;}
 #mod-picker h3{color:#e066ff;font-size:10px;letter-spacing:4px;margin:0 0 10px;text-align:center;}
@@ -2256,35 +2259,86 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   });
   lbl.title = 'Double-click to collapse  |  EDIT mode to drag';
   // Drag-to-reorder within rack (only active in editMode)
-  let dragActive = false;
+  // Uses ghost+placeholder pattern: original stays as ghost, floating clone follows cursor,
+  // placeholder shows the exact drop position in the flex layout.
   lbl.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    if (!editMode) return;
+    if (e.button !== 0 || !editMode) return;
     e.preventDefault();
-    lbl.setPointerCapture(e.pointerId);
-    dragActive = true;
-    p.classList.add('drag-target');
-  });
-  lbl.addEventListener('pointermove', e => {
-    if (!dragActive) return;
     const rack = p.parentElement; if (!rack) return;
-    const cx = e.clientX, cy = e.clientY;
-    for (const sib of rack.children) {
-      if (sib === p || !sib.dataset.moduleType) continue;
-      const r = sib.getBoundingClientRect();
-      if (cy >= r.top - 8 && cy <= r.bottom + 8 && cx >= r.left - 24 && cx <= r.right + 24) {
-        if (cx < r.left + r.width / 2) rack.insertBefore(p, sib);
-        else rack.insertBefore(p, sib.nextSibling);
-        break;
+    const rect = p.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    // Floating clone that follows cursor
+    const cloneEl = p.cloneNode(true);
+    cloneEl.removeAttribute('id');
+    cloneEl.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    Object.assign(cloneEl.style, {
+      position: 'fixed', left: rect.left+'px', top: rect.top+'px',
+      width: rect.width+'px', margin: '0',
+      pointerEvents: 'none', zIndex: '2000',
+      opacity: '0.93',
+      boxShadow: '0 24px 60px rgba(0,0,0,0.95), 0 0 32px #ffaa0077',
+      borderColor: '#ffaa00',
+      transform: 'scale(1.04) rotate(0.7deg)',
+      transition: 'none',
+    });
+    document.body.appendChild(cloneEl);
+
+    // Placeholder: shows where module will land
+    const ph = document.createElement('div');
+    ph.className = 'module-drop-ph';
+    Object.assign(ph.style, {
+      minWidth: rect.width+'px', height: rect.height+'px',
+      flexShrink: '0', boxSizing: 'border-box',
+    });
+    rack.insertBefore(ph, p.nextSibling);
+
+    // Ghost the original
+    p.style.opacity = '0.12';
+    p.style.pointerEvents = 'none';
+
+    // Find best insertion point: closest module center, then insert before/after it
+    function calcInsert(cx, cy) {
+      const items = [...rack.children].filter(el => el !== p && el !== ph && el.dataset.moduleType);
+      if (!items.length) return null;
+      let closest = null, closestDist = Infinity;
+      for (const sib of items) {
+        const r = sib.getBoundingClientRect();
+        const dist = Math.hypot(cx - (r.left + r.width/2), cy - (r.top + r.height/2));
+        if (dist < closestDist) { closestDist = dist; closest = sib; }
       }
+      if (!closest) return null;
+      const r = closest.getBoundingClientRect();
+      return cx < r.left + r.width * 0.5 ? closest : closest.nextElementSibling;
     }
-  });
-  lbl.addEventListener('pointerup', () => {
-    if (!dragActive) return;
-    dragActive = false;
-    p.classList.remove('drag-target');
-    syncRackOrder();
-    if (typeof updateCables === 'function') updateCables();
+
+    const onMove = ev => {
+      cloneEl.style.left = (ev.clientX - offsetX) + 'px';
+      cloneEl.style.top  = (ev.clientY - offsetY) + 'px';
+      const target = calcInsert(ev.clientX, ev.clientY);
+      // target === null means append to end
+      if (target !== null) {
+        if (ph.nextSibling !== target) rack.insertBefore(ph, target);
+      } else {
+        if (rack.lastElementChild !== ph) rack.appendChild(ph);
+      }
+    };
+
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      rack.insertBefore(p, ph);
+      ph.remove();
+      cloneEl.remove();
+      p.style.opacity = '';
+      p.style.pointerEvents = '';
+      syncRackOrder();
+      if (typeof updateCables === 'function') updateCables();
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   });
   p.appendChild(lbl); p.appendChild(content);
   return p;
