@@ -1,274 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" type="text/css" href="fibonacci.css">
-	<link rel="stylesheet"
-	      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/default.min.css">
-	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REVERSEGREMLIN // NM² MODSYNTH</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="scanline"></div>
+    <div class="noise"></div>
 
-<header class="header">
-	<a href="index.html" class="logo">
-		Nadia Morris - Game Dev Blog
-	</a>
-	<nav>
-		<ul>
-			<li>
-				<a href="index.html">home</a>
-			</li>
-			<li>
-				<a href="contact.html">contact</a>
-			</li>
-			<li>
-				<a href="about.html">about</a>
-			</li>
-		</ul>
-	</nav>
-</header>
+    <svg class="bg-svg" preserveAspectRatio="none" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;">
+        <defs>
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="neon-pink">
+                <feGaussianBlur stdDeviation="2" result="b1"/>
+                <feGaussianBlur stdDeviation="6" result="b2"/>
+                <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+        </defs>
+        <path class="cable cable-1" d="M-50,200 C100,100 300,400 600,200 S900,0 1200,200" fill="none" stroke="#e066ff" stroke-width="1" opacity="0.15" filter="url(#glow)"/>
+        <path class="cable cable-2" d="M-50,600 C200,400 500,800 800,500 S1100,200 1400,600" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.1" filter="url(#glow)"/>
+        <path class="cable cable-3" d="M-50,400 C300,200 600,600 900,300 S1200,100 1500,400" fill="none" stroke="#ff00ff" stroke-width="0.5" opacity="0.08"/>
+    </svg>
 
-<main class="main">
-	<article>
-			<h1>Latest Posts</h1>
-			<article>
-					<header>
-						<div class="author">
-							<img src="assets/nadia_mini.png" width="80"/>
-							<span>Nadia Morris</span>
-							<span class="role">Code Monkey</span>
-						</div>
-		
-						<h2><a id="farm_defender">Farm Defender</a></h2>
-		
-						<div class="post-meta">
-							<div class="posted-date">
-								<span class="icon calendar"></span>
-								<span>July 04, 2019 9:00 AM</span>
-							</div>
-							<div class="tagged-in">
-								<span class="icon tag"></span>
-								<ul>
-									<li>
-										<a href="#">#unity</a>
-									</li>
-									<li>
-										<a href="#">#c-sharp</a>
-									</li>
-									<li>
-										<a href="#">#gaming</a>
-									</li>
-								</ul>
-							</div>
-						</div>
-					</header>
-		
-					<figure class="poster-image">
-						<img src="assets/farm_defender.gif">
-					</figure>
-		
-					<p>
-						I'm on the next to last section in GameDev.tv's <a href="https://www.udemy.com/unitycourse2/" target="_blank">Unity3D Developer course on Udemy.</a> This section's project focused on making a Tower Defense game. I have never really played those much, but enjoyed making one and once I customized it to my liking, enjoyed playing it. I didn't invest the time into menus or finalizing the game loop because honestly I have no desire to make a Tower Defense game, but I can always go back and add that later if the mood strikes me. Check out the game <a href="https://reversegremlin.github.io/FarmDefender/index.html" target="_blank">here</a>. Just click on open (brown) tiles, and if the tile you click isn't in the path, you can place a tower there. The towers shoot water at the egg bombs the evil chicken is hurling at the farm. It is your job to protect the farm! If you're interested in perusing the <a href="https://github.com/reversegremlin/Farm-Defender" target="_blank">code</a>, enjoy.
-					</p>
-		
-					<p>
-						The most impoortant thing I learned in this section: how to implement breadth first search for path planning. I really think games are the way to teach folks this, it makes it so real. I know most of my games will probably use Unity's built in navmesh path planning which uses A*, but for what this game needed, BFS was perfect. The other cool nugget was how to build custom editor code. While building the world, it places a Text Mesh on top of the boxes, which was amazingly helpful for testing and troubleshooting the path planning. It also took care of the snapping, a much better experience than trying to remembver to use Unity's built in snap tool. Oh, one more thing, using a ring buffer to cycle the Towers, brilliant way of being efficient while letting the player move Towers around.
-					</p>
-				</article>
-		
-		<article>
-			<header>
-				<div class="author">
-					<img src="assets/nadia_mini.png" width="80"/>
-					<span>Nadia Morris</span>
-					<span class="role">Code Monkey</span>
-				</div>
+    <main class="container">
+        <header class="hero">
+            <div class="logo-wrap">
+                <svg id="logo-svg" viewBox="0 0 540 190" xmlns="http://www.w3.org/2000/svg" style="width:300px;max-width:90vw;">
+                    <text x="270" y="118" text-anchor="middle" font-size="108" font-family="Arial Black,Impact,sans-serif" font-weight="900" fill="#e066ff" filter="url(#neon-pink)" class="logo-text">nm²</text>
+                    <text x="270" y="153" text-anchor="middle" font-size="22" font-family='Courier New',monospace" fill="#70dbdb" letter-spacing="20" class="logo-sub">synth</text>
+                </svg>
+            </div>
+            <h1 class="glitch" data-text="REVERSEGREMLIN">REVERSEGREMLIN</h1>
+            <p class="tagline">modular synthesis for the void</p>
+        </header>
 
-				<h2><a id="voxel_art">Voxel Art</a></h2>
+        <section class="content">
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                    <span class="terminal-title">project_manifest.sh</span>
+                </div>
+                <div class="terminal-body">
+                    <p><span class="prompt">></span> NM² (Nadia Morris Modular) is a browser-based synthesis engine built for live ambient performance and surgical sound design.</p>
+                    <p><span class="prompt">></span> Inspired by the warmth of analog hardware and the precision of digital wavefolding.</p>
+                    <p><span class="prompt">></span> Features: VCO w/ Hard Sync, Microcosm Granular, 4096-point Wavefolder, Convolution Reverb, 4-track Loop Station, and a 16-step Probability Sequencer.</p>
+                    <p><span class="prompt">></span> Zero installation. Zero build steps. Pure Web Audio.</p>
+                    <p class="blink"><span class="prompt">></span> _</p>
+                </div>
+            </div>
 
-				<div class="post-meta">
-					<div class="posted-date">
-						<span class="icon calendar"></span>
-						<span>June 21, 2019 4:00 PM</span>
-					</div>
-					<div class="tagged-in">
-						<span class="icon tag"></span>
-						<ul>
-							<li>
-								<a href="#">#unity</a>
-							</li>
-							<li>
-								<a href="#">#voxel</a>
-							</li>
-							<li>
-								<a href="#">#gaming</a>
-							</li>
-						</ul>
-					</div>
-				</div>
-			</header>
+            <nav class="links">
+                <a href="nm2synth.html" class="btn btn-primary">
+                    <span class="btn-glitch">LAUNCH SYNTH</span>
+                    <span class="btn-label">v1.0.0-stable</span>
+                </a>
+                <a href="https://github.com/reversegremlin/nm2" target="_blank" class="btn btn-secondary">
+                    <span>VIEW SOURCE</span>
+                    <span class="btn-label">GitHub Repo</span>
+                </a>
+            </nav>
+        </section>
 
-			<figure class="poster-image">
-				<div class="sketchfab-embed-wrapper"><iframe width="640" height="480" src="https://sketchfab.com/models/4d26c963e0484e708835ca04cfa626fc/embed" frameborder="0" allow="autoplay; fullscreen; vr" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+        <footer class="footer">
+            <p>&copy; 2026 REVERSEGREMLIN // BUILT ON BITS</p>
+        </footer>
+    </main>
 
-					<p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;">
-						<a href="https://sketchfab.com/3d-models/voxel-chicken-4d26c963e0484e708835ca04cfa626fc?utm_medium=embed&utm_source=website&utm_campaign=share-popup" target="_blank" style="font-weight: bold; color: #1CAAD9;">Voxel Chicken</a>
-						by <a href="https://sketchfab.com/nadiabellamorris?utm_medium=embed&utm_source=website&utm_campaign=share-popup" target="_blank" style="font-weight: bold; color: #1CAAD9;">nadiabellamorris</a>
-						on <a href="https://sketchfab.com?utm_medium=embed&utm_source=website&utm_campaign=share-popup" target="_blank" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
-					</p>
-					</div>
-			</figure>
-
-			<p>
-				I'm absolutely loving Voxel Art! While working on my Tower Defense project, I wasn't feeling the space theme they provided, so I started with some free assets in the Unity store, but after watching <a href="https://vimeo.com/308360273">Rick's video on MagicaVoxel</a>, I decided to create my own. Next update, I will share the full game, but for now, <a href="https://skfb.ly/6LyEo">here's my first piece of Voxel art</a>. 
-			</p>
-
-			<p>
-				You can get MagicaVoxel <a href="https://ephtracy.github.io/">here</a>.
-			</p>
-		</article>
-
-		<article>
-			<header>
-				<div class="author">
-					<img src="assets/nadia_mini.png" width="80"/>
-					<span>Nadia Morris</span>
-					<span class="role">Code Monkey</span>
-				</div>
-
-				<h2><a id="calamari_revenge">Calamari's Revenge</a></h2>
-
-				<div class="post-meta">
-					<div class="posted-date">
-						<span class="icon calendar"></span>
-						<span>May 12, 2019 4:00 PM</span>
-					</div>
-					<div class="tagged-in">
-						<span class="icon tag"></span>
-						<ul>
-							<li>
-								<a href="#">#unity</a>
-							</li>
-							<li>
-								<a href="#">#c-sharp</a>
-							</li>
-							<li>
-								<a href="#">#gaming</a>
-							</li>
-						</ul>
-					</div>
-				</div>
-			</header>
-
-			<figure class="poster-image">
-				<img src="assets/calamari_preview.gif">
-			</figure>
-
-			<p>
-				I'm really enjoying the <a href="https://www.udemy.com/unitycourse2/" target="_blank">Unity3D Developer course on Udemy.</a> The third section really got things going with a rail shooter. Growing up with <a href="https://www.wikiwand.com/en/After_Burner" target="_blank">After Burner</a> in the 80's, these games have nostalgia for me. Check out the game <a href="https://reversegremlin.github.io/calamari_revenge/index.html" target="_blank">here</a>. If you're interested in perusing the <a href="https://github.com/reversegremlin/CalamariRevenge" target="_blank">code</a>, enjoy.
-			</p>
-
-			<p>
-				Things I learned in this section: terrain, bump, height, and normal maps, skybox, background music and audio tracks, animations & tmelines, singletons, cross-platform inputs, particles, triggers & collisions, sending messages, managing game objects in code, and last but not least UI.
-			</p>
-		</article>
-
-		<article>
-			<header>
-				<div class="author">
-					<img src="assets/nadia_mini.png" width="80"/>
-					<span>Nadia Morris</span>
-					<span class="role">Code Monkey</span>
-				</div>
-
-				<h2><a href="detail.html">Rocket Boost</a></h2>
-
-				<div class="post-meta">
-					<div class="posted-date">
-						<span class="icon calendar"></span>
-						<span>April 12, 2019 4:00 PM</span>
-					</div>
-					<div class="tagged-in">
-						<span class="icon tag"></span>
-						<ul>
-							<li>
-								<a href="#">#unity</a>
-							</li>
-							<li>
-								<a href="#">#c-sharp</a>
-							</li>
-							<li>
-								<a href="#">#games</a>
-							</li>
-						</ul>
-				</div>
-			</header>
-
-			<figure class="poster-image">
-				<img src="assets/boost.gif">
-			</figure>
-
-			<p>
-				The first real project was this platformer, creating a game to test the skills of a rocket pilot.
-			</p>
-
-			<p>
-				Great place to start, I learned how to build a 3d world from primitives. It focused on h ow to generate and configure lighting, connecting game objects to C# code, basic controls, and collisions. It's not the most compelling game in the world, but I learned tons, and enjoyed making it.
-				Get the game <a href="https://reversegremlin.github.io/boost/index.html" target="_blank">here</a>, and if you want to check out the code, head over to <a href="https://github.com/reversegremlin/RocketBoost" target="_blank">GitHub</a>.
-			</p>
-		</article>
-
-		<article>
-			<header>
-				<div class="author">
-					<img src="assets/nadia_mini.png" width="80"/>
-					<span>Nadia Morris</span>
-					<span class="role">Code Monkey</span>
-				</div>
-
-				<h2><a id="learning_unity">Learning Unity3D</a></h2>
-
-				<div class="post-meta">
-					<div class="posted-date">
-						<span class="icon calendar"></span>
-						<span>Feb 12, 2019 4:00 PM</span>
-					</div>
-					<div class="tagged-in">
-						<span class="icon tag"></span>
-						<ul>
-							<li>
-								<a href="#">#unity</a>
-							</li>
-							<li>
-								<a href="#">#c-sharp</a>
-							</li>
-							<li>
-								<a href="#">#game-dev</a>
-							</li>
-						</ul>
-					</div>
-				</div>
-			</header>
-
-			<figure class="poster-image">
-				<img src="assets/unity_screenshot.png">
-			</figure>
-
-			<p>
-				After building my first Skyrim mod, I realized my time could be better spent learning to make games myself. After debating the pros and cons of each, I decided to learn Unity3D. I already knew C#, so it was an easier transition than learning C++ as well as Unreal.
-			</p>
-
-			<p>
-				I'm taking the Udemy <a href="https://www.udemy.com/unitycourse2/" target="_blank">Complete Unity3D development course</a> taught by <a href="https://twitter.com/BenTristem" target="_blank">Ben Tristem</a>. 
-			</p>
-		</article>
-	</article>
-</main>
-
-<footer class="footer">
-	&copy; 2019 &middot; All Rights Reserved, Your Mileage May Vary
-</footer>
-<script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        window.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            document.querySelectorAll('.cable').forEach((cable, i) => {
+                const depth = (i + 1) * 20;
+                const tx = (x - 0.5) * depth;
+                const ty = (y - 0.5) * depth;
+                cable.style.transform = 'translate(' + tx + 'px, ' + ty + 'px)';
+            });
+        });
+    </script>
 </body>
 </html>
