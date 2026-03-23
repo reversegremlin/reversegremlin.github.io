@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REVERSEGREMLIN // NM² MODSYNTH</title>
+    <title>REVERSEGREMLIN // NM² // CHROMASCOPE</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -22,6 +22,11 @@
                 <feGaussianBlur stdDeviation="6" result="b2"/>
                 <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
+            <filter id="neon-cyan">
+                <feGaussianBlur stdDeviation="2" result="c1"/>
+                <feGaussianBlur stdDeviation="6" result="c2"/>
+                <feMerge><feMergeNode in="c2"/><feMergeNode in="c1"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
         </defs>
         <path class="cable cable-1" d="M-50,200 C100,100 300,400 600,200 S900,0 1200,200" fill="none" stroke="#e066ff" stroke-width="1" opacity="0.15" filter="url(#glow)"/>
         <path class="cable cable-2" d="M-50,600 C200,400 500,800 800,500 S1100,200 1400,600" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.1" filter="url(#glow)"/>
@@ -37,38 +42,52 @@
                 </svg>
             </div>
             <h1 class="glitch" data-text="REVERSEGREMLIN">REVERSEGREMLIN</h1>
-            <p class="tagline">modular synthesis for the void</p>
+            <p class="tagline">modular synthesis & audio intelligence for the void</p>
         </header>
 
         <section class="content">
-            <div class="terminal">
+            <!-- PROJECT 1: NM2 -->
+            <div class="terminal terminal-pink">
                 <div class="terminal-header">
                     <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                    <span class="terminal-title">project_manifest.sh</span>
+                    <span class="terminal-title">nm2_manifest.sh</span>
                 </div>
                 <div class="terminal-body">
-                    <p><span class="prompt">></span> NM² Synth is a browser-based synthesis engine built for live ambient performance and  sound design.</p>
-                    <p><span class="prompt">></span> Inspired by the warmth of analog hardware and the precision of digital wavefolding.</p>
+                    <p><span class="prompt">></span> NM² (Nadia Morris Modular) is a browser-based synthesis engine built for live ambient performance and surgical sound design.</p>
                     <p><span class="prompt">></span> Features: VCO w/ Hard Sync, Microcosm Granular, 4096-point Wavefolder, Convolution Reverb, 4-track Loop Station, and a 16-step Probability Sequencer.</p>
                     <p><span class="prompt">></span> Zero installation. Zero build steps. Pure Web Audio.</p>
-                    <p class="blink"><span class="prompt">></span> _</p>
+                    <div class="links-inline">
+                        <a href="nm2synth.html" class="link-glow-pink">LAUNCH SYNTH</a>
+                        <a href="https://github.com/reversegremlin/nm2" target="_blank" class="link-glow-pink">GITHUB REPO</a>
+                    </div>
                 </div>
             </div>
 
-            <nav class="links">
-                <a href="nm2synth.html" class="btn btn-primary">
-                    <span class="btn-glitch">LAUNCH SYNTH</span>
-                    <span class="btn-label">v1.0.0-stable</span>
-                </a>
-                <a href="https://github.com/reversegremlin/nm2" target="_blank" class="btn btn-secondary">
-                    <span>VIEW SOURCE</span>
-                    <span class="btn-label">GitHub Repo</span>
-                </a>
-            </nav>
+            <!-- PROJECT 2: CHROMASCOPE -->
+            <div class="terminal terminal-cyan">
+                <div class="terminal-header">
+                    <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                    <span class="terminal-title">chromascope_intel.py</span>
+                </div>
+                <div class="terminal-body">
+                    <p><span class="prompt-cyan">></span> CHROMASCOPE is an audio intelligence engine for reactive generative art. It analyzes musical structure—key, pitch, timbre, onset—to drive visualizations.</p>
+                    <p><span class="prompt-cyan">></span> Separation of analysis and rendering. One manifest powers 11+ real-time styles (Fluid, Sacred, Fibonacci, Quark).</p>
+                    <p><span class="prompt-cyan">></span> Built on HPSS decomposition, MFCC timbre mapping, and neural beat tracking.</p>
+                    <div class="links-inline">
+                        <a href="https://github.com/nadiabellamorris/chromascope" target="_blank" class="link-glow-cyan">EXPLORE CHROMASCOPE</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="terminal terminal-dim">
+                <div class="terminal-body">
+                    <p class="blink"><span class="prompt">></span> system_ready_</p>
+                </div>
+            </div>
         </section>
 
         <footer class="footer">
-            <p>&copy; 2026 REVERSEGREMLIN //</p>
+            <p>&copy; 2026 REVERSEGREMLIN // BUILT ON BITS</p>
         </footer>
     </main>
 
