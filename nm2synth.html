@@ -4166,6 +4166,22 @@ const FACTORY_PRESETS = [
     extraModules:[{type:'delay',instanceId:2,vals:{'delay-2-time':0.55,'delay-2-fb':0.55,'delay-2-mix':0.38}}],
     cables:[{fromId:'vco2-out',toId:'mix-b-in',color:'#88aaff'},{fromId:'vca-out',toId:'delay-in',color:'#ff6600'},{fromId:'vca-out',toId:'delay-2-in',color:'#ff4488'},{fromId:'delay-out',toId:'reverb-in',color:'#00ffff'},{fromId:'delay-2-out',toId:'reverb-in',color:'#00ff88'}]
   }},
+  { name:'REACTOR MELTDOWN', desc:'Everything routing into everything. Triple filter modulation: S&H random steps + inverted LFO2 + sidechain envelope — all hitting VCF simultaneously. VCO2 hard sync + extreme wavefold (5.8) → stutter (0.05s slices) + Microcosm GLTCH (max scatter). Augmented chords, Lydian RAND quantizer, probabilistic 16-step chaos at 127bpm. 14 cables. Do not load near bedtime.', cfg:{v:1,
+    vco:{type:'square',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:-5,detune:18,hardSync:true},
+    lfo:{type:'triangle',rate:0.055,depth:3800}, lfo2:{type:'square',rate:0.42,depth:950},
+    adsr:{A:0.001,D:0.09,S:0.58,R:2.8}, vcf:{cutoff:380,res:7.5,ftype:'lowpass'}, vca:{gain:0.82},
+    reverb:{size:9,decay:0.97,mix:0.88}, delay:{time:0.1875,fb:0.74,mix:0.55},
+    chorus:{rate:1.8,depth:0.85,width:0.98,mix:0.82},
+    tape:{drive:7,wow:0.6,mix:0.68}, phaser:{rate:0.7,depth:0.9,mix:0.62},
+    noise:{type:'pink',level:0.18}, mixer:{a:0.72,b:0.72,c:0.65},
+    seq:{bpm:127,direction:'rnd',stepCount:16,steps:Array.from({length:16},(_,i)=>({on:[1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1][i]===1,pitch:[0,12,-7,7,12,-5,0,19,-12,3,14,7,-3,12,5,-12][i],prob:[1,0.85,1,0.7,1,0.9,1,0.55,1,0.75,0.6,1,0.9,1,0.65,0.8][i]}))},
+    att:{att:-1.5,offset:0.2}, wavefolder:{fold:5.8,symm:0.35}, panner:{rate:1.1,depth:0.92},
+    microcosm:{blend:0.95,grainSz:0.03,scatter:0.88,pitch:0.5,density:30,mode:'glitch'},
+    chord:{name:'aug',spread:9,level:0.62,wave:'square'}, quant:{active:true,randMode:true,scale:'lydian',root:6},
+    sidechain:{attack:0.0005,release:0.07,amount:3.5}, arp:{chord:'aug',dir:'rnd',rateMul:4,octaves:3,root:0},
+    stutter:{slice:0.05,repeat:14,mix:0.88,active:true},
+    cables:[{fromId:'vco2-out',toId:'mix-b-in',color:'#ff6600'},{fromId:'noise-out',toId:'mix-c-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'lfo2-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'vco2-cv',color:'#ff4488'},{fromId:'vca-out',toId:'fold-in',color:'#ffff00'},{fromId:'fold-out',toId:'stutter-ai',color:'#ff6600'},{fromId:'vca-out',toId:'microcosm-in',color:'#ff00ff'},{fromId:'microcosm-out',toId:'delay-in',color:'#00ffff'},{fromId:'vca-out',toId:'reverb-in',color:'#88aaff'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'vca-out',toId:'sc-in',color:'#ff4488'},{fromId:'sc-out',toId:'vcf-cv',color:'#00ff88'}]
+  }},
 ];
 
 function openFactoryPicker() {
