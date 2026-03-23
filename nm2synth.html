@@ -35,6 +35,17 @@ body{background:#060610;font-family:'Courier New',monospace;color:#ccc;min-heigh
 .module-label{text-align:center;font-size:9px;font-weight:bold;letter-spacing:4px;color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e066ff22;}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
 .module.bypassed .module-label{color:#666;}
+/* ── Edit mode ── */
+#edit-mode-btn.on{background:#ffaa0022;border-color:#ffaa00;color:#ffaa00;box-shadow:0 0 8px #ffaa0044;}
+#edit-mode-btn.on:hover{border-color:#ffcc44;color:#ffcc44;}
+body.edit-mode #rack{border-color:#ffaa0055;box-shadow:0 0 40px #ffaa0022,inset 0 0 60px rgba(0,0,0,.4);}
+body.edit-mode .module{border-color:#ffaa0044;transition:border-color .15s;}
+body.edit-mode .module:hover{border-color:#ffaa00bb;box-shadow:0 0 12px #ffaa0033;}
+body.edit-mode .module-label{cursor:grab;background:linear-gradient(to bottom,#ffaa0014,transparent);border-bottom-color:#ffaa0044;}
+body.edit-mode .module-label:active{cursor:grabbing;}
+body.edit-mode .module.drag-target{outline:1px dashed #ffaa0088;}
+.module-drag-handle{display:none;font-size:9px;color:#ffaa0088;margin-right:3px;pointer-events:none;line-height:1;vertical-align:middle;}
+body.edit-mode .module-drag-handle{display:inline;}
 /* ── Module picker ── */
 #mod-picker{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#04040e;border:1px solid #ff00ff44;border-radius:4px;padding:16px;z-index:900;min-width:280px;box-shadow:0 8px 32px #000a;}
 #mod-picker h3{color:#e066ff;font-size:10px;letter-spacing:4px;margin:0 0 10px;text-align:center;}
@@ -167,10 +178,10 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
 @keyframes cable-flow{from{stroke-dashoffset:18;}to{stroke-dashoffset:0;}}
 
 /* ── Tutorial Panel ── */
-#tut-panel{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(115%);width:460px;max-width:96vw;background:#04040f;border:1px solid #00ffff33;border-radius:4px;z-index:250;box-shadow:0 0 30px #00ffff11;transition:transform .35s;}
+#tut-panel{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(calc(100% + 80px));width:460px;max-width:96vw;max-height:calc(100vh - 90px);display:flex;flex-direction:column;background:#04040f;border:1px solid #00ffff33;border-radius:4px;z-index:250;box-shadow:0 0 30px #00ffff11;transition:transform .35s;}
 #tut-panel.open{transform:translateX(-50%) translateY(0);}
-#tut-hdr{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#06061a;border-bottom:1px solid #00ffff22;font-size:8px;letter-spacing:3px;color:#00ffff;}
-#tut-body{padding:12px;}
+#tut-hdr{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#06061a;border-bottom:1px solid #00ffff22;font-size:8px;letter-spacing:3px;color:#00ffff;}
+#tut-body{padding:12px;overflow-y:auto;flex:1 1 auto;min-height:0;}
 .tut-pick{display:block;width:100%;text-align:left;background:#09091e;border:1px solid #00ffff1a;color:#777;padding:8px 10px;margin:4px 0;cursor:pointer;font-size:8px;border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;transition:all .2s;}
 .tut-pick:hover{border-color:#00ffff55;color:#00ffff;background:#0c0c26;}
 #tut-step-title{font-size:10px;color:#00ffff;letter-spacing:2px;margin-bottom:8px;}
@@ -338,10 +349,11 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
   <span id="midi-ind">NO MIDI</span>
   <button class="btn" id="mclk-btn">CLK IN</button>
   <button class="btn" id="flow-btn">⊞ FLOW</button>
+  <button class="btn" id="edit-mode-btn" title="Toggle edit mode to drag and rearrange modules">✎ EDIT</button>
   <button class="btn" id="add-mod-btn">⊕ MODULE</button>
   <button class="btn" id="learn-btn">▶ LEARN</button>
   <button class="btn" id="help-btn">? HELP</button>
-  <span id="status">nm² modsynth v1.0</span>
+  <span id="status">nm² modsynth v1.0.1</span>
   <div class="tb-sep"></div>
   <span class="tb-lbl">PRESETS:</span>
   <button class="btn" id="ps-save">SAVE AS</button>
@@ -434,7 +446,18 @@ function ppKey(type, instanceId, suffix) {
 function modsKey(type, instanceId) {
   return instanceId === 1 ? type : `${type}_inst${instanceId}`;
 }
+function ppTypePrefix(type) {
+  return type === 'mixer' ? 'mix' : type === 'wavefolder' ? 'fold' : type;
+}
+function panelId(type, instanceId) {
+  return instanceId === 1 ? `mod-${type}` : `mod-${type}-${instanceId}`;
+}
+function syncRackOrder() {
+  const rack = document.getElementById('rack');
+  if (rack) rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+}
 let midiIn = null;
+let editMode = false;
 
 const CABLE_PAL = ['#ff00ff','#00ffff','#ffff00','#ff6600','#00ff88','#ff4488','#88aaff'];
 const TIPS = {
@@ -1765,7 +1788,7 @@ const DUPLICATABLE_TYPES = ['vco','lfo','vcf','adsr','vca','mixer','delay','reve
 
 function regPPForInstance(type, instanceId) {
   const mk = modsKey(type, instanceId);
-  const p  = (suf) => ppKey(type === 'mixer' ? 'mix' : type === 'wavefolder' ? 'fold' : type, instanceId, suf);
+  const p  = (suf) => ppKey(ppTypePrefix(type), instanceId, suf);
   const m  = () => mods[mk];
   const entries = {
     vco:        [[p('out'), ()=>m().gain], [p('cv'), ()=>m().osc.frequency, true]],
@@ -1785,26 +1808,23 @@ function regPPForInstance(type, instanceId) {
   (entries[type] || []).forEach(([id, getNode, isParam]) => regPP(id, getNode, !!isParam));
 }
 
-// Map type → { make, build } functions
-function _moduleFns(type) {
-  const makers   = {vco:makeVCO,lfo:makeLFO,vcf:makeVCF,adsr:makeADSR,vca:makeVCA,mixer:makeMixer,delay:makeDelay,reverb:makeReverb,chorus:makeChorus,tape:makeTape,phaser:makePhaser,wavefolder:makeWavefolder,att:makeAttenuverter};
-  const builders = {vco:buildVCOPanel,lfo:buildLFOPanel,vcf:buildVCFPanel,adsr:buildADSRPanel,vca:buildVCAPanel,mixer:buildMixerPanel,delay:buildDelayPanel,reverb:buildReverbPanel,chorus:buildChorusPanel,tape:buildTapePanel,phaser:buildPhaserPanel,wavefolder:buildWavefolderPanel,att:buildAttenuverterPanel};
-  return { make: makers[type], build: builders[type] };
-}
+// Map type → { make, build } functions (constants, not rebuilt on each call)
+const MODULE_MAKERS   = {vco:makeVCO,lfo:makeLFO,vcf:makeVCF,adsr:makeADSR,vca:makeVCA,mixer:makeMixer,delay:makeDelay,reverb:makeReverb,chorus:makeChorus,tape:makeTape,phaser:makePhaser,wavefolder:makeWavefolder,att:makeAttenuverter};
+const MODULE_BUILDERS = {vco:buildVCOPanel,lfo:buildLFOPanel,vcf:buildVCFPanel,adsr:buildADSRPanel,vca:buildVCAPanel,mixer:buildMixerPanel,delay:buildDelayPanel,reverb:buildReverbPanel,chorus:buildChorusPanel,tape:buildTapePanel,phaser:buildPhaserPanel,wavefolder:buildWavefolderPanel,att:buildAttenuverterPanel};
+function _moduleFns(type) { return { make: MODULE_MAKERS[type], build: MODULE_BUILDERS[type] }; }
 
 function instantiateModule(type) {
   const fns = _moduleFns(type);
   if (!fns.make) return null;
   instanceCounters[type] = (instanceCounters[type] || 1) + 1;
   const instanceId = instanceCounters[type];
-  if (!moduleInstances[type]) moduleInstances[type] = [1];
   fns.make(instanceId);
   const panelEl = fns.build(instanceId);
   const rack = document.getElementById('rack');
   if (rack) rack.appendChild(panelEl);
   regPPForInstance(type, instanceId);
   moduleInstances[type].push(instanceId);
-  if (rack) rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+  syncRackOrder();
   // Scroll to newly added module
   setTimeout(()=>{ panelEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }, 80);
   setStatus(`Added ${type.toUpperCase()} #${instanceId}`);
@@ -1817,29 +1837,27 @@ function removeModule(type, instanceId) {
   const m  = mods[mk];
   if (!m) return;
   // Remove all cables touching this module's patch points
-  const ptype = type === 'mixer' ? 'mix' : type === 'wavefolder' ? 'fold' : type;
-  const ownPPs = new Set(Object.keys(ppMap).filter(k => {
-    const pre1 = `${ptype}-`; const pre2 = `${ptype}-${instanceId}-`;
-    return k.startsWith(pre2) || (instanceId === 1 && k.startsWith(pre1) && !k.match(new RegExp(`^${ptype}-\\d+-`)));
-  }));
+  const ptype = ppTypePrefix(type);
+  const pre2 = `${ptype}-${instanceId}-`;
+  const primaryRe = new RegExp(`^${ptype}-\\d+-`);
+  const ownPPs = new Set(Object.keys(ppMap).filter(k =>
+    k.startsWith(pre2) || (instanceId === 1 && k.startsWith(`${ptype}-`) && !primaryRe.test(k))
+  ));
   [...cables].filter(c => ownPPs.has(c.fromId) || ownPPs.has(c.toId)).forEach(c => delCable(c));
   // Cleanup audio
   if (typeof m.cleanup === 'function') m.cleanup();
   delete mods[mk];
   // Remove panel from DOM
-  const panelId = `mod-${type}-${instanceId}`;
-  const panelEl = document.getElementById(panelId);
+  const panelEl = document.getElementById(panelId(type, instanceId));
   if (panelEl) panelEl.remove();
   // Update tracking
   moduleInstances[type] = (moduleInstances[type] || []).filter(id => id !== instanceId);
-  const rack = document.getElementById('rack');
-  if (rack) rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+  syncRackOrder();
   setStatus(`Removed ${type.toUpperCase()} #${instanceId}`);
 }
 
 function bypassModule(type, instanceId) {
-  const panelId = instanceId === 1 ? `mod-${type}` : `mod-${type}-${instanceId}`;
-  const panelEl = document.getElementById(panelId);
+  const panelEl = document.getElementById(panelId(type, instanceId));
   if (!panelEl) return;
   const bypassed = panelEl.classList.toggle('bypassed');
   setStatus(`${type.toUpperCase()} #${instanceId} ${bypassed ? 'bypassed' : 'restored'}`);
@@ -1851,12 +1869,10 @@ function applyRackOrder(order) {
   if (!rack) return;
   order.forEach(key => {
     const [type, id] = key.split('-');
-    const instanceId = Number(id);
-    const panelId = instanceId === 1 ? `mod-${type}` : `mod-${type}-${instanceId}`;
-    const el = document.getElementById(panelId);
+    const el = document.getElementById(panelId(type, Number(id)));
     if (el && el.parentElement === rack) rack.appendChild(el);
   });
-  rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+  syncRackOrder();
   if (typeof updateCables === 'function') updateCables();
 }
 
@@ -2221,8 +2237,11 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   ['tl','tr','bl','br'].forEach(pos=>{const s=document.createElement('div');s.className=`screw ${pos}`;p.appendChild(s);});
   const lbl = document.createElement('div');
   lbl.className = 'module-label';
-  lbl.textContent = instanceId === 1 ? label : `${label} #${instanceId}`;
-  lbl.style.cursor = 'grab';
+  const handle = document.createElement('span');
+  handle.className = 'module-drag-handle';
+  handle.textContent = '⠿ ';
+  lbl.appendChild(handle);
+  lbl.appendChild(document.createTextNode(instanceId === 1 ? label : `${label} #${instanceId}`));
   const tip = TIPS[`mod-${type}`];
   if(tip){ lbl.addEventListener('mouseenter',e=>showTip(tip,e)); lbl.addEventListener('mousemove',moveTip); lbl.addEventListener('mouseleave',hideTip); }
   // Double-click: collapse/expand module body
@@ -2235,22 +2254,22 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
     lbl.title = collapsed ? 'Double-click to expand' : 'Double-click to collapse';
     if (typeof updateCables === 'function') updateCables();
   });
-  lbl.title = 'Drag to reorder  |  Double-click to collapse';
-  // Drag-to-reorder within rack
+  lbl.title = 'Double-click to collapse  |  EDIT mode to drag';
+  // Drag-to-reorder within rack (only active in editMode)
   let dragActive = false;
   lbl.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
+    if (!editMode) return;
     e.preventDefault();
     lbl.setPointerCapture(e.pointerId);
     dragActive = true;
-    lbl.style.cursor = 'grabbing';
-    p.style.outline = '1px dashed #ff00ff88';
+    p.classList.add('drag-target');
   });
   lbl.addEventListener('pointermove', e => {
     if (!dragActive) return;
     const rack = p.parentElement; if (!rack) return;
     const cx = e.clientX, cy = e.clientY;
-    for (const sib of [...rack.children]) {
+    for (const sib of rack.children) {
       if (sib === p || !sib.dataset.moduleType) continue;
       const r = sib.getBoundingClientRect();
       if (cy >= r.top - 8 && cy <= r.bottom + 8 && cx >= r.left - 24 && cx <= r.right + 24) {
@@ -2263,10 +2282,8 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   lbl.addEventListener('pointerup', () => {
     if (!dragActive) return;
     dragActive = false;
-    lbl.style.cursor = 'grab';
-    p.style.outline = '';
-    const rack = p.parentElement;
-    if (rack) rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+    p.classList.remove('drag-target');
+    syncRackOrder();
     if (typeof updateCables === 'function') updateCables();
   });
   p.appendChild(lbl); p.appendChild(content);
@@ -3495,11 +3512,9 @@ function getConfig() {
       if (!m) return null;
       // Collect current knob values for this instance
       const vals = {};
-      const ptype = type === 'mixer' ? 'mix' : type === 'wavefolder' ? 'fold' : type;
-      Object.keys(knobRefs).filter(k => {
-        const pre2 = `${ptype}-${id}-`;
-        return k.startsWith(pre2);
-      }).forEach(k => { const ref = knobRefs[k]; if (ref && ref.getVal) vals[k] = ref.getVal(); });
+      const pre2 = `${ppTypePrefix(type)}-${id}-`;
+      Object.keys(knobRefs).filter(k => k.startsWith(pre2))
+        .forEach(k => { const ref = knobRefs[k]; if (ref && ref.getVal) vals[k] = ref.getVal(); });
       return { type, instanceId: id, vals };
     }).filter(Boolean)),
   };
@@ -3617,7 +3632,7 @@ function showTip(t,e){tipEl.textContent=t;tipEl.style.display='block';moveTip(e)
 function moveTip(e){tipEl.style.left=(e.clientX+14)+'px';tipEl.style.top=(e.clientY-36)+'px';}
 function hideTip(){tipEl.style.display='none';}
 
-function setStatus(msg){document.getElementById('status').textContent=msg||'nm² modsynth v1.0';}
+function setStatus(msg){document.getElementById('status').textContent=msg||'nm² modsynth v1.0.1';}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEB MIDI
@@ -4594,6 +4609,16 @@ document.getElementById('load-file').addEventListener('change',e=>{
   r.readAsText(f); e.target.value='';
 });
 
+document.getElementById('edit-mode-btn').addEventListener('click', () => {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  const btn = document.getElementById('edit-mode-btn');
+  btn.classList.toggle('on', editMode);
+  btn.textContent = editMode ? '✓ EDITING' : '✎ EDIT';
+  btn.title = editMode ? 'Exit edit mode (back to play)' : 'Toggle edit mode to drag and rearrange modules';
+  setStatus(editMode ? 'Edit mode — drag module labels to rearrange' : 'Play mode');
+});
+
 document.getElementById('flow-btn').addEventListener('click',()=>document.getElementById('flow-panel').classList.toggle('open'));
 document.getElementById('flow-close').addEventListener('click',()=>document.getElementById('flow-panel').classList.remove('open'));
 
@@ -5347,7 +5372,7 @@ async function init() {
   buildPPRegistry();
   // Initialize multi-instance tracking
   DUPLICATABLE_TYPES.forEach(type => { moduleInstances[type] = [1]; instanceCounters[type] = 1; });
-  rackOrder = [...rack.children].filter(el=>el.dataset.moduleType).map(el=>`${el.dataset.moduleType}-${el.dataset.instanceId}`);
+  syncRackOrder();
   drawDefaultCables();
   buildLoopStation();
 
@@ -5374,7 +5399,7 @@ async function init() {
   limKnobs.appendChild(mkKnob({id:'lim-thresh',label:'DRIVE',min:0.5,max:8,val:1.5,log:true,sz:'sm',tip:TIPS['lim-thresh'],onChange:v=>mods.limiter.setThresh(v)}));
   limKnobs.appendChild(mkKnob({id:'lim-ceil',  label:'CEIL', min:0.3,max:1, val:0.85,          sz:'sm',tip:TIPS['lim-ceil'],  onChange:v=>mods.limiter.setCeil(v)}));
 
-  setStatus('nm² modsynth v1.0 — POWERED ON');
+  setStatus('nm² modsynth v1.0.1 — POWERED ON');
 }
 
 document.getElementById('start').addEventListener('click',()=>{
