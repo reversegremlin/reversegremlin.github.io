@@ -154,7 +154,8 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
 #cables{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;}
 
 /* ── Tooltip ── */
-#tip{position:fixed;background:#040410;color:#00ffff;border:1px solid #00ffff44;padding:6px 10px;font-size:var(--fs-md);border-radius:3px;pointer-events:none;z-index:500;display:none;max-width:320px;line-height:1.6;box-shadow:0 0 16px #00ffff22;}
+#tip{position:fixed;background:#040410;color:#00ffff;border:1px solid #00ffff44;padding:6px 10px;font-size:var(--fs-md);border-radius:3px;pointer-events:none;z-index:500;display:none;max-width:320px;line-height:1.6;box-shadow:0 0 16px #00ffff22;white-space:pre-line;}
+#tip .tip-hint{display:block;color:#ffffff44;font-size:8px;letter-spacing:1px;margin-bottom:3px;padding-bottom:3px;border-bottom:1px solid #ffffff11;}
 
 /* ── Preset select ── */
 .tb-sep{flex-basis:100%;height:1px;background:#ff00ff11;margin:2px -6px;}
@@ -460,6 +461,7 @@ const cables = [];  // {fromId, toId, color, el}
 const audioConns = new Set(); // "fromId→toId"
 let pendingPP = null;
 const knobRefs = {};       // id → knob wrap (for visual sync on load/randomize)
+function sk(id, v) { if (knobRefs[id]) knobRefs[id].setVal(v); } // global knob sync helper
 const PRESET_KEY = 'nm2synth_presets';
 // ── Multi-instance support ──────────────────────────────────────────────────
 let rackOrder = [];                   // ['vco-1','vcf-1',...] — current DOM order
@@ -715,6 +717,23 @@ const TIPS = {
   'sc-release': 'Envelope Release — how fast the CV output falls when the input gets quieter (0.01–2s). Short release (0.01–0.05s) = tight, rhythmic CV that drops quickly between hits. Long release (0.5–2s) = the CV holds up between events, giving a smoother modulation that doesn\'t click off.',
   'sc-amount':  'Amount — scales the output CV level (0–5x). The raw RMS level is typically 0–0.3; amount multiplies this into a useful CV range. Turn up until the sidechain effect is as strong as you want. High amount = aggressive pumping; low amount = gentle breathing.',
 
+  // ── Bitcrusher ────────────────────────────────────────────────────────────
+  'mod-crush': 'BITCRUSHER — reduces bit depth and sample rate for digital grit and lo-fi textures. BITS = bit depth (16=clean, 4=crunchy, 1=square-wave destruction). RATE = sample-rate decimation (1=clean, 32=telephone-quality aliasing). Mix at 50% for parallel grit on top of the clean signal.',
+  'crush-ai':  'Bitcrusher Audio In — patch from VCO, VCA, or any audio source. The signal is quantized and downsampled before reaching the output.',
+  'crush-ao':  'Bitcrusher Audio Out — the crushed signal. Patch into VCF IN to tame the harshness, or straight to Reverb IN for lo-fi washy textures. Very low BITS values produce square-wave-like distortion regardless of input shape.',
+
+  // ── Euclidean Rhythm Generator ─────────────────────────────────────────────
+  'mod-euclid': 'EUCLID — Euclidean rhythm generator. Distributes HITS as evenly as possible across STEPS using the Bjorklund algorithm — the same math that underlies most polyrhythms in world music. The output is a gate signal. Patch to ADSR GATE or VCA ENV to drive rhythmic patterns that no human would program.',
+  'euclid-go':  'Euclidean Gate Out — fires a short gate pulse each time an active step is reached. Patch to ADSR GATE IN for rhythmic note triggering, or into VCA ENV for amplitude sculpting. Try patching two EUCLID modules with different HITS/STEPS into separate drum voices for rich polyrhythm.',
+
+  // ── Lissajous Scope ────────────────────────────────────────────────────────
+  'mod-lissajous': 'LISSAJOUS — X-Y oscilloscope. Plots two audio signals against each other: X input on the horizontal axis, Y input on the vertical. When X and Y are frequency-related, beautiful closed curves appear (Lissajous figures). Patch VCO → X and VCO2 → Y, then tune VCO2 to a harmonic interval and watch the figures form. Phosphor-glow rendering.',
+  'lissaj-xi': 'Lissajous X Input — horizontal axis signal. Patch any audio source here. The amplitude drives left-right position on the display.',
+  'lissaj-yi': 'Lissajous Y Input — vertical axis signal. Patch a second audio source here. Try harmonically related oscillators for stable figures, or unrelated signals for chaotic motion.',
+
+  // ── AFFECT ────────────────────────────────────────────────────────────────
+  'mod-affect': 'AFFECT — emotion-driven parameter mapping. A 2D pad (Valence × Arousal) controls 15 synth parameters simultaneously via bilinear interpolation across four emotional poles: MELANCHOLY (dark, slow), CALM (bright, slow), TENSE (dark, fast), EUPHORIC (bright, fast). Type a mood into the text box to move the puck. WANDER engages Brownian drift for autonomous emotional evolution.',
+
   // ── Sequencer additions ───────────────────────────────────────────────────
   'seq-prob':   'Probability — the chance this step will fire each time the sequencer reaches it. 100% = always fires. 50% = fires half the time, randomly. 0% = never fires (same as turning the step off). Best technique: set most steps to 100%, then drop a few key steps to 60–80%. The pattern becomes generative — it sounds different every loop but stays musical because the rhythm skeleton is preserved. This is the core of generative sequencer technique in ambient music.',
   'seq-dir':    'Direction — how the sequencer moves through its steps each tick. FWD (→): left to right, loops back to step 1. REV (←): right to left, loops back to the last step — your melody plays backwards. P-P: ping-pong, bounces between step 1 and the last step; with 8 steps this gives a 14-step (not 16) pattern before repeating because the endpoints don\'t double. RND: jumps to a completely random step each tick — non-repeating, generative. Try switching direction while playing to hear the phrase mutate live. Ctrl+Z undoes a direction change.',
@@ -848,6 +867,7 @@ function makeSeq() {
     }
     refreshStepLights();
     if (mods.clkdiv) mods.clkdiv.tick();
+    if (mods.euclid) mods.euclid.tick();
     const ms = (60 / m.bpm / 2) * 1000;
     const s = m.steps[m.step];
     const fires = s.on && Math.random() < (s.prob ?? 1.0);
@@ -1808,6 +1828,11 @@ function buildPPRegistry() {
   regPP('stutter-ai',  ()=>mods.stutter.inlet);
   regPP('stutter-ao',  ()=>mods.stutter.outlet);
   regPP('micloop-out', ()=>mods.miclooper.outlet);
+  regPP('crush-ai',   ()=>mods.crush.inlet);
+  regPP('crush-ao',   ()=>mods.crush.outlet);
+  regPP('euclid-go',  ()=>mods.euclid.gate);
+  regPP('lissaj-xi',  ()=>mods.lissajous?.xNode);
+  regPP('lissaj-yi',  ()=>mods.lissajous?.yNode);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2272,18 +2297,19 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   lbl.appendChild(handle);
   lbl.appendChild(document.createTextNode(instanceId === 1 ? label : `${label} #${instanceId}`));
   const tip = TIPS[`mod-${type}`];
-  if(tip){ lbl.addEventListener('mouseenter',e=>showTip(tip,e)); lbl.addEventListener('mousemove',moveTip); lbl.addEventListener('mouseleave',hideTip); }
-  // Double-click: collapse/expand module body
   let collapsed = false;
+  const getHint = () => collapsed ? 'DBL-CLICK TO EXPAND' : 'DBL-CLICK TO COLLAPSE  ·  EDIT MODE TO DRAG';
+  lbl.addEventListener('mouseenter', e => showTip(tip || '', e, getHint()));
+  lbl.addEventListener('mousemove', moveTip);
+  lbl.addEventListener('mouseleave', hideTip);
+  // Double-click: collapse/expand module body
   lbl.addEventListener('dblclick', e => {
     e.stopPropagation();
     collapsed = !collapsed;
     content.style.display = collapsed ? 'none' : '';
     lbl.style.opacity = collapsed ? '0.5' : '';
-    lbl.title = collapsed ? 'Double-click to expand' : 'Double-click to collapse';
     if (typeof updateCables === 'function') updateCables();
   });
-  lbl.title = 'Double-click to collapse  |  EDIT mode to drag';
   // Drag-to-reorder within rack (only active in editMode)
   // Uses ghost+placeholder pattern: original stays as ghost, floating clone follows cursor,
   // placeholder shows the exact drop position in the flex layout.
@@ -3621,6 +3647,10 @@ function getConfig() {
     stutter: {slice:mods.stutter.sliceVal,repeat:mods.stutter.repeatVal,mix:mods.stutter.mixVal,active:mods.stutter.activeVal},
     mic:     {level:mods.mic.levelVal},
     miclooper: {levelIn:mods.miclooper.levelInVal, levelOut:mods.miclooper.levelOutVal},
+    crush:  {bits:mods.crush.bits, rate:mods.crush.rate, mix:mods.crush.mixVal},
+    euclid: {hits:mods.euclid.hits, steps:mods.euclid.steps, offset:mods.euclid.offset},
+    affect: {x:mods.affect.targetX, y:mods.affect.targetY, strength:mods.affect.strength,
+             active:mods.affect.active, wanderMode:mods.affect.wanderMode, driftSpeed:mods.affect.driftSpeed},
     cables:cables.map(c=>({fromId:c.fromId,toId:c.toId,color:c.color})),
     rackOrder: rackOrder.slice(),
     extraModules: DUPLICATABLE_TYPES.flatMap(type => (moduleInstances[type] || []).filter(id => id > 1).map(id => {
@@ -3717,6 +3747,15 @@ function applyConfig(cfg) {
   }
   if(cfg.mic){ mods.mic.setLevel(cfg.mic.level); sk('mic-level',cfg.mic.level); }
   if(cfg.miclooper){ mods.miclooper.setLevelIn(cfg.miclooper.levelIn||1); sk('micloop-level',cfg.miclooper.levelIn||1); mods.miclooper.setLevelOut(cfg.miclooper.levelOut||0.8); sk('micloop-vol',cfg.miclooper.levelOut||0.8); }
+  if(cfg.crush){ mods.crush.bits=cfg.crush.bits||8; sk('crush-bits',cfg.crush.bits||8); mods.crush.rate=cfg.crush.rate||1; sk('crush-rate',cfg.crush.rate||1); mods.crush.setMix(cfg.crush.mix??1); sk('crush-mix',cfg.crush.mix??1); }
+  if(cfg.euclid){ mods.euclid.setHits(cfg.euclid.hits||3); sk('euclid-hits',cfg.euclid.hits||3); mods.euclid.setSteps(cfg.euclid.steps||8); sk('euclid-steps',cfg.euclid.steps||8); mods.euclid.setOffset(cfg.euclid.offset||0); sk('euclid-offset',cfg.euclid.offset||0); }
+  if(cfg.affect){
+    mods.affect.targetX=cfg.affect.x??0.5; mods.affect.targetY=cfg.affect.y??0.5;
+    mods.affect.strength=cfg.affect.strength??0.5; sk('affect-strength',mods.affect.strength);
+    mods.affect.wanderMode=!!cfg.affect.wanderMode;
+    mods.affect.driftSpeed=cfg.affect.driftSpeed??0.3; sk('affect-drift',mods.affect.driftSpeed);
+    if(cfg.affect.active){ mods.affect.active=true; applyAffect(mods.affect.targetX, mods.affect.targetY); }
+  }
   // Restore extra module instances
   if (cfg.extraModules && cfg.extraModules.length) {
     cfg.extraModules.forEach(({ type, instanceId, vals }) => {
@@ -3746,7 +3785,15 @@ function applyConfig(cfg) {
 // TOOLTIP
 // ═══════════════════════════════════════════════════════════════════════════════
 const tipEl=document.getElementById('tip');
-function showTip(t,e){tipEl.textContent=t;tipEl.style.display='block';moveTip(e);}
+function showTip(t,e,hint){
+  if(hint){
+    tipEl.innerHTML='<span class="tip-hint">'+hint+'</span>';
+    tipEl.appendChild(document.createTextNode(t));
+  } else {
+    tipEl.textContent=t;
+  }
+  tipEl.style.display='block';moveTip(e);
+}
 function moveTip(e){tipEl.style.left=(e.clientX+14)+'px';tipEl.style.top=(e.clientY-36)+'px';}
 function hideTip(){tipEl.style.display='none';}
 
@@ -5673,6 +5720,201 @@ function buildPadSamplerPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// BITCRUSHER
+// ═══════════════════════════════════════════════════════════════════════════════
+function makeCrusher() {
+  const inlet  = ctx.createGain();
+  const outlet = ctx.createGain();
+  const dryGain = ctx.createGain(); dryGain.gain.value = 0;
+  const wetGain = ctx.createGain(); wetGain.gain.value = 1;
+  const proc = ctx.createScriptProcessor(256, 1, 1);
+  const m = { inlet, outlet, bits: 8, rate: 1, mixVal: 1 };
+  let held = 0, heldCount = 0;
+  proc.onaudioprocess = e => {
+    const inp = e.inputBuffer.getChannelData(0);
+    const out = e.outputBuffer.getChannelData(0);
+    const step = Math.pow(2, -(m.bits - 1));
+    const r = Math.max(1, Math.round(m.rate));
+    for (let i = 0; i < inp.length; i++) {
+      if (heldCount % r === 0) held = Math.round(inp[i] / step) * step;
+      heldCount++;
+      out[i] = held;
+    }
+  };
+  // wet/dry mix
+  inlet.connect(proc);
+  proc.connect(wetGain);
+  wetGain.connect(outlet);
+  inlet.connect(dryGain);
+  dryGain.connect(outlet);
+  m.setMix = v => { m.mixVal = v; wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); dryGain.gain.setTargetAtTime(1-v, ctx.currentTime, 0.01); };
+  // silent sink to keep proc active
+  const sink = ctx.createMediaStreamDestination(); proc.connect(sink);
+  mods.crush = m; return m;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EUCLIDEAN RHYTHM GENERATOR
+// ═══════════════════════════════════════════════════════════════════════════════
+function makeEuclid() {
+  const gate = ctx.createConstantSource(); gate.offset.value = 0; gate.start();
+  const m = { gate, hits: 3, steps: 8, offset: 0, stepCount: 0, pattern: [] };
+  function buildPattern() {
+    const { hits, steps, offset } = m;
+    const h = Math.min(hits, steps);
+    const pat = [];
+    for (let i = 0; i < steps; i++) {
+      pat.push(Math.floor((i + 1) * h / steps) > Math.floor(i * h / steps));
+    }
+    const rot = ((offset % steps) + steps) % steps;
+    m.pattern = pat.slice(rot).concat(pat.slice(0, rot));
+    if (typeof drawEuclidPattern === 'function') drawEuclidPattern();
+  }
+  m.buildPattern = buildPattern;
+  m.setHits   = v => { m.hits   = Math.round(v); buildPattern(); };
+  m.setSteps  = v => { m.steps  = Math.round(v); buildPattern(); };
+  m.setOffset = v => { m.offset = Math.round(v); buildPattern(); };
+  m.tick = () => {
+    const idx = m.stepCount % m.steps;
+    m.stepCount++;
+    if (!m.pattern[idx]) return;
+    const dur = (60 / (mods.seq?.bpm || 120) / 2) * 0.35;
+    gate.offset.setValueAtTime(1, ctx.currentTime);
+    gate.offset.setValueAtTime(0, ctx.currentTime + dur);
+    if (typeof drawEuclidPattern === 'function') drawEuclidPattern(idx);
+  };
+  buildPattern();
+  mods.euclid = m; return m;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AFFECT — XY Pad emotion-driven parameter mapping
+// ═══════════════════════════════════════════════════════════════════════════════
+function makeAffect() {
+  mods.affect = {
+    x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5,
+    strength: 0.5, active: false,
+    wanderMode: false, driftSpeed: 0.3,
+    wanderDX: 0, wanderDY: 0, lastQuadrant: null
+  };
+}
+
+// Bilinear interpolation: BL=(0,0)=MELANCHOLY BR=(1,0)=CALM TL=(0,1)=TENSE TR=(1,1)=EUPHORIC
+function biAff(x, y, [BL, BR, TL, TR]) {
+  return BL*(1-x)*(1-y) + BR*x*(1-y) + TL*(1-x)*y + TR*x*y;
+}
+
+const AFFECT_POLES = {
+  'vcf-cutoff':  [380,   700,   4500, 5800],
+  'vcf-res':     [3.0,   1.2,   20,   7   ],
+  'adsr-A':      [0.8,   0.35,  0.003,0.015],
+  'adsr-D':      [0.4,   0.3,   0.08, 0.12 ],
+  'adsr-S':      [0.62,  0.7,   0.85, 0.75 ],
+  'adsr-R':      [3.0,   2.2,   0.1,  0.35 ],
+  'lfo-rate':    [0.22,  0.10,  5.5,  2.5  ],
+  'lfo-depth':   [260,   80,    1400, 650  ],
+  'reverb-size': [5.8,   5.0,   0.7,  2.0  ],
+  'reverb-mix':  [0.68,  0.58,  0.06, 0.22 ],
+  'delay-mix':   [0.35,  0.18,  0.03, 0.34 ],
+  'tape-drive':  [2.5,   1.2,   7.2,  3.5  ],
+  'tape-mix':    [0.42,  0.10,  0.72, 0.32 ],
+  'phaser-mix':  [0.52,  0.38,  0.00, 0.26 ],
+  'chorus-mix':  [0.28,  0.48,  0.00, 0.38 ],
+};
+
+const AFFECT_WORDS = {
+  'melancholy':[0.08,0.18],'sad':[0.12,0.22],'lonely':[0.14,0.12],'dark':[0.22,0.32],
+  'somber':[0.10,0.18],'heavy':[0.20,0.28],'grief':[0.06,0.15],'loss':[0.10,0.10],
+  'blue':[0.20,0.22],'gloomy':[0.10,0.20],'haunted':[0.22,0.38],'brooding':[0.18,0.30],
+  'mournful':[0.08,0.12],'bleak':[0.12,0.16],
+  'calm':[0.85,0.15],'peaceful':[0.90,0.10],'serene':[0.88,0.08],'gentle':[0.80,0.16],
+  'soft':[0.75,0.20],'tender':[0.78,0.18],'meditative':[0.82,0.08],'tranquil':[0.90,0.06],
+  'still':[0.86,0.05],'floating':[0.80,0.20],'drifting':[0.75,0.16],'dreamy':[0.72,0.22],
+  'ethereal':[0.70,0.18],'ambient':[0.78,0.14],'zen':[0.88,0.08],'healing':[0.82,0.12],
+  'restful':[0.88,0.06],'clear':[0.85,0.18],
+  'angry':[0.10,0.90],'aggressive':[0.14,0.94],'intense':[0.28,0.84],'tense':[0.24,0.80],
+  'anxious':[0.30,0.76],'raw':[0.10,0.86],'chaotic':[0.18,0.90],'distorted':[0.14,0.80],
+  'harsh':[0.12,0.88],'industrial':[0.20,0.84],'brutal':[0.10,0.94],'edgy':[0.26,0.78],
+  'nervous':[0.32,0.72],'frantic':[0.18,0.88],'glitchy':[0.22,0.78],'dirty':[0.16,0.74],
+  'happy':[0.90,0.84],'euphoric':[0.94,0.94],'joyful':[0.88,0.84],'excited':[0.84,0.90],
+  'energetic':[0.80,0.88],'bright':[0.88,0.74],'uplifting':[0.90,0.82],'ecstatic':[0.94,0.90],
+  'radiant':[0.88,0.80],'dance':[0.82,0.92],'rave':[0.75,0.94],'festival':[0.85,0.88],
+  'hopeful':[0.82,0.72],'playful':[0.80,0.78],'sparkling':[0.86,0.80],
+  'mysterious':[0.38,0.54],'nostalgic':[0.34,0.28],'cinematic':[0.44,0.50],
+  'cosmic':[0.54,0.28],'spiritual':[0.62,0.18],'hypnotic':[0.50,0.44],
+  'liminal':[0.50,0.34],'bittersweet':[0.40,0.30],'longing':[0.28,0.24],
+  'wistful':[0.35,0.22],'pensive':[0.32,0.32],
+};
+
+function textToAffect(text) {
+  const words = text.toLowerCase().split(/\s+/);
+  const hits = words.map(w => AFFECT_WORDS[w]).filter(Boolean);
+  if (!hits.length) return null;
+  return [hits.reduce((s,v)=>s+v[0],0)/hits.length, hits.reduce((s,v)=>s+v[1],0)/hits.length];
+}
+
+function applyAffect(x, y) {
+  const m = mods.affect;
+  if (!m.active) return;
+  const str = m.strength;
+  const interp = (poles) => {
+    const full   = biAff(x, y, poles);
+    const center = biAff(0.5, 0.5, poles);
+    return center + (full - center) * str;
+  };
+  // Continuous params
+  if (mods.vcf)    { const v=interp(AFFECT_POLES['vcf-cutoff']);   mods.vcf.setCutoff(v);   sk('vcf-cutoff',v); }
+  if (mods.vcf)    { const v=interp(AFFECT_POLES['vcf-res']);      mods.vcf.setRes(v);      sk('vcf-res',v); }
+  if (mods.adsr)   { mods.adsr.A=interp(AFFECT_POLES['adsr-A']); sk('adsr-A',mods.adsr.A);
+                     mods.adsr.D=interp(AFFECT_POLES['adsr-D']); sk('adsr-D',mods.adsr.D);
+                     mods.adsr.S=interp(AFFECT_POLES['adsr-S']); sk('adsr-S',mods.adsr.S);
+                     mods.adsr.R=interp(AFFECT_POLES['adsr-R']); sk('adsr-R',mods.adsr.R); drawEnv(); }
+  if (mods.lfo)    { const r=interp(AFFECT_POLES['lfo-rate']);  mods.lfo.setRate(r);  sk('lfo-rate',r);
+                     const d=interp(AFFECT_POLES['lfo-depth']); mods.lfo.setDepth(d); sk('lfo-depth',d); }
+  if (mods.reverb) { mods.reverb.setSize(interp(AFFECT_POLES['reverb-size'])); sk('reverb-size',mods.reverb.sizeVal);
+                     mods.reverb.setMix(interp(AFFECT_POLES['reverb-mix']));   sk('reverb-mix',mods.reverb.mixVal); }
+  if (mods.delay)  { mods.delay.setMix(interp(AFFECT_POLES['delay-mix']));  sk('delay-mix',mods.delay.mixVal); }
+  if (mods.tape)   { mods.tape.setDrive(interp(AFFECT_POLES['tape-drive'])); sk('tape-drive',mods.tape.driveVal);
+                     mods.tape.setMix(interp(AFFECT_POLES['tape-mix']));     sk('tape-mix',mods.tape.mixVal); }
+  if (mods.phaser) { mods.phaser.setMix(interp(AFFECT_POLES['phaser-mix'])); sk('phaser-mix',mods.phaser.mixVal); }
+  if (mods.chorus) { mods.chorus.setMix(interp(AFFECT_POLES['chorus-mix'])); sk('chorus-mix',mods.chorus.mixVal); }
+  // Discrete: use dominant quadrant with 0.08-unit hysteresis
+  const qx = x > 0.5 ? 1 : 0, qy = y > 0.5 ? 1 : 0;
+  const quad = `${qx}${qy}`;
+  const prevQ = m.lastQuadrant;
+  const dist = Math.abs(x - 0.5) + Math.abs(y - 0.5);
+  if (quad !== prevQ && dist > 0.08) {
+    m.lastQuadrant = quad;
+    const waves    = {  '00':'sawtooth', '10':'sine',   '01':'sawtooth', '11':'square'  };
+    const chords   = {  '00':'min7',     '10':'sus2',   '01':'min',      '11':'maj7'    };
+    if (mods.vco)   { mods.vco.setType(waves[quad]);  sk('vco-wave',waves[quad]); }
+    if (mods.chord) { mods.chord.setChord(chords[quad]); sk('chord-type-sel',chords[quad]); }
+  }
+}
+
+function startAffectLoop() {
+  const m = mods.affect;
+  function loop() {
+    requestAnimationFrame(loop);
+    if (m.wanderMode && m.active) {
+      m.wanderDX += (Math.random() - 0.5) * m.driftSpeed * 0.004;
+      m.wanderDY += (Math.random() - 0.5) * m.driftSpeed * 0.004;
+      m.wanderDX *= 0.92; m.wanderDY *= 0.92;
+      m.targetX = Math.max(0, Math.min(1, m.targetX + m.wanderDX));
+      m.targetY = Math.max(0, Math.min(1, m.targetY + m.wanderDY));
+    }
+    const px = m.x, py = m.y;
+    m.x += (m.targetX - m.x) * 0.12;
+    m.y += (m.targetY - m.y) * 0.12;
+    if (m.active && (Math.abs(m.x-px) > 0.001 || Math.abs(m.y-py) > 0.001)) {
+      applyAffect(m.x, m.y);
+    }
+    if (typeof drawAffectCanvas === 'function') drawAffectCanvas();
+  }
+  loop();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MASTER LIMITER
 // ═══════════════════════════════════════════════════════════════════════════════
 function makeLimiter() {
@@ -5698,6 +5940,297 @@ function makeLimiter() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// BUILD PANELS — new modules
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildCrusherPanel() {
+  const d = document.createElement('div');
+  d.appendChild(mkPP('crush-ai', 'ai', 'IN',  'in'));
+  d.appendChild(mkPP('crush-ao', 'ao', 'OUT', 'out'));
+  d.appendChild(mkKnob({id:'crush-bits', label:'BITS', min:1, max:16, val:8,  sz:'sm', tip:TIPS['crush-ai'],
+    onChange: v => { mods.crush.bits = Math.round(v); }}));
+  d.appendChild(mkKnob({id:'crush-rate', label:'RATE', min:1, max:32, val:1,  sz:'sm', log:true,
+    onChange: v => { mods.crush.rate = Math.round(v); }}));
+  d.appendChild(mkKnob({id:'crush-mix',  label:'MIX',  min:0, max:1,  val:1,  sz:'sm',
+    onChange: v => mods.crush.setMix(v)}));
+  return panel('crush', 'BITCRUSH', d);
+}
+
+let _euclidDrawFn = null;
+function drawEuclidPattern(activeIdx) {
+  if (_euclidDrawFn) _euclidDrawFn(activeIdx);
+}
+function buildEuclidPanel() {
+  const d = document.createElement('div');
+  // Pattern display canvas
+  const cv = document.createElement('canvas');
+  cv.width = 148; cv.height = 32;
+  cv.style.cssText = 'display:block;margin:4px auto;border:1px solid #00ff8844;border-radius:2px;';
+  d.appendChild(cv);
+  let flashIdx = -1;
+  _euclidDrawFn = (activeIdx) => {
+    if (activeIdx !== undefined) { flashIdx = activeIdx; setTimeout(()=>{ flashIdx=-1; }, 80); }
+    const c = cv.getContext('2d');
+    c.fillStyle = '#04040e'; c.fillRect(0,0,cv.width,cv.height);
+    const pat = mods.euclid.pattern;
+    const n = pat.length;
+    const dotR = Math.min(8, (cv.width - 8) / n / 2 - 1);
+    const cx0 = cv.width/2, cy0 = cv.height/2;
+    const radius = Math.min(cx0, cy0) - dotR - 2;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx0 + Math.cos(ang) * radius;
+      const y = cy0 + Math.sin(ang) * radius;
+      const active = pat[i];
+      const isFlash = i === flashIdx;
+      c.beginPath(); c.arc(x, y, dotR, 0, Math.PI*2);
+      c.fillStyle = isFlash ? '#ffffff' : active ? '#00ff88' : '#1a3a2a';
+      c.shadowBlur = isFlash ? 12 : active ? 6 : 0;
+      c.shadowColor = '#00ff88';
+      c.fill(); c.shadowBlur = 0;
+    }
+  };
+  d.appendChild(mkPP('euclid-go', 'co', 'GATE', 'out'));
+  d.appendChild(mkKnob({id:'euclid-hits',   label:'HITS',   min:1,  max:16, val:3, sz:'sm',
+    onChange: v => mods.euclid.setHits(v)}));
+  d.appendChild(mkKnob({id:'euclid-steps',  label:'STEPS',  min:2,  max:16, val:8, sz:'sm',
+    onChange: v => mods.euclid.setSteps(v)}));
+  d.appendChild(mkKnob({id:'euclid-offset', label:'SHIFT',  min:0,  max:15, val:0, sz:'sm',
+    onChange: v => mods.euclid.setOffset(v)}));
+  drawEuclidPattern();
+  return panel('euclid', 'EUCLID', d);
+}
+
+function buildSpectrumPanel() {
+  const d = document.createElement('div'); d.style.minWidth = '200px';
+  const cv = document.createElement('canvas'); cv.id = 'spectrum-cv';
+  cv.width = 192; cv.height = 110;
+  cv.style.cssText = 'border:1px solid #00ffff44;box-shadow:0 0 12px #00ffff11;display:block;';
+  d.appendChild(cv);
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'text-align:center;font-size:7px;color:#00ffff44;margin-top:3px;letter-spacing:2px;';
+  lbl.textContent = 'FREQUENCY';
+  d.appendChild(lbl);
+  return panel('spectrum', 'SPECTRUM', d);
+}
+
+function buildLissajousPanel() {
+  const d = document.createElement('div'); d.style.minWidth = '170px';
+  const cv = document.createElement('canvas'); cv.id = 'lissajous-cv';
+  cv.width = 160; cv.height = 160;
+  cv.style.cssText = 'border:1px solid #ff00ff44;box-shadow:0 0 12px #ff00ff11;display:block;';
+  d.appendChild(cv);
+  d.appendChild(mkPP('lissaj-xi', 'ai', 'X IN', 'in'));
+  d.appendChild(mkPP('lissaj-yi', 'ai', 'Y IN', 'in'));
+  return panel('lissajous', 'LISSAJOUS', d);
+}
+
+// AFFECT panel — canvas + text input + buttons + knobs
+let drawAffectCanvas = null;
+function buildAffectPanel() {
+  const m = mods.affect;
+  const W = 180, H = 180;
+  const d = document.createElement('div'); d.style.minWidth = `${W+8}px`;
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  cv.style.cssText = `border:1px solid #222;box-shadow:0 0 8px #00000044;cursor:crosshair;display:block;`;
+  d.appendChild(cv);
+  const c = cv.getContext('2d');
+
+  const trail = [];
+  drawAffectCanvas = () => {
+    const on = m.active;
+    cv.style.borderColor = on ? '#00ffff44' : '#222';
+    c.fillStyle = '#04040e'; c.fillRect(0,0,W,H);
+    // grid
+    c.strokeStyle = '#ffffff08'; c.lineWidth = 0.5;
+    [W/3, 2*W/3].forEach(x => { c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); });
+    [H/3, 2*H/3].forEach(y => { c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); });
+    // labels
+    c.font = '7px "Courier New"'; c.letterSpacing = '1px'; c.fillStyle = '#444';
+    c.fillText('MELANCHOLY', 3, H-4);
+    c.fillText('CALM', W-36, H-4);
+    c.fillText('TENSE', 3, 10);
+    c.fillText('EUPHORIC', W-58, 10);
+    // trail
+    trail.push([m.x, m.y]);
+    if (trail.length > 24) trail.shift();
+    trail.forEach(([tx,ty], i) => {
+      const alpha = (i / trail.length) * 0.12;
+      c.beginPath();
+      c.arc(tx*W, (1-ty)*H, 3, 0, Math.PI*2);
+      c.fillStyle = `rgba(0,255,255,${alpha})`;
+      c.fill();
+    });
+    // puck
+    const px = m.x * W, py = (1 - m.y) * H;
+    c.beginPath(); c.arc(px, py, 8, 0, Math.PI*2);
+    c.fillStyle = on ? '#00ffff' : '#336666';
+    c.shadowBlur = on ? 16 : 4; c.shadowColor = '#00ffff';
+    c.fill(); c.shadowBlur = 0;
+  };
+
+  // Drag to move puck
+  let dragging = false;
+  const setPuck = (e) => {
+    const r = cv.getBoundingClientRect();
+    m.targetX = Math.max(0, Math.min(1, (e.clientX - r.left) / W));
+    m.targetY = Math.max(0, Math.min(1, 1 - (e.clientY - r.top)  / H));
+    m.wanderDX = 0; m.wanderDY = 0;
+    if (m.active) applyAffect(m.targetX, m.targetY);
+  };
+  cv.addEventListener('pointerdown', e => { dragging=true; cv.setPointerCapture(e.pointerId); setPuck(e); });
+  cv.addEventListener('pointermove', e => { if (dragging) setPuck(e); });
+  cv.addEventListener('pointerup',   () => { dragging=false; });
+
+  // Mood dropdown
+  const sel = document.createElement('select');
+  sel.style.cssText = 'width:100%;box-sizing:border-box;background:#080818;border:1px solid #333;color:#aaa;padding:3px 5px;font-size:9px;font-family:"Courier New",monospace;margin-top:4px;letter-spacing:1px;';
+  const blankOpt = document.createElement('option');
+  blankOpt.value = ''; blankOpt.textContent = '— choose a mood —';
+  sel.appendChild(blankOpt);
+  // Sort words alphabetically and group by quadrant label
+  const quadrant = ([x, y]) => y > 0.5 ? (x > 0.5 ? 'EUPHORIC' : 'TENSE') : (x > 0.5 ? 'CALM' : 'MELANCHOLY');
+  const grouped = {};
+  Object.entries(AFFECT_WORDS).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([word, xy]) => {
+    const q = quadrant(xy);
+    if (!grouped[q]) grouped[q] = [];
+    grouped[q].push(word);
+  });
+  ['MELANCHOLY','CALM','TENSE','EUPHORIC'].forEach(q => {
+    const grp = document.createElement('optgroup');
+    grp.label = q;
+    (grouped[q] || []).forEach(word => {
+      const opt = document.createElement('option');
+      opt.value = word; opt.textContent = word;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+  sel.addEventListener('change', () => {
+    if (!sel.value) return;
+    const res = textToAffect(sel.value);
+    if (res) { m.targetX = res[0]; m.targetY = res[1]; m.wanderDX = 0; m.wanderDY = 0; }
+  });
+  d.appendChild(sel);
+
+  // Buttons row
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:4px;margin-top:4px;';
+  const onBtn = document.createElement('button');
+  onBtn.className = 'btn'; onBtn.textContent = 'ON';
+  onBtn.addEventListener('click', () => {
+    m.active = !m.active;
+    onBtn.classList.toggle('on', m.active);
+    if (m.active) applyAffect(m.x, m.y);
+  });
+  const wanderBtn = document.createElement('button');
+  wanderBtn.className = 'btn'; wanderBtn.textContent = 'WANDER';
+  wanderBtn.addEventListener('click', () => {
+    m.wanderMode = !m.wanderMode;
+    wanderBtn.classList.toggle('on', m.wanderMode);
+    driftWrap.style.display = m.wanderMode ? '' : 'none';
+  });
+  btnRow.appendChild(onBtn); btnRow.appendChild(wanderBtn);
+  d.appendChild(btnRow);
+
+  // Knobs
+  const knobRow = document.createElement('div');
+  knobRow.style.cssText = 'display:flex;gap:4px;margin-top:4px;';
+  knobRow.appendChild(mkKnob({id:'affect-strength', label:'STRNGTH', min:0, max:1, val:0.5, sz:'sm',
+    onChange: v => { m.strength = v; if(m.active) applyAffect(m.x, m.y); }}));
+  const driftWrap = document.createElement('div');
+  driftWrap.style.display = 'none';
+  driftWrap.appendChild(mkKnob({id:'affect-drift', label:'DRIFT', min:0.1, max:2, val:0.3, sz:'sm',
+    onChange: v => { m.driftSpeed = v; }}));
+  knobRow.appendChild(driftWrap);
+  d.appendChild(knobRow);
+
+  return panel('affect', 'AFFECT', d);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPECTRUM + LISSAJOUS visualization loops
+// ═══════════════════════════════════════════════════════════════════════════════
+function startSpectrum() {
+  const cv = document.getElementById('spectrum-cv'); if (!cv) return;
+  const c = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const specAnalyser = ctx.createAnalyser();
+  specAnalyser.fftSize = 2048; specAnalyser.smoothingTimeConstant = 0.75;
+  analyserNode.connect(specAnalyser);
+  const freqBuf = new Float32Array(specAnalyser.frequencyBinCount);
+  const grad = c.createLinearGradient(0,H,0,0);
+  grad.addColorStop(0, '#00ffff'); grad.addColorStop(0.5,'#8800ff'); grad.addColorStop(1,'#ff00ff');
+  function draw() {
+    requestAnimationFrame(draw);
+    specAnalyser.getFloatFrequencyData(freqBuf);
+    c.fillStyle = '#04040e'; c.fillRect(0,0,W,H);
+    const bins = freqBuf.length;
+    const nyq = ctx.sampleRate / 2;
+    const logMin = Math.log10(20), logMax = Math.log10(nyq);
+    const barW = Math.ceil(W / 80);
+    for (let i = 0; i < 80; i++) {
+      const f0 = Math.pow(10, logMin + (i/80)*(logMax-logMin));
+      const f1 = Math.pow(10, logMin + ((i+1)/80)*(logMax-logMin));
+      const b0 = Math.round(f0/nyq * bins), b1 = Math.round(f1/nyq * bins);
+      let maxDb = -160;
+      for (let b=Math.max(0,b0); b<Math.min(bins,b1); b++) maxDb = Math.max(maxDb, freqBuf[b]);
+      const norm = Math.max(0, (maxDb + 100) / 80);
+      const barH = norm * H;
+      c.fillStyle = grad;
+      c.fillRect(i * W/80, H - barH, barW-1, barH);
+    }
+    // freq labels
+    c.fillStyle = '#ffffff22'; c.font = '6px monospace';
+    [[100,'100'],[1000,'1k'],[10000,'10k']].forEach(([f,lbl]) => {
+      const x = (Math.log10(f)-logMin)/(logMax-logMin)*W;
+      c.fillText(lbl, x-4, H-2);
+    });
+  }
+  draw();
+}
+
+function startLissajous() {
+  const cv = document.getElementById('lissajous-cv'); if (!cv) return;
+  const c  = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  // Two analyser nodes for X and Y inputs
+  const axNode = ctx.createAnalyser(); axNode.fftSize = 1024;
+  const ayNode = ctx.createAnalyser(); ayNode.fftSize = 1024;
+  const xSilent = ctx.createGain(); xSilent.gain.value = 0;
+  const ySilent = ctx.createGain(); ySilent.gain.value = 0;
+  axNode.connect(xSilent); xSilent.connect(ctx.destination);
+  ayNode.connect(ySilent); ySilent.connect(ctx.destination);
+  mods.lissajous = { xNode: axNode, yNode: ayNode };
+  // Also hook to main analyser so X at least shows something without a patch
+  analyserNode.connect(axNode);
+  const xBuf = new Float32Array(axNode.frequencyBinCount);
+  const yBuf = new Float32Array(ayNode.frequencyBinCount);
+  const HISTORY = 512;
+  function draw() {
+    requestAnimationFrame(draw);
+    axNode.getFloatTimeDomainData(xBuf);
+    ayNode.getFloatTimeDomainData(yBuf);
+    // Phosphor fade
+    c.fillStyle = 'rgba(4,4,14,0.25)'; c.fillRect(0,0,W,H);
+    c.strokeStyle = '#ff00ff'; c.lineWidth = 1.2;
+    c.shadowColor = '#ff00ff'; c.shadowBlur = 6;
+    c.beginPath();
+    const n = Math.min(xBuf.length, yBuf.length, HISTORY);
+    for (let i=0; i<n; i++) {
+      const px = (xBuf[i]+1)*0.5*W;
+      const py = (1-(yBuf[i]+1)*0.5)*H;
+      i===0 ? c.moveTo(px,py) : c.lineTo(px,py);
+    }
+    c.stroke(); c.shadowBlur=0;
+  }
+  draw();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
@@ -5720,6 +6253,7 @@ async function init() {
   makeChorus(); makePanner(); makeTape(); makePhaser(); makeWavefolder();
   makeChord(); makeQuantizer(); makeMicrocosm();
   makeArp(); makeSidechain(); makeSampler(); makePadSampler(); makeStutter(); makeMicInput(); makeMicLooper();
+  makeCrusher(); makeEuclid(); makeAffect();
   wireDefault();
 
   // Build UI
@@ -5755,6 +6289,11 @@ async function init() {
   rack.appendChild(buildMicLooperPanel());
   rack.appendChild(buildSeqPanel());
   rack.appendChild(buildScopePanel());
+  rack.appendChild(buildSpectrumPanel());
+  rack.appendChild(buildLissajousPanel());
+  rack.appendChild(buildCrusherPanel());
+  rack.appendChild(buildEuclidPanel());
+  rack.appendChild(buildAffectPanel());
 
   buildPPRegistry();
   // Initialize multi-instance tracking
@@ -5768,6 +6307,9 @@ async function init() {
   startLFOPreview('lfo-cv', ()=>mods.lfo);
   startLFOPreview('lfo2-cv', ()=>mods.lfo2);
   startVCFPreview();
+  startSpectrum();
+  startLissajous();
+  startAffectLoop();
   drawEnv();
 
   // Auto-start sequencer
