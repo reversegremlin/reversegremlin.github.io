@@ -10,6 +10,27 @@
 html{overflow-y:scroll;}
 body{background:#060610;font-family:'Courier New',monospace;color:#ccc;min-height:100vh;overflow-x:auto;padding-bottom:100px;}
 
+/* ── Font-size scale (override with body.a11y-large) ── */
+:root{
+  --fs-xs:7px;   /* knob labels, patch rows, micro labels */
+  --fs-sm:8px;   /* loop btns, oct btns, toolbar labels  */
+  --fs-md:9px;   /* main btns, module labels, wave btns  */
+  --fs-lg:10px;  /* toolbar btns, picker title           */
+  --ls-mod:4px;  /* module-label letter-spacing          */
+}
+body.a11y-large{
+  --fs-xs:9px; --fs-sm:10px; --fs-md:12px; --fs-lg:14px; --ls-mod:2px;
+}
+/* Catch inline font-size:7px / 8px labels inside modules */
+body.a11y-large .module [style*="font-size:7px"],
+body.a11y-large .module [style*="font-size: 7px"]{font-size:var(--fs-xs) !important;}
+body.a11y-large .module [style*="font-size:8px"],
+body.a11y-large .module [style*="font-size: 8px"]{font-size:var(--fs-sm) !important;}
+body.a11y-large #loopstation [style*="font-size:7px"]{font-size:var(--fs-xs) !important;}
+body.a11y-large #loopstation [style*="font-size:8px"]{font-size:var(--fs-sm) !important;}
+body.a11y-large #toolbar [style*="font-size:7px"]{font-size:var(--fs-xs) !important;}
+body.a11y-large #toolbar [style*="font-size:8px"]{font-size:var(--fs-sm) !important;}
+
 /* ── Start Screen ── */
 #start{position:fixed;inset:0;background:#060610;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;cursor:pointer;gap:24px;}
 #start p{color:#70dbdb;letter-spacing:6px;font-size:13px;text-shadow:0 0 10px #70dbdb44;animation:blink-slow 2s infinite;}
@@ -32,7 +53,7 @@ body{background:#060610;font-family:'Courier New',monospace;color:#ccc;min-heigh
 /* ── Module panel ── */
 .module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:10px 8px 8px;position:relative;min-width:110px;box-shadow:0 0 12px rgba(0,0,0,.6);}
 .module:hover{border-color:#e066ff33;}
-.module-label{text-align:center;font-size:9px;font-weight:bold;letter-spacing:4px;color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e066ff22;}
+.module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e066ff22;}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
 .module.bypassed .module-label{color:#666;}
 /* ── Edit mode ── */
@@ -51,14 +72,14 @@ body.edit-mode .module-drag-handle{display:inline;}
 .module-drop-ph::after{content:'DROP HERE';font-size:7px;letter-spacing:2px;color:#ffaa0077;font-family:'Courier New',monospace;pointer-events:none;}
 /* ── Module picker ── */
 #mod-picker{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#04040e;border:1px solid #ff00ff44;border-radius:4px;padding:16px;z-index:900;min-width:280px;box-shadow:0 8px 32px #000a;}
-#mod-picker h3{color:#e066ff;font-size:10px;letter-spacing:4px;margin:0 0 10px;text-align:center;}
+#mod-picker h3{color:#e066ff;font-size:var(--fs-lg);letter-spacing:4px;margin:0 0 10px;text-align:center;}
 #mod-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;}
-#mod-picker .mpick-btn{background:#0a0a1e;border:1px solid #333;color:#aaa;font-family:"Courier New",monospace;font-size:9px;letter-spacing:1px;padding:7px 4px;cursor:pointer;border-radius:2px;text-align:center;}
+#mod-picker .mpick-btn{background:#0a0a1e;border:1px solid #333;color:#aaa;font-family:"Courier New",monospace;font-size:var(--fs-md);letter-spacing:1px;padding:7px 4px;cursor:pointer;border-radius:2px;text-align:center;}
 #mod-picker .mpick-btn:hover{border-color:#ff00ff88;color:#e066ff;background:#0d0d22;}
 #mod-picker-close{float:right;margin-top:-28px;}
 /* ── Context menu ── */
 #ctx-menu{display:none;position:fixed;background:#04040e;border:1px solid #ff00ff44;border-radius:3px;z-index:950;min-width:120px;box-shadow:0 4px 16px #000a;padding:3px 0;}
-#ctx-menu button{display:block;width:100%;background:none;border:none;color:#aaa;font-family:"Courier New",monospace;font-size:9px;letter-spacing:1px;padding:6px 14px;text-align:left;cursor:pointer;}
+#ctx-menu button{display:block;width:100%;background:none;border:none;color:#aaa;font-family:"Courier New",monospace;font-size:var(--fs-md);letter-spacing:1px;padding:6px 14px;text-align:left;cursor:pointer;}
 #ctx-menu button:hover{background:#ff00ff22;color:#e066ff;}
 #ctx-menu hr{border:none;border-top:1px solid #ff00ff22;margin:2px 0;}
 .screw{position:absolute;width:7px;height:7px;background:#1a1a2e;border:1px solid #444;border-radius:50%;display:flex;align-items:center;justify-content:center;}
@@ -74,17 +95,17 @@ body.edit-mode .module-drag-handle{display:inline;}
 .knob-dot{position:absolute;width:3px;height:38%;background:#ff00ff;left:calc(50% - 1.5px);top:8%;transform-origin:50% 100%;border-radius:2px;box-shadow:0 0 6px #ff00ff;pointer-events:none;}
 .knob.lg .knob-dot{height:38%;}
 .knob.sm .knob-dot{width:2px;background:#00ffff;box-shadow:0 0 4px #00ffff;}
-.knob-lbl{font-size:7px;color:#888;letter-spacing:1px;margin-top:2px;text-align:center;}
-.knob-val{font-size:7px;color:#00ffff;text-shadow:0 0 6px #00ffff;letter-spacing:0;margin-top:0px;text-align:center;min-height:8px;}
+.knob-lbl{font-size:var(--fs-xs);color:#888;letter-spacing:1px;margin-top:2px;text-align:center;}
+.knob-val{font-size:var(--fs-xs);color:#00ffff;text-shadow:0 0 6px #00ffff;letter-spacing:0;margin-top:0px;text-align:center;min-height:8px;}
 
 /* ── Wave / type buttons ── */
 .wbtns{display:flex;gap:2px;margin:4px 0;}
-.wbtn{background:#0f0f22;border:1px solid #333;color:#666;font-size:9px;padding:2px 4px;cursor:pointer;border-radius:2px;font-family:inherit;}
+.wbtn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-md);padding:2px 4px;cursor:pointer;border-radius:2px;font-family:inherit;}
 .wbtn:hover{border-color:#00ffff55;color:#00ffff;}
 .wbtn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 6px #ff00ff44;}
 
 /* ── Patch points ── */
-.pp-row{display:flex;align-items:center;gap:4px;margin:2px 0;font-size:7px;color:#666;}
+.pp-row{display:flex;align-items:center;gap:4px;margin:2px 0;font-size:var(--fs-xs);color:#666;}
 .pp{width:12px;height:12px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.5);transition:transform .1s,box-shadow .1s;flex-shrink:0;}
 .pp:hover{transform:scale(1.4);}
 .pp.ao{background:#ff6600;box-shadow:0 0 6px #ff6600;}
@@ -109,7 +130,7 @@ canvas{display:block;border-radius:3px;}
 .step-tog.on{background:#ff00ff;box-shadow:0 0 4px #ff00ff;}
 
 /* ── Transport / buttons ── */
-.btn{background:#0d0d22;border:1px solid #444;color:#aaa;padding:4px 8px;cursor:pointer;font-size:9px;border-radius:2px;font-family:inherit;letter-spacing:1px;}
+.btn{background:#0d0d22;border:1px solid #444;color:#aaa;padding:4px 8px;cursor:pointer;font-size:var(--fs-md);border-radius:2px;font-family:inherit;letter-spacing:1px;}
 .btn:hover{border-color:#ff00ff;color:#ff00ff;}
 .btn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 8px #ff00ff44;}
 .btn.rec-live{background:#cc000033;border-color:#ff0000;color:#ff4444;animation:recblink 1s infinite;}
@@ -118,7 +139,7 @@ canvas{display:block;border-radius:3px;}
 
 /* ── Oct selector ── */
 .oct-row{display:flex;gap:2px;margin:4px 0;}
-.oct-btn{background:#0f0f22;border:1px solid #333;color:#666;font-size:8px;padding:1px 3px;cursor:pointer;border-radius:2px;font-family:inherit;}
+.oct-btn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-sm);padding:1px 3px;cursor:pointer;border-radius:2px;font-family:inherit;}
 .oct-btn.on{background:#00ffff22;border-color:#00ffff;color:#00ffff;}
 
 /* ── Divider ── */
@@ -126,56 +147,56 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
 
 /* ── Toolbar ── */
 #toolbar{display:flex;gap:6px;padding:10px 16px;background:#04040e;border-top:1px solid #ff00ff33;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;}
-#toolbar .btn{font-size:10px;padding:5px 12px;}
-#status{color:#444;font-size:9px;margin-left:auto;letter-spacing:2px;}
+#toolbar .btn{font-size:var(--fs-lg);padding:5px 12px;}
+#status{color:#444;font-size:var(--fs-md);margin-left:auto;letter-spacing:2px;}
 
 /* ── SVG cables ── */
 #cables{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;}
 
 /* ── Tooltip ── */
-#tip{position:fixed;background:#040410;color:#00ffff;border:1px solid #00ffff44;padding:6px 10px;font-size:9px;border-radius:3px;pointer-events:none;z-index:500;display:none;max-width:290px;line-height:1.6;box-shadow:0 0 16px #00ffff22;}
+#tip{position:fixed;background:#040410;color:#00ffff;border:1px solid #00ffff44;padding:6px 10px;font-size:var(--fs-md);border-radius:3px;pointer-events:none;z-index:500;display:none;max-width:320px;line-height:1.6;box-shadow:0 0 16px #00ffff22;}
 
 /* ── Preset select ── */
 .tb-sep{flex-basis:100%;height:1px;background:#ff00ff11;margin:2px -6px;}
-.tb-lbl{font-size:8px;color:#555;letter-spacing:2px;align-self:center;padding-left:4px;}
-.preset-sel{background:#0d0d22;border:1px solid #444;color:#aaa;padding:4px 6px;font-size:9px;border-radius:2px;font-family:'Courier New',monospace;cursor:pointer;max-width:150px;}
+.tb-lbl{font-size:var(--fs-sm);color:#555;letter-spacing:2px;align-self:center;padding-left:4px;}
+.preset-sel{background:#0d0d22;border:1px solid #444;color:#aaa;padding:4px 6px;font-size:var(--fs-md);border-radius:2px;font-family:'Courier New',monospace;cursor:pointer;max-width:150px;}
 .preset-sel:focus{border-color:#ff00ff;outline:none;}
 
 /* ── MIDI indicator ── */
-#midi-ind{font-size:8px;padding:3px 8px;border:1px solid #333;color:#444;letter-spacing:1px;border-radius:2px;align-self:center;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
+#midi-ind{font-size:var(--fs-sm);padding:3px 8px;border:1px solid #333;color:#444;letter-spacing:1px;border-radius:2px;align-self:center;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
 #midi-ind.on{border-color:#00ffff55;color:#00ffff;text-shadow:0 0 6px #00ffff88;}
 
 /* ── Sampler ── */
 .sampler-wave{border:1px solid #ff00ff22;background:#04040e;border-radius:2px;display:block;cursor:pointer;}
-.sampler-fname{font-size:7px;color:#666;letter-spacing:1px;margin:2px 0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;}
+.sampler-fname{font-size:var(--fs-xs);color:#666;letter-spacing:1px;margin:2px 0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;}
 
 /* ── Loop Station ── */
 #loopstation{padding:8px 16px;background:#04040e;border-top:1px solid #ff00ff22;border-bottom:1px solid #ff00ff22;}
-.ls-title{font-size:8px;letter-spacing:4px;color:#ff00ff;text-shadow:0 0 8px #ff00ff;margin-bottom:6px;}
+.ls-title{font-size:var(--fs-sm);letter-spacing:3px;color:#ff00ff;text-shadow:0 0 8px #ff00ff;margin-bottom:6px;}
 .ls-tracks{display:flex;gap:8px;flex-wrap:wrap;}
 .ls-track{background:#080818;border:1px solid #ff00ff22;border-radius:4px;padding:8px;display:flex;align-items:center;gap:8px;min-width:220px;flex:1;}
 .ls-track.armed{border-color:#ff0000;box-shadow:0 0 8px #ff000044;}
 .ls-track.recording{border-color:#ff0000;box-shadow:0 0 12px #ff000066;animation:recblink 1s infinite;}
 .ls-track.has-loop{border-color:#00ffff44;}
-.ls-track-num{font-size:9px;color:#555;letter-spacing:2px;width:14px;flex-shrink:0;}
+.ls-track-num{font-size:var(--fs-md);color:#555;letter-spacing:2px;width:14px;flex-shrink:0;}
 .ls-wave{flex:1;height:36px;border:1px solid #ffffff11;border-radius:2px;background:#020208;}
 .ls-btns{display:flex;gap:3px;flex-direction:column;}
 .ls-btns-row{display:flex;gap:3px;}
-.ls-btn{background:#0d0d22;border:1px solid #333;color:#666;padding:2px 6px;cursor:pointer;font-size:8px;border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;white-space:nowrap;}
+.ls-btn{background:#0d0d22;border:1px solid #333;color:#666;padding:2px 6px;cursor:pointer;font-size:var(--fs-sm);border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;white-space:nowrap;}
 .ls-btn:hover{border-color:#ff00ff;color:#ff00ff;}
 .ls-btn.rec{border-color:#ff0000;color:#ff4444;}
 .ls-btn.rec:hover,.ls-btn.rec.on{background:#ff000022;border-color:#ff0000;color:#ff6666;box-shadow:0 0 6px #ff000044;}
 .ls-btn.play.on{background:#00ffff22;border-color:#00ffff;color:#00ffff;box-shadow:0 0 6px #00ffff44;}
 .ls-btn.dub.on{background:#ffff0022;border-color:#ffff00;color:#ffff00;}
-.ls-lbl{font-size:7px;color:#444;letter-spacing:2px;width:14px;flex-shrink:0;text-align:center;}
+.ls-lbl{font-size:var(--fs-xs);color:#444;letter-spacing:2px;width:14px;flex-shrink:0;text-align:center;}
 
 /* ── Signal Flow Panel ── */
 #flow-panel{position:fixed;top:70px;right:0;width:250px;background:#040410;border:1px solid #ff00ff33;border-right:none;border-radius:4px 0 0 4px;z-index:200;transform:translateX(100%);transition:transform .3s;box-shadow:-4px 0 16px #ff00ff0a;}
 #flow-panel.open{transform:translateX(0);}
-#flow-hdr{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#07071a;border-bottom:1px solid #ff00ff22;font-size:8px;letter-spacing:3px;color:#ff00ff;}
+#flow-hdr{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#07071a;border-bottom:1px solid #ff00ff22;font-size:var(--fs-sm);letter-spacing:3px;color:#ff00ff;}
 #flow-body{padding:8px;max-height:360px;overflow-y:auto;}
 .flow-chain{display:flex;align-items:center;gap:3px;margin:3px 0;flex-wrap:wrap;}
-.flow-node{background:#0a0a1e;border:1px solid #333;border-radius:2px;padding:2px 5px;font-size:7px;white-space:nowrap;}
+.flow-node{background:#0a0a1e;border:1px solid #333;border-radius:2px;padding:2px 5px;font-size:var(--fs-xs);white-space:nowrap;}
 .flow-arr{color:#444;font-size:9px;animation:farrow 2s infinite;}
 @keyframes farrow{0%,100%{opacity:.2;}50%{opacity:1;}}
 @keyframes cable-flow{from{stroke-dashoffset:18;}to{stroke-dashoffset:0;}}
@@ -183,17 +204,17 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
 /* ── Tutorial Panel ── */
 #tut-panel{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(calc(100% + 80px));width:460px;max-width:96vw;max-height:calc(100vh - 90px);display:flex;flex-direction:column;background:#04040f;border:1px solid #00ffff33;border-radius:4px;z-index:250;box-shadow:0 0 30px #00ffff11;transition:transform .35s;}
 #tut-panel.open{transform:translateX(-50%) translateY(0);}
-#tut-hdr{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#06061a;border-bottom:1px solid #00ffff22;font-size:8px;letter-spacing:3px;color:#00ffff;}
+#tut-hdr{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#06061a;border-bottom:1px solid #00ffff22;font-size:var(--fs-sm);letter-spacing:3px;color:#00ffff;}
 #tut-body{padding:12px;overflow-y:auto;flex:1 1 auto;min-height:0;}
-.tut-pick{display:block;width:100%;text-align:left;background:#09091e;border:1px solid #00ffff1a;color:#777;padding:8px 10px;margin:4px 0;cursor:pointer;font-size:8px;border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;transition:all .2s;}
+.tut-pick{display:block;width:100%;text-align:left;background:#09091e;border:1px solid #00ffff1a;color:#777;padding:8px 10px;margin:4px 0;cursor:pointer;font-size:var(--fs-sm);border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;transition:all .2s;}
 .tut-pick:hover{border-color:#00ffff55;color:#00ffff;background:#0c0c26;}
-#tut-step-title{font-size:10px;color:#00ffff;letter-spacing:2px;margin-bottom:8px;}
-#tut-step-text{font-size:8px;color:#999;line-height:1.9;letter-spacing:.4px;margin-bottom:12px;}
-#tut-prog{font-size:7px;color:#333;letter-spacing:2px;margin-left:auto;}
+#tut-step-title{font-size:var(--fs-lg);color:#00ffff;letter-spacing:2px;margin-bottom:8px;}
+#tut-step-text{font-size:var(--fs-sm);color:#999;line-height:1.9;letter-spacing:.4px;margin-bottom:12px;}
+#tut-prog{font-size:var(--fs-xs);color:#333;letter-spacing:2px;margin-left:auto;}
 .tut-highlight{border-color:#00ffff !important;box-shadow:0 0 18px #00ffff33,inset 0 0 8px #00ffff08 !important;z-index:10;position:relative;}
 
 /* ── Notes ── */
-.notes-area{flex:1;min-height:30px;max-height:60px;resize:vertical;background:#050510;border:1px solid #ff00ff14;color:#666;font-family:'Courier New',monospace;font-size:8px;padding:4px 8px;border-radius:2px;outline:none;letter-spacing:.5px;}
+.notes-area{flex:1;min-height:30px;max-height:60px;resize:vertical;background:#050510;border:1px solid #ff00ff14;color:#666;font-family:'Courier New',monospace;font-size:var(--fs-sm);padding:4px 8px;border-radius:2px;outline:none;letter-spacing:.5px;}
 .notes-area:focus{border-color:#ff00ff33;color:#999;}
 /* ── Scenes ── */
 .scene-slot.filled{border-color:#ff00ff66;color:#ff00ff;box-shadow:0 0 6px #ff00ff44;}
@@ -356,6 +377,7 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
   <button class="btn" id="add-mod-btn">⊕ MODULE</button>
   <button class="btn" id="learn-btn">▶ LEARN</button>
   <button class="btn" id="help-btn">? HELP</button>
+  <button class="btn" id="a11y-btn" title="Toggle large text">A+</button>
   <span id="status">nm² modsynth v1.0.1</span>
   <div class="tb-sep"></div>
   <span class="tb-lbl">PRESETS:</span>
@@ -680,6 +702,7 @@ const TIPS = {
   'mod-micinput': 'MIC INPUT — captures live microphone audio as a patchable source. Click ARM to request microphone access, then patch MIC OUT into any module: VCF for filtered voice, Microcosm for granular vocal clouds, Loop Station input for live looping. The VU meter shows input level. Classic technique: voice through Microcosm SHIM + Reverb = instant ambient vocal texture.',
   'mic-out':      'Mic Audio Out — live microphone signal. Patch into VCF IN, MICROCOSM IN, or Loop Station audio input. Same as any audio out patch point — the whole effects chain is available to your mic.',
   'mic-level':    'Mic Level — input gain before the patch point (0.1×–4×). Boost quiet sources or tame loud ones. The VU meter shows post-gain level.',
+  'mod-miclooper': 'MIC LOOP — records your microphone directly into a looping buffer. ARM the mic, hit REC, sing or play, hit REC again to commit. The loop plays back instantly and can be routed through any effect via the OUT patch point. Independent of the Loop Station — this captures mic audio only, not the full master mix.',
   'mod-stutter':  'STUTTER — rhythmic slice-and-repeat effect. When ACTIVE, captures a short audio slice (SLICE length) and loops it, creating the classic DJ stutter / glitch effect. REPEAT controls how long the stutter sustains before the live signal bleeds back through. Independent of Microcosm — stutter is predictable and rhythmic; Microcosm GLTCH is organic. Patch anything into STUTTER IN; STUTTER OUT goes to your effects chain or Loop Station.',
   'stutter-ai':   'Stutter Audio In — patch any audio source: VCA OUT, Sampler OUT, Pad Sampler OUT, or Loop output. The stutter captures and loops whatever signal enters here.',
   'stutter-ao':   'Stutter Audio Out — processed signal (sliced + looped + MIX blend). Patch to Reverb IN, Delay IN, or Loop Station input to layer the stutter into your performance.',
@@ -1718,6 +1741,8 @@ function wireDefault() {
   mods.padsampler.outlet.connect(masterOut);
   // Stutter → master (send effect: wet-only outlet, patch stutter-ai to activate)
   mods.stutter.outlet.connect(masterOut);
+  // Mic Looper → master (always audible; patch micloop-out for effects routing)
+  mods.miclooper.outlet.connect(masterOut);
   // Mark as wired
   audioConns.add('vco-out→vcf-in');
   audioConns.add('vcf-out→vca-in');
@@ -1782,6 +1807,7 @@ function buildPPRegistry() {
   regPP('mic-out',     ()=>mods.mic.outlet);
   regPP('stutter-ai',  ()=>mods.stutter.inlet);
   regPP('stutter-ao',  ()=>mods.stutter.outlet);
+  regPP('micloop-out', ()=>mods.miclooper.outlet);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3558,6 +3584,7 @@ function getConfig() {
     microcosm:{blend:mods.microcosm.blendVal,grainSz:mods.microcosm.grainSzVal,scatter:mods.microcosm.scatterVal,pitch:mods.microcosm.pitchVal,density:mods.microcosm.densityVal,mode:mods.microcosm.mode},
     stutter: {slice:mods.stutter.sliceVal,repeat:mods.stutter.repeatVal,mix:mods.stutter.mixVal,active:mods.stutter.activeVal},
     mic:     {level:mods.mic.levelVal},
+    miclooper: {levelIn:mods.miclooper.levelInVal, levelOut:mods.miclooper.levelOutVal},
     cables:cables.map(c=>({fromId:c.fromId,toId:c.toId,color:c.color})),
     rackOrder: rackOrder.slice(),
     extraModules: DUPLICATABLE_TYPES.flatMap(type => (moduleInstances[type] || []).filter(id => id > 1).map(id => {
@@ -3653,6 +3680,7 @@ function applyConfig(cfg) {
     if(stutterBtn){ stutterBtn.textContent=cfg.stutter.active?'ACTIVE':'STUTTER'; stutterBtn.classList.toggle('on',!!cfg.stutter.active); }
   }
   if(cfg.mic){ mods.mic.setLevel(cfg.mic.level); sk('mic-level',cfg.mic.level); }
+  if(cfg.miclooper){ mods.miclooper.setLevelIn(cfg.miclooper.levelIn||1); sk('micloop-level',cfg.miclooper.levelIn||1); mods.miclooper.setLevelOut(cfg.miclooper.levelOut||0.8); sk('micloop-vol',cfg.miclooper.levelOut||0.8); }
   // Restore extra module instances
   if (cfg.extraModules && cfg.extraModules.length) {
     cfg.extraModules.forEach(({ type, instanceId, vals }) => {
@@ -5130,6 +5158,24 @@ PATCH IDEAS (NEW MODULES):
   Loop export (WAV) → drag back into PAD SMPLR = stem looper workflow`);
 });
 
+// ── Accessibility: font-size toggle ────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('a11y-btn');
+  const KEY = 'nm2-a11y-large';
+  function apply(large) {
+    document.body.classList.toggle('a11y-large', large);
+    btn.classList.toggle('on', large);
+    btn.textContent = large ? 'A−' : 'A+';
+    btn.title = large ? 'Switch to normal text size' : 'Toggle large text';
+  }
+  apply(localStorage.getItem(KEY) === '1');
+  btn.addEventListener('click', () => {
+    const large = !document.body.classList.contains('a11y-large');
+    apply(large);
+    localStorage.setItem(KEY, large ? '1' : '0');
+  });
+})();
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUDIO UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5194,6 +5240,240 @@ function buildStutterPanel() {
   d.appendChild(mkPP('stutter-ai','ai','IN', 'in'));
   d.appendChild(mkPP('stutter-ao','ao','OUT','out'));
   return panel('stutter','STUTTER',d);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MIC LOOPER
+// ═══════════════════════════════════════════════════════════════════════════════
+function makeMicLooper() {
+  const gainIn   = ctx.createGain(); gainIn.gain.value  = 1.0;
+  const gainOut  = ctx.createGain(); gainOut.gain.value = 0.8;
+  const outlet   = ctx.createGain(); outlet.gain.value  = 1.0;
+  const analyser = ctx.createAnalyser(); analyser.fftSize = 256;
+  gainIn.connect(analyser);   // mic monitoring
+  gainOut.connect(analyser);  // playback monitoring
+  gainOut.connect(outlet);
+
+  const m = {
+    gainIn, gainOut, outlet, analyser,
+    stream: null, src: null, active: false,
+    buffer: null, playingSrc: null,
+    playing: false, recording: false, looping: true,
+    rec: null, recChunks: [], _recDest: null,
+    levelInVal: 1.0, levelOutVal: 0.8,
+    onLoopReady: null,
+  };
+
+  m.arm = async () => {
+    if (m.active) {
+      if (m.recording) m.stopRec();
+      m.stop();
+      if (m.src) { m.src.disconnect(); m.src = null; }
+      if (m.stream && !(mods.mic && mods.mic.stream === m.stream)) {
+        m.stream.getTracks().forEach(t => t.stop());
+      }
+      m.stream = null; m.active = false; return false;
+    }
+    try {
+      if (mods.mic && mods.mic.active && mods.mic.stream) {
+        m.stream = mods.mic.stream;
+      } else {
+        m.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      }
+      m.src = ctx.createMediaStreamSource(m.stream);
+      m.src.connect(gainIn);
+      m.active = true; return true;
+    } catch(e) { console.warn('MicLooper: access denied', e); return false; }
+  };
+
+  m.startRec = () => {
+    if (!m.active || m.recording) return false;
+    m.recChunks = [];
+    const dest = ctx.createMediaStreamDestination();
+    gainIn.connect(dest);
+    m._recDest = dest;
+    const mtype = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    m.rec = new MediaRecorder(dest.stream, { mimeType: mtype });
+    m.rec.ondataavailable = e => { if (e.data.size > 0) m.recChunks.push(e.data); };
+    m.rec.onstop = async () => {
+      try { gainIn.disconnect(dest); } catch(e) {}
+      const blob = new Blob(m.recChunks, { type: mtype });
+      try {
+        m.buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
+        m.recording = false;
+        if (m.looping) m.play();
+        if (m.onLoopReady) m.onLoopReady();
+      } catch(e) { console.warn('MicLooper decode error', e); m.recording = false; }
+    };
+    m.rec.start();
+    m.recording = true;
+    return true;
+  };
+
+  m.stopRec = () => {
+    if (!m.rec || m.rec.state !== 'recording') return;
+    m.rec.stop();
+  };
+
+  m.play = () => {
+    if (!m.buffer) return;
+    m.stop();
+    const src = ctx.createBufferSource();
+    src.buffer = m.buffer; src.loop = m.looping;
+    src.connect(gainOut); src.start();
+    m.playingSrc = src; m.playing = true;
+    src.onended = () => { if (m.playingSrc === src) { m.playing = false; m.playingSrc = null; } };
+  };
+
+  m.stop = () => {
+    if (m.playingSrc) { try { m.playingSrc.stop(); } catch(e) {} m.playingSrc = null; }
+    m.playing = false;
+  };
+
+  m.clear = () => { m.stop(); m.buffer = null; };
+
+  m.setLevelIn  = v => { m.levelInVal  = v; gainIn.gain.setTargetAtTime(v, ctx.currentTime, 0.02); };
+  m.setLevelOut = v => { m.levelOutVal = v; gainOut.gain.setTargetAtTime(v, ctx.currentTime, 0.02); };
+
+  mods.miclooper = m; return m;
+}
+
+function buildMicLooperPanel() {
+  const d = document.createElement('div'); d.style.minWidth = '110px';
+
+  // VU meter (shows mic input + playback level)
+  const vu = document.createElement('canvas');
+  vu.width = 94; vu.height = 12;
+  vu.style.cssText = 'display:block;margin-bottom:3px;border:1px solid #ff00ff22;background:#04040e;border-radius:2px;';
+  const vCtx = vu.getContext('2d');
+  const abuf = new Float32Array(256);
+  function drawVU() {
+    requestAnimationFrame(drawVU);
+    vCtx.fillStyle = '#04040e'; vCtx.fillRect(0, 0, 94, 12);
+    if (!mods.miclooper.active && !mods.miclooper.playing) return;
+    mods.miclooper.analyser.getFloatTimeDomainData(abuf);
+    let rms = 0; for (const v of abuf) rms += v * v; rms = Math.sqrt(rms / abuf.length);
+    const w = Math.min(94, rms * 380);
+    const g = vCtx.createLinearGradient(0, 0, 94, 0);
+    g.addColorStop(0, '#00ff88'); g.addColorStop(0.6, '#ffff00'); g.addColorStop(1, '#ff4444');
+    vCtx.fillStyle = g; vCtx.fillRect(0, 1, w, 10);
+  }
+  drawVU();
+
+  // Waveform display (filled in once loop is recorded)
+  const wave = document.createElement('canvas');
+  wave.width = 94; wave.height = 30;
+  wave.style.cssText = 'display:block;margin-bottom:4px;border:1px solid #ff00ff22;background:#04040e;border-radius:2px;';
+  const wCtx = wave.getContext('2d');
+  function drawWave() {
+    wCtx.fillStyle = '#04040e'; wCtx.fillRect(0, 0, 94, 30);
+    if (!mods.miclooper.buffer) {
+      wCtx.fillStyle = '#333'; wCtx.font = '6px Courier New';
+      wCtx.textAlign = 'center'; wCtx.fillText('no loop', 47, 17);
+      return;
+    }
+    const data = mods.miclooper.buffer.getChannelData(0);
+    const step = Math.max(1, Math.ceil(data.length / 94));
+    wCtx.strokeStyle = '#ff00ff88'; wCtx.lineWidth = 1; wCtx.beginPath();
+    for (let x = 0; x < 94; x++) {
+      let min = 1, max = -1;
+      for (let j = 0; j < step; j++) {
+        const s = data[x * step + j] || 0;
+        if (s < min) min = s; if (s > max) max = s;
+      }
+      const y1 = (1 - max) / 2 * 30, y2 = (1 - min) / 2 * 30;
+      if (x === 0) wCtx.moveTo(x, Math.max(y1, 1));
+      else { wCtx.lineTo(x, Math.max(y1, 1)); wCtx.lineTo(x, Math.min(y2, 29)); }
+    }
+    wCtx.stroke();
+  }
+  drawWave();
+
+  // ARM button
+  const armBtn = document.createElement('button');
+  armBtn.className = 'btn'; armBtn.style.cssText = 'width:100%;margin-bottom:3px;font-size:8px;';
+  armBtn.textContent = 'ARM MIC';
+  armBtn.addEventListener('click', async () => {
+    await mods.miclooper.arm();
+    armBtn.classList.toggle('on', mods.miclooper.active);
+    armBtn.textContent = mods.miclooper.active ? '⦿ LIVE' : 'ARM MIC';
+    if (!mods.miclooper.active && mods.miclooper.recording) {
+      recBtn.classList.remove('rec-live'); recBtn.textContent = '● REC';
+    }
+  });
+
+  // Transport row: REC / PLAY / STOP
+  const txRow = document.createElement('div'); txRow.style.cssText = 'display:flex;gap:2px;margin-bottom:3px;';
+
+  const recBtn = document.createElement('button');
+  recBtn.className = 'btn'; recBtn.style.cssText = 'flex:1.5;font-size:9px;';
+  recBtn.textContent = '● REC';
+  recBtn.addEventListener('click', () => {
+    if (!ctx) { setStatus('Power on first.'); return; }
+    if (!mods.miclooper.active) { setStatus('ARM MIC LOOP first.'); return; }
+    if (mods.miclooper.recording) {
+      mods.miclooper.stopRec();
+      recBtn.classList.remove('rec-live'); recBtn.textContent = '● REC';
+    } else {
+      if (mods.miclooper.startRec()) {
+        recBtn.classList.add('rec-live'); recBtn.textContent = '■ STOP';
+        playBtn.classList.remove('on');
+      }
+    }
+  });
+
+  const playBtn = document.createElement('button');
+  playBtn.className = 'btn'; playBtn.style.cssText = 'flex:1;font-size:9px;';
+  playBtn.textContent = '▶'; playBtn.title = 'Play loop';
+  playBtn.addEventListener('click', () => {
+    if (!mods.miclooper.buffer) { setStatus('Record a loop first.'); return; }
+    mods.miclooper.play(); playBtn.classList.add('on');
+  });
+
+  const stopBtn = document.createElement('button');
+  stopBtn.className = 'btn'; stopBtn.style.cssText = 'flex:1;font-size:9px;';
+  stopBtn.textContent = '■'; stopBtn.title = 'Stop loop';
+  stopBtn.addEventListener('click', () => { mods.miclooper.stop(); playBtn.classList.remove('on'); });
+
+  txRow.appendChild(recBtn); txRow.appendChild(playBtn); txRow.appendChild(stopBtn);
+
+  // Mode row: LOOP / CLEAR
+  const modeRow = document.createElement('div'); modeRow.style.cssText = 'display:flex;gap:2px;margin-bottom:3px;';
+
+  const loopBtn = document.createElement('button');
+  loopBtn.className = 'btn on'; loopBtn.style.cssText = 'flex:1;font-size:9px;';
+  loopBtn.textContent = '↻ LOOP'; loopBtn.title = 'Loop / one-shot';
+  loopBtn.addEventListener('click', () => {
+    mods.miclooper.looping = !mods.miclooper.looping;
+    loopBtn.classList.toggle('on', mods.miclooper.looping);
+    if (mods.miclooper.playingSrc) mods.miclooper.playingSrc.loop = mods.miclooper.looping;
+  });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'btn'; clearBtn.style.cssText = 'flex:1;font-size:9px;';
+  clearBtn.textContent = '✕ CLR'; clearBtn.title = 'Erase loop';
+  clearBtn.addEventListener('click', () => { mods.miclooper.clear(); playBtn.classList.remove('on'); drawWave(); });
+
+  modeRow.appendChild(loopBtn); modeRow.appendChild(clearBtn);
+
+  // Callback: updates UI after decode completes (async)
+  mods.miclooper.onLoopReady = () => {
+    drawWave();
+    recBtn.classList.remove('rec-live'); recBtn.textContent = '● REC';
+    playBtn.classList.add('on');
+  };
+
+  // Knobs
+  const knobRow = document.createElement('div'); knobRow.style.cssText = 'display:flex;gap:2px;justify-content:center;';
+  knobRow.appendChild(mkKnob({id:'micloop-level', label:'IN',  min:0.1, max:4,  val:1.0, log:true, onChange:v=>mods.miclooper.setLevelIn(v)}));
+  knobRow.appendChild(mkKnob({id:'micloop-vol',   label:'OUT', min:0,   max:1,  val:0.8,           onChange:v=>mods.miclooper.setLevelOut(v)}));
+
+  d.appendChild(vu); d.appendChild(wave); d.appendChild(armBtn);
+  d.appendChild(txRow); d.appendChild(modeRow); d.appendChild(knobRow);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('micloop-out','ao','OUT','out'));
+  return panel('miclooper', 'MIC LOOP', d);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5387,7 +5667,7 @@ async function init() {
   makeSandH(); makeLFO2(); makeAttenuverter();
   makeChorus(); makePanner(); makeTape(); makePhaser(); makeWavefolder();
   makeChord(); makeQuantizer(); makeMicrocosm();
-  makeArp(); makeSidechain(); makeSampler(); makePadSampler(); makeStutter(); makeMicInput();
+  makeArp(); makeSidechain(); makeSampler(); makePadSampler(); makeStutter(); makeMicInput(); makeMicLooper();
   wireDefault();
 
   // Build UI
@@ -5420,6 +5700,7 @@ async function init() {
   rack.appendChild(buildPadSamplerPanel());
   rack.appendChild(buildStutterPanel());
   rack.appendChild(buildMicInputPanel());
+  rack.appendChild(buildMicLooperPanel());
   rack.appendChild(buildSeqPanel());
   rack.appendChild(buildScopePanel());
 
