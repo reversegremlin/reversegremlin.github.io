@@ -445,7 +445,7 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
 // STATE
 // ═══════════════════════════════════════════════════════════════════════════════
 let ctx, masterOut, analyserNode;
-let mediaRec = null, recChunks = [], isRec = false;
+let recScriptNode = null, recBuffers = null, recSampleRate = 0, isRec = false;
 const undoStack = [];
 const MAX_UNDO = 40;
 let ignoreUndo = false;
@@ -3530,27 +3530,63 @@ function drawDefaultCables() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// RECORDING
+// RECORDING — captures raw PCM and encodes as 32-bit float stereo WAV
 // ═══════════════════════════════════════════════════════════════════════════════
 function startRec() {
-  const dest=ctx.createMediaStreamDestination();
-  masterOut.connect(dest);
-  mediaRec=new MediaRecorder(dest.stream,{mimeType:'audio/webm;codecs=opus'});
-  recChunks=[];
-  mediaRec.ondataavailable=e=>recChunks.push(e.data);
-  mediaRec.onstop=()=>{
-    const blob=new Blob(recChunks,{type:'audio/webm'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`nm2-modsynth-${Date.now()}.webm`;
-    a.click();
-    setStatus('Recording saved ✓');
+  recSampleRate = ctx.sampleRate;
+  recBuffers = [[], []]; // [left[], right[]]
+  // ScriptProcessorNode captures interleaved PCM off the master bus
+  recScriptNode = ctx.createScriptProcessor(4096, 2, 2);
+  recScriptNode.onaudioprocess = e => {
+    recBuffers[0].push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    recBuffers[1].push(new Float32Array(e.inputBuffer.getChannelData(1)));
   };
-  mediaRec.start();
-  isRec=true;
+  masterOut.connect(recScriptNode);
+  // Connect to a silent sink so the node stays active without doubling output
+  recScriptNode._sink = ctx.createMediaStreamDestination();
+  recScriptNode.connect(recScriptNode._sink);
+  isRec = true;
   setStatus('⏺ RECORDING...');
 }
-function stopRec() { if(mediaRec&&isRec){mediaRec.stop();isRec=false;} }
+function stopRec() {
+  if (!recScriptNode || !isRec) return;
+  masterOut.disconnect(recScriptNode);
+  recScriptNode.disconnect();
+  recScriptNode = null;
+  isRec = false;
+  // Flatten channel buffers
+  function flatten(bufs) {
+    let len = 0; bufs.forEach(b => len += b.length);
+    const out = new Float32Array(len); let off = 0;
+    bufs.forEach(b => { out.set(b, off); off += b.length; });
+    return out;
+  }
+  const L = flatten(recBuffers[0]);
+  const R = flatten(recBuffers[1]);
+  recBuffers = null;
+  // Encode 32-bit float stereo WAV
+  const nc = 2, bps = 32, sr = recSampleRate;
+  const dataBytes = L.length * nc * (bps / 8);
+  const buf = new ArrayBuffer(44 + dataBytes);
+  const v = new DataView(buf);
+  const ws = (off, s) => { for (let i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4, 36+dataBytes, true); ws(8,'WAVE');
+  ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,3,true); // 3=IEEE float
+  v.setUint16(22,nc,true); v.setUint32(24,sr,true);
+  v.setUint32(28,sr*nc*(bps/8),true); v.setUint16(32,nc*(bps/8),true); v.setUint16(34,bps,true);
+  ws(36,'data'); v.setUint32(40,dataBytes,true);
+  let off = 44;
+  for (let i=0; i<L.length; i++) {
+    v.setFloat32(off, L[i], true); off+=4;
+    v.setFloat32(off, R[i], true); off+=4;
+  }
+  const blob = new Blob([buf], {type:'audio/wav'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `nm2-modsynth-${Date.now()}.wav`;
+  a.click();
+  setStatus('Recording saved as WAV ✓');
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFIG SAVE / LOAD
@@ -5158,7 +5194,7 @@ PATCH POINT COLORS:
   🔵 Cyan    = CV out
   🟢 Green   = CV/env in
 
-REC saves .webm audio | SAVE PATCH saves JSON
+REC saves .wav audio (32-bit float stereo) | SAVE PATCH saves JSON
 SHIFT+drag knob = fine control
 
 KEYBOARD SHORTCUTS:
