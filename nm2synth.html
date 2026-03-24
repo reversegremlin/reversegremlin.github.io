@@ -2201,6 +2201,17 @@ let ghostSnap = null; // ppMap id currently snapped to, or null
 
 window.addEventListener('mousemove', e => { ghostMouse.x = e.clientX; ghostMouse.y = e.clientY; });
 
+// Clicking blank space drops the cable
+document.addEventListener('click', e => {
+  if (!pendingPP) return;
+  if (!e.target.closest('.pp')) {
+    ppMap[pendingPP].el.classList.remove('pending');
+    pendingPP = null;
+    setStatus('');
+    stopGhost();
+  }
+}, true);
+
 function startGhost(fromId) {
   stopGhost();
   const r  = ppMap[fromId].el.getBoundingClientRect();
