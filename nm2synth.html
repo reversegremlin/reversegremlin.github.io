@@ -105,18 +105,24 @@ body.edit-mode .module-drag-handle{display:inline;}
 .wbtn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 6px #ff00ff44;}
 
 /* ── Patch points ── */
-.pp-row{display:flex;align-items:center;gap:4px;margin:2px 0;font-size:var(--fs-xs);color:#666;}
-.pp{width:12px;height:12px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.5);transition:transform .1s,box-shadow .1s;flex-shrink:0;}
-.pp:hover{transform:scale(1.4);}
-.pp.ao{background:#ff6600;box-shadow:0 0 6px #ff6600;}
-.pp.co{background:#00ffff;box-shadow:0 0 6px #00ffff;}
-.pp.ai{background:#ffff00;box-shadow:0 0 6px #ffff00;}
-.pp.ci{background:#00ff88;box-shadow:0 0 6px #00ff88;}
-.pp.gi{background:#ff44aa;box-shadow:0 0 6px #ff44aa;}
+.pp-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:var(--fs-xs);color:#666;}
+.pp{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s;flex-shrink:0;}
+.pp:hover{transform:scale(1.5);}
+.pp.ao{background:#ff6600;box-shadow:0 0 8px #ff6600;}
+.pp.co{background:#00ffff;box-shadow:0 0 8px #00ffff;}
+.pp.ai{background:#ffff00;box-shadow:0 0 8px #ffff00;}
+.pp.ci{background:#00ff88;box-shadow:0 0 8px #00ff88;}
+.pp.gi{background:#ff44aa;box-shadow:0 0 8px #ff44aa;}
 .pp.pending{animation:ppulse .4s infinite alternate;}
-@keyframes ppulse{from{transform:scale(1);}to{transform:scale(1.6);}}
+@keyframes ppulse{from{transform:scale(1);}to{transform:scale(1.7);}}
 .pp.linked{filter:brightness(1.4);}
-.pp.ghost-snap{box-shadow:0 0 0 3px rgba(255,255,255,.55),0 0 14px rgba(255,255,255,.35);transform:scale(1.45);}
+.pp.ghost-snap{box-shadow:0 0 0 3px rgba(255,255,255,.6),0 0 10px rgba(255,255,255,.25);transform:scale(1.6);}
+/* Available inputs lit up while a cable is being dragged */
+.pp.pp-available{animation:pp-avail 1.1s ease-in-out infinite alternate;}
+@keyframes pp-avail{from{transform:scale(1);}to{transform:scale(1.25);opacity:.75;}}
+/* Type-compatible inputs (e.g. audio-in when dragging from audio-out) */
+.pp.pp-compatible{animation:pp-compat .75s ease-in-out infinite alternate;filter:brightness(1.3);}
+@keyframes pp-compat{from{transform:scale(1.1);}to{transform:scale(1.5);filter:brightness(1.6);}}
 
 /* ── Canvas ── */
 canvas{display:block;border-radius:3px;}
@@ -2099,6 +2105,23 @@ function mkPP(id, cls, label, role) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PATCHING
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Highlight all input patch points while dragging; compatible types get stronger glow
+function highlightAvailable(fromId) {
+  const srcCls = ppMap[fromId]?.cls;
+  const compat = srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi'] : [];
+  for (const pp of Object.values(ppMap)) {
+    if (pp.role !== 'in') continue;
+    pp.el.classList.add('pp-available');
+    if (compat.includes(pp.cls)) pp.el.classList.add('pp-compatible');
+  }
+}
+function clearAvailable() {
+  for (const pp of Object.values(ppMap)) {
+    pp.el.classList.remove('pp-available','pp-compatible');
+  }
+}
+
 function patchClick(id) {
   const pp = ppMap[id];
   if(pendingPP===null) {
@@ -2196,12 +2219,14 @@ function startGhost(fromId) {
   ghostEl.setAttribute('pointer-events', 'none');
   document.getElementById('cables').appendChild(ghostEl);
   ghostRaf = requestAnimationFrame(ghostLoop);
+  highlightAvailable(fromId);
 }
 
 function stopGhost() {
   if (ghostEl)  { ghostEl.remove(); ghostEl = null; }
   if (ghostRaf) { cancelAnimationFrame(ghostRaf); ghostRaf = null; }
   if (ghostSnap){ ppMap[ghostSnap]?.el.classList.remove('ghost-snap'); ghostSnap = null; }
+  clearAvailable();
 }
 
 function ghostLoop() {
@@ -2210,13 +2235,18 @@ function ghostLoop() {
   const srcR = ppMap[pendingPP].el.getBoundingClientRect();
   const sx = srcR.left + srcR.width/2, sy = srcR.top + srcR.height/2;
 
-  // Find nearest input patch point within snap radius
-  let snapX = ghostMouse.x, snapY = ghostMouse.y, newSnap = null;
+  // Find nearest input patch point within snap radius (60px), prefer type-compatible
+  let snapX = ghostMouse.x, snapY = ghostMouse.y, newSnap = null, snapDist = Infinity;
+  const srcCls = ppMap[pendingPP]?.cls;
+  const compatCls = srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi'] : [];
   for (const [id, pp] of Object.entries(ppMap)) {
     if (pp.role !== 'in') continue;
     const pr = pp.el.getBoundingClientRect();
     const cx = pr.left + pr.width/2, cy = pr.top + pr.height/2;
-    if (Math.hypot(ghostMouse.x - cx, ghostMouse.y - cy) < 28) { snapX = cx; snapY = cy; newSnap = id; break; }
+    const d = Math.hypot(ghostMouse.x - cx, ghostMouse.y - cy);
+    // Compatible inputs get a 15px bonus to win tie-breaks with nearby incompatible ones
+    const effective = d - (compatCls.includes(pp.cls) ? 15 : 0);
+    if (d < 60 && effective < snapDist) { snapX = cx; snapY = cy; newSnap = id; snapDist = effective; }
   }
 
   // Update snap highlight
@@ -5723,33 +5753,40 @@ function buildPadSamplerPanel() {
 // BITCRUSHER
 // ═══════════════════════════════════════════════════════════════════════════════
 function makeCrusher() {
-  const inlet  = ctx.createGain();
-  const outlet = ctx.createGain();
+  const inlet   = ctx.createGain();
+  const outlet  = ctx.createGain();
   const dryGain = ctx.createGain(); dryGain.gain.value = 0;
   const wetGain = ctx.createGain(); wetGain.gain.value = 1;
-  const proc = ctx.createScriptProcessor(256, 1, 1);
+  // Stereo processor — 2 in, 2 out so both channels are crushed independently
+  const proc = ctx.createScriptProcessor(512, 2, 2);
   const m = { inlet, outlet, bits: 8, rate: 1, mixVal: 1 };
-  let held = 0, heldCount = 0;
+  let heldL = 0, heldR = 0, heldCount = 0;
   proc.onaudioprocess = e => {
-    const inp = e.inputBuffer.getChannelData(0);
-    const out = e.outputBuffer.getChannelData(0);
+    const inL  = e.inputBuffer.getChannelData(0);
+    const inR  = e.inputBuffer.getChannelData(1);
+    const outL = e.outputBuffer.getChannelData(0);
+    const outR = e.outputBuffer.getChannelData(1);
     const step = Math.pow(2, -(m.bits - 1));
     const r = Math.max(1, Math.round(m.rate));
-    for (let i = 0; i < inp.length; i++) {
-      if (heldCount % r === 0) held = Math.round(inp[i] / step) * step;
+    for (let i = 0; i < inL.length; i++) {
+      if (heldCount % r === 0) {
+        heldL = Math.round(inL[i] / step) * step;
+        heldR = Math.round(inR[i] / step) * step;
+      }
       heldCount++;
-      out[i] = held;
+      outL[i] = heldL;
+      outR[i] = heldR;
     }
   };
-  // wet/dry mix
   inlet.connect(proc);
   proc.connect(wetGain);
   wetGain.connect(outlet);
   inlet.connect(dryGain);
   dryGain.connect(outlet);
+  // proc needs a path to ctx.destination to stay active; silence it so it doesn't leak
+  const keepAlive = ctx.createGain(); keepAlive.gain.value = 0;
+  proc.connect(keepAlive); keepAlive.connect(ctx.destination);
   m.setMix = v => { m.mixVal = v; wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); dryGain.gain.setTargetAtTime(1-v, ctx.currentTime, 0.01); };
-  // silent sink to keep proc active
-  const sink = ctx.createMediaStreamDestination(); proc.connect(sink);
   mods.crush = m; return m;
 }
 
