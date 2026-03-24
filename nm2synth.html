@@ -110,7 +110,7 @@ body.edit-mode .module-drag-handle{display:inline;}
 .pp:hover{transform:scale(1.5);}
 .pp.ao{background:#ff0088;box-shadow:0 0 6px #ff0088,0 0 16px #ff008866;}
 .pp.co{background:#00aaff;box-shadow:0 0 6px #00aaff,0 0 16px #00aaff66;}
-.pp.ai{background:#ff2244;box-shadow:0 0 6px #ff2244,0 0 16px #ff224466;}
+.pp.ai{background:#00ff66;box-shadow:0 0 6px #00ff66,0 0 16px #00ff6666;}
 .pp.ci{background:#cc00ff;box-shadow:0 0 6px #cc00ff,0 0 16px #cc00ff66;}
 .pp.gi{background:#ffee00;box-shadow:0 0 6px #ffee00,0 0 16px #ffee0066;}
 .pp.pending{animation:ppulse .4s infinite alternate;}
@@ -494,7 +494,7 @@ let editMode = false;
 
 const CABLE_PAL = ['#ff00ff','#00ffff','#ffff00','#ff6600','#00ff88','#ff4488','#88aaff']; // legacy fallback
 // Patch-point type → colour (mirrors CSS .pp.ao / .ai / etc.)
-const PP_COLOR = { ao:'#ff0088', co:'#00aaff', ai:'#ff2244', ci:'#cc00ff', gi:'#ffee00' };
+const PP_COLOR = { ao:'#ff0088', co:'#00aaff', ai:'#00ff66', ci:'#cc00ff', gi:'#ffee00' };
 const TIPS = {
   // ── Modules (hover on label) ──────────────────────────────────────────────
   'mod-vco':  'VCO — Voltage Controlled Oscillator. This is your sound source — it generates a continuous waveform. Everything else shapes it. No VCO = no sound. Think of it as the vocal cords of your synth.',
