@@ -1763,6 +1763,8 @@ function wireDefault() {
   mods.chorus.outlet.connect(masterOut);
   mods.tape.outlet.connect(masterOut);
   mods.phaser.outlet.connect(masterOut);
+  // Mixer → master (always audible; patch mix-a-in / mix-b-in / mix-c-in to use it)
+  mods.mixer.out.connect(masterOut);
   // Sampler → master (always audible; also patch sampler-out for additional processing)
   mods.sampler.outlet.connect(masterOut);
   // Pad sampler → master (always audible; patch padsampler-out for effects routing)
