@@ -12,14 +12,14 @@ body{background:#060610;font-family:'Courier New',monospace;color:#ccc;min-heigh
 
 /* ── Font-size scale (override with body.a11y-large) ── */
 :root{
-  --fs-xs:7px;   /* knob labels, patch rows, micro labels */
-  --fs-sm:8px;   /* loop btns, oct btns, toolbar labels  */
-  --fs-md:9px;   /* main btns, module labels, wave btns  */
-  --fs-lg:10px;  /* toolbar btns, picker title           */
-  --ls-mod:4px;  /* module-label letter-spacing          */
+  --fs-xs:9px;   /* knob labels, patch rows, micro labels */
+  --fs-sm:10px;  /* loop btns, oct btns, toolbar labels  */
+  --fs-md:11px;  /* main btns, module labels, wave btns  */
+  --fs-lg:13px;  /* toolbar btns, picker title           */
+  --ls-mod:3px;  /* module-label letter-spacing          */
 }
 body.a11y-large{
-  --fs-xs:9px; --fs-sm:10px; --fs-md:12px; --fs-lg:14px; --ls-mod:2px;
+  --fs-xs:11px; --fs-sm:13px; --fs-md:14px; --fs-lg:16px; --ls-mod:2px;
 }
 /* Catch inline font-size:7px / 8px labels inside modules */
 body.a11y-large .module [style*="font-size:7px"],
@@ -48,12 +48,12 @@ body.a11y-large #toolbar [style*="font-size:8px"]{font-size:var(--fs-sm) !import
 /* ── Layout ── */
 #rack-wrap{padding:16px 16px 0;}
 #rack-title{text-align:center;font-size:20px;letter-spacing:12px;color:#e066ff;text-shadow:0 0 20px #e066ff44;padding:8px 0 12px;}
-#rack{display:flex;flex-wrap:wrap;gap:10px;padding:12px;background:#0a0a18;border:1px solid #e066ff22;border-radius:6px;box-shadow:0 0 40px #e066ff11,inset 0 0 60px rgba(0,0,0,.4);}
+#rack{display:flex;flex-wrap:wrap;gap:16px;padding:18px;background:#0a0a18;border:1px solid #e066ff22;border-radius:6px;box-shadow:0 0 40px #e066ff11,inset 0 0 60px rgba(0,0,0,.4);}
 
 /* ── Module panel ── */
-.module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:10px 8px 8px;position:relative;min-width:110px;box-shadow:0 0 12px rgba(0,0,0,.6);}
+.module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:14px 12px 12px;position:relative;min-width:130px;box-shadow:0 0 12px rgba(0,0,0,.6);}
 .module:hover{border-color:#e066ff33;}
-.module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #e066ff22;}
+.module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #e066ff22;}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
 .module.bypassed .module-label{color:#666;}
 /* ── Edit mode ── */
@@ -87,25 +87,25 @@ body.edit-mode .module-drag-handle{display:inline;}
 .screw.tl{top:3px;left:3px;} .screw.tr{top:3px;right:3px;} .screw.bl{bottom:3px;left:3px;} .screw.br{bottom:3px;right:3px;}
 
 /* ── Knob ── */
-.knob-wrap{display:flex;flex-direction:column;align-items:center;margin:4px 2px;}
-.knob{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#2a2a4a,#0a0a18);border:2px solid #333;cursor:ns-resize;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.8),0 0 0 1px #111,inset 0 1px 0 rgba(255,255,255,.06);user-select:none;transition:border-color .2s;}
+.knob-wrap{display:flex;flex-direction:column;align-items:center;margin:8px 4px;}
+.knob{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#2a2a4a,#0a0a18);border:2px solid #333;cursor:ns-resize;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.8),0 0 0 1px #111,inset 0 1px 0 rgba(255,255,255,.06);user-select:none;transition:border-color .2s;}
 .knob:hover{border-color:#ff00ff88;}
-.knob.lg{width:52px;height:52px;}
-.knob.sm{width:28px;height:28px;}
+.knob.lg{width:60px;height:60px;}
+.knob.sm{width:34px;height:34px;}
 .knob-dot{position:absolute;width:3px;height:38%;background:#ff00ff;left:calc(50% - 1.5px);top:8%;transform-origin:50% 100%;border-radius:2px;box-shadow:0 0 6px #ff00ff;pointer-events:none;}
 .knob.lg .knob-dot{height:38%;}
 .knob.sm .knob-dot{width:2px;background:#00ffff;box-shadow:0 0 4px #00ffff;}
-.knob-lbl{font-size:var(--fs-xs);color:#888;letter-spacing:1px;margin-top:2px;text-align:center;}
-.knob-val{font-size:var(--fs-xs);color:#00ffff;text-shadow:0 0 6px #00ffff;letter-spacing:0;margin-top:0px;text-align:center;min-height:8px;}
+.knob-lbl{font-size:var(--fs-xs);color:#888;letter-spacing:1px;margin-top:4px;text-align:center;}
+.knob-val{font-size:var(--fs-xs);color:#00ffff;text-shadow:0 0 6px #00ffff;letter-spacing:0;margin-top:1px;text-align:center;min-height:10px;}
 
 /* ── Wave / type buttons ── */
-.wbtns{display:flex;gap:2px;margin:4px 0;}
-.wbtn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-md);padding:2px 4px;cursor:pointer;border-radius:2px;font-family:inherit;}
+.wbtns{display:flex;gap:5px;margin:6px 0;}
+.wbtn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-md);padding:4px 8px;cursor:pointer;border-radius:2px;font-family:inherit;}
 .wbtn:hover{border-color:#00ffff55;color:#00ffff;}
 .wbtn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 6px #ff00ff44;}
 
 /* ── Patch points ── */
-.pp-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:var(--fs-xs);color:#666;}
+.pp-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:var(--fs-xs);color:#666;}
 .pp{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s;flex-shrink:0;}
 .pp:hover{transform:scale(1.5);}
 .pp.ao{background:#ff6600;box-shadow:0 0 8px #ff6600;}
@@ -136,20 +136,20 @@ canvas{display:block;border-radius:3px;}
 .step-tog.on{background:#ff00ff;box-shadow:0 0 4px #ff00ff;}
 
 /* ── Transport / buttons ── */
-.btn{background:#0d0d22;border:1px solid #444;color:#aaa;padding:4px 8px;cursor:pointer;font-size:var(--fs-md);border-radius:2px;font-family:inherit;letter-spacing:1px;}
+.btn{background:#0d0d22;border:1px solid #444;color:#aaa;padding:6px 10px;cursor:pointer;font-size:var(--fs-md);border-radius:2px;font-family:inherit;letter-spacing:1px;}
 .btn:hover{border-color:#ff00ff;color:#ff00ff;}
 .btn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 8px #ff00ff44;}
 .btn.rec-live{background:#cc000033;border-color:#ff0000;color:#ff4444;animation:recblink 1s infinite;}
 @keyframes recblink{50%{opacity:.5;}}
-.transport{display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap;}
+.transport{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap;}
 
 /* ── Oct selector ── */
-.oct-row{display:flex;gap:2px;margin:4px 0;}
-.oct-btn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-sm);padding:1px 3px;cursor:pointer;border-radius:2px;font-family:inherit;}
+.oct-row{display:flex;gap:4px;margin:6px 0;}
+.oct-btn{background:#0f0f22;border:1px solid #333;color:#666;font-size:var(--fs-sm);padding:3px 6px;cursor:pointer;border-radius:2px;font-family:inherit;}
 .oct-btn.on{background:#00ffff22;border-color:#00ffff;color:#00ffff;}
 
 /* ── Divider ── */
-hr{border:none;border-top:1px solid #ff00ff22;margin:5px 0;}
+hr{border:none;border-top:1px solid #ff00ff22;margin:10px 0;}
 
 /* ── Toolbar ── */
 #toolbar{display:flex;gap:6px;padding:10px 16px;background:#04040e;border-top:1px solid #ff00ff33;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;}
