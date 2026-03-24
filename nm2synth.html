@@ -1982,6 +1982,7 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   document.addEventListener('mouseup', () => {
     if (dragging && id && cur !== startVal) {
       const sv2 = startVal, ev2 = cur, cb = onChange, kid = id;
+      logEvent('knob', { id, label, from: sv2, v: ev2 });
       pushUndo({ label: `${label}`, undo: () => { cb(sv2); if(knobRefs[kid]) knobRefs[kid].setVal(sv2); } });
     }
     dragging = false;
@@ -2168,6 +2169,7 @@ function addCable(fromId, toId, color) {
   document.getElementById('cables').appendChild(el);
   const cable = {fromId,toId,color,el,gradEl,gradId};
   cables.push(cable);
+  logEvent('cable_add', { from: fromId, to: toId });
   ppMap[fromId].el.classList.add('linked');
   ppMap[toId].el.classList.add('linked');
   moveCable(cable);
@@ -2183,6 +2185,7 @@ function addCable(fromId, toId, color) {
 
 function delCable(cable) {
   const { fromId, toId, color } = cable;
+  logEvent('cable_remove', { from: fromId, to: toId });
   pushUndo({ label: `remove cable`, undo: () => {
     const prev = ignoreUndo; ignoreUndo = true; addCable(fromId, toId, color); ignoreUndo = prev;
   }});
@@ -2491,6 +2494,7 @@ function waveSelector(waves, current, onChange, tipKey, id) {
     b.addEventListener('click',()=>{
       row.querySelectorAll('.wbtn').forEach(x=>x.classList.remove('on'));
       b.classList.add('on'); onChange(type);
+      logEvent('mode', { param: id || tipKey || 'wave', v: type });
     });
     const tip = tipKey ? TIPS[tipKey+type] : null;
     if(tip){ b.addEventListener('mouseenter',e=>showTip(tip,e)); b.addEventListener('mousemove',moveTip); b.addEventListener('mouseleave',hideTip); }
@@ -3643,6 +3647,61 @@ function drawDefaultCables() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // RECORDING — captures raw PCM and encodes as 32-bit float stereo WAV
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSION LOGGER
+// Records patch events alongside WAV recording.
+// Format: nm2-session-log v1  — JSON (replayable) + Markdown (human notes)
+// ═══════════════════════════════════════════════════════════════════════════════
+let _sessionLog      = null;  // null = off; [] = recording
+let _sessionStart    = 0;
+let _sessionSuppress = false; // silence log during batch ops (preset load)
+
+function logEvent(op, data) {
+  if (!_sessionLog || _sessionSuppress) return;
+  _sessionLog.push({ t: Date.now() - _sessionStart, op, ...data });
+}
+
+function _fmtT(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function _exportSessionLog() {
+  if (!_sessionLog || !_sessionLog.length) return;
+  const events  = _sessionLog;
+  const durMs   = events[events.length - 1]?.t ?? 0;
+  const recDate = new Date(_sessionStart);
+  const stem    = `nm2-session-${recDate.toISOString().slice(0,19).replace(/[T:]/g,'-')}`;
+
+  // ── JSON (machine-replayable) ──────────────────────────────────────────────
+  const payload = { format:'nm2-session-log', version:1,
+    recorded: recDate.toISOString(), duration_ms: durMs, events };
+  const jBlob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const ja = document.createElement('a');
+  ja.href = URL.createObjectURL(jBlob); ja.download = stem + '.json'; ja.click();
+  URL.revokeObjectURL(ja.href);
+
+  // ── Markdown (human-readable study notes) ─────────────────────────────────
+  const ICON = { cable_add:'+ cable', cable_remove:'- cable',
+                 knob:'~ knob', mode:'* mode', preset_load:'★ preset' };
+  const lines = events.map(e => {
+    let d = '';
+    if (e.op === 'cable_add'   ) d = `${e.from} → ${e.to}`;
+    if (e.op === 'cable_remove') d = `${e.from} → ${e.to}`;
+    if (e.op === 'knob'        ) d = `${e.label}  ${e.from != null ? Number(e.from).toFixed(2)+' → ':''
+                                      }${Number(e.v).toFixed(2)}`;
+    if (e.op === 'mode'        ) d = `${e.param}  →  ${e.v}`;
+    if (e.op === 'preset_load' ) d = e.name || '';
+    return `${_fmtT(e.t).padEnd(6)} ${(ICON[e.op] || e.op).padEnd(15)} ${d}`;
+  }).join('\n');
+  const md = `# nm² Session Log\n**Recorded:** ${recDate.toLocaleString()
+    }  |  **Duration:** ${_fmtT(durMs)}\n\n\`\`\`\n${lines}\n\`\`\`\n`;
+  const mBlob = new Blob([md], { type:'text/markdown' });
+  const ma = document.createElement('a');
+  ma.href = URL.createObjectURL(mBlob); ma.download = stem + '.md'; ma.click();
+  URL.revokeObjectURL(ma.href);
+}
+
 function startRec() {
   recSampleRate = ctx.sampleRate;
   recBuffers = [[], []]; // [left[], right[]]
@@ -3657,6 +3716,7 @@ function startRec() {
   recScriptNode._sink = ctx.createMediaStreamDestination();
   recScriptNode.connect(recScriptNode._sink);
   isRec = true;
+  _sessionLog = []; _sessionStart = Date.now();
   setStatus('⏺ RECORDING...');
 }
 function stopRec() {
@@ -3696,7 +3756,8 @@ function stopRec() {
   a.href = URL.createObjectURL(blob);
   a.download = `nm2-modsynth-${Date.now()}.wav`;
   a.click();
-  setStatus('Recording saved as WAV ✓');
+  _exportSessionLog(); _sessionLog = null;
+  setStatus('Recording saved as WAV + session log ✓');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -4002,7 +4063,7 @@ function loadPreset() {
   const name = document.getElementById('preset-sel').value;
   if(!name) { setStatus('Select a preset first.'); return; }
   const p = getPresets().find(p=>p.name===name);
-  if(p) { applyConfig(p.config); const el=document.getElementById('notes-area'); if(el) el.value=p.notes||''; setStatus(`Preset "${name}" loaded ✓`); }
+  if(p) { _sessionSuppress=true; applyConfig(p.config); _sessionSuppress=false; logEvent('preset_load',{name}); const el=document.getElementById('notes-area'); if(el) el.value=p.notes||''; setStatus(`Preset "${name}" loaded ✓`); }
 }
 
 function deletePreset() {
@@ -4374,7 +4435,7 @@ function openFactoryPicker() {
     card.innerHTML = `<div style="color:#ff00ff;font-size:9px;letter-spacing:3px;margin-bottom:6px;">${String(i+1).padStart(2,'0')} ${p.name}</div><div style="color:#666;font-size:8px;line-height:1.5;">${p.desc}</div>`;
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
-      applyConfig(p.cfg);
+      _sessionSuppress=true; applyConfig(p.cfg); _sessionSuppress=false; logEvent('preset_load',{name:p.name});
       // Auto-fetch and load sample if preset specifies one
       if (p.cfg.sampler?.sampleUrl) {
         setStatus(`Loading sample…`);
