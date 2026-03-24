@@ -2140,7 +2140,13 @@ function patchClick(id) {
 }
 
 function addCable(fromId, toId, color) {
-  const existing = cables.find(c=>c.toId===toId);
+  // Audio inputs (ai) allow multiple connections — sources sum, matching real modular behaviour.
+  // CV/gate inputs (ci, gi) allow only one connection at a time (new cable replaces old).
+  // Never add an exact duplicate regardless of type.
+  const dstCls = ppMap[toId]?.cls;
+  const isDup  = cables.some(c=>c.fromId===fromId && c.toId===toId);
+  if (isDup) return; // silently ignore exact duplicates
+  const existing = (dstCls === 'ai') ? null : cables.find(c=>c.toId===toId);
   const replacedFrom  = existing?.fromId  ?? null;
   const replacedColor = existing?.color   ?? null;
   if (existing) { const prev = ignoreUndo; ignoreUndo = true; delCable(existing); ignoreUndo = prev; }
@@ -4063,7 +4069,7 @@ function loadPreset() {
   const name = document.getElementById('preset-sel').value;
   if(!name) { setStatus('Select a preset first.'); return; }
   const p = getPresets().find(p=>p.name===name);
-  if(p) { _sessionSuppress=true; applyConfig(p.config); _sessionSuppress=false; logEvent('preset_load',{name}); const el=document.getElementById('notes-area'); if(el) el.value=p.notes||''; setStatus(`Preset "${name}" loaded ✓`); }
+  if(p) { _sessionSuppress=true; applyConfig(p.config); const el=document.getElementById('notes-area'); if(el) el.value=p.notes||''; setStatus(`Preset "${name}" loaded ✓`); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name}); },150); }
 }
 
 function deletePreset() {
@@ -4435,7 +4441,7 @@ function openFactoryPicker() {
     card.innerHTML = `<div style="color:#ff00ff;font-size:9px;letter-spacing:3px;margin-bottom:6px;">${String(i+1).padStart(2,'0')} ${p.name}</div><div style="color:#666;font-size:8px;line-height:1.5;">${p.desc}</div>`;
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
-      _sessionSuppress=true; applyConfig(p.cfg); _sessionSuppress=false; logEvent('preset_load',{name:p.name});
+      _sessionSuppress=true; applyConfig(p.cfg); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
       // Auto-fetch and load sample if preset specifies one
       if (p.cfg.sampler?.sampleUrl) {
         setStatus(`Loading sample…`);
