@@ -507,6 +507,7 @@ const TIPS = {
 
   // ── Patch points ──────────────────────────────────────────────────────────
   'vco-out':  'VCO Audio Out — the raw oscillator waveform exits here. Connect it to VCF IN to filter it, or directly to VCA IN to bypass the filter. This is the starting point of every subtractive synthesis patch.',
+  'vco-sub':  'Sub-oscillator Out — always a square wave, one octave below the main VCO. Perfectly tracks pitch changes, MIDI, and sequencer CV. Patch into MIX B-IN alongside the main VCO for instant bass thickness, or into VCF IN to blend with the fundamental. Classic technique: VCO OUT → VCF, SUB OUT → MIX → VCF for a fat doubled subtractive bass.',
   'vco-cv':   'VCO Pitch CV In — accepts a control voltage that shifts the frequency. Connect the sequencer here to play melodic patterns. Connect an LFO for vibrato (pitch wobble). Each semitone of CV shifts pitch by one note on the musical scale.',
   'lfo-out':  'LFO CV Out — a slow oscillating signal (not heard directly). Patching this to VCF cutoff creates an automatic filter sweep. Patching to VCO pitch creates vibrato. The depth knob scales how strong the effect is.',
   'vcf-in':   'VCF Audio In — the sound enters the filter here. Connect from VCO Out. Nothing is filtered until signal arrives. You can also feed any audio here — try patching VCA Out back here for feedback effects (careful with volume!).',
@@ -585,6 +586,24 @@ const TIPS = {
 
   // ── Delay ─────────────────────────────────────────────────────────────────
   'mod-delay':    'DELAY — echo effect. The signal is repeated after a set time, then fed back for multiple repeats. Short delays (10–80ms) thicken the sound without audible echo. Medium (100–400ms) = slapback or rhythmic echo. Long (500ms+) = classic echo. Use delay to layer evolving phrases over themselves.',
+  'vcf-drive':    'VCF Drive — pre-filter saturation (1×–8×). Adds tanh harmonic saturation before the filter stage. At 1× (default) output is unity. At 2–4× fattens the tone with soft saturation. At 6–8× produces aggressive filter drive — pair with high resonance for screaming acid lines.',
+  'vcf-res-cv':   'VCF Resonance CV — patch an LFO, envelope, or S&H here to modulate resonance over time. CV sums with the manual RES knob. Patch a slow LFO here for time-varying resonance sweeps, or an ADSR for resonance peaks on each note attack.',
+  'vcf-kb-track': 'KB TRACK — keyboard tracking. When ON, VCF cutoff follows the sequencer and MIDI pitch at 1V/oct (1 octave = 2× cutoff freq). Classic technique for acoustic realism: high notes naturally have brighter timbre, so the filter opens as pitch rises.',
+  // ── Transistor Ladder VCF ──────────────────────────────────────────────────
+  'mod-ladder':    'LADDER — Moog transistor ladder filter emulation. Two cascaded 12dB/oct lowpass stages (24dB/oct total rolloff). Darker, warmer character than the state-variable VCF — the classic Minimoog "wool" sound. At RESO 0.95+, it self-oscillates into a sine wave at the cutoff frequency: a tunable sine oscillator. Patch ladder-ai ← VCO and ladder-ao → master for the signature Moog bass sound.',
+  'ladder-ai':     'Ladder Audio In — audio input to the transistor ladder filter. Patch from VCO Out, Mixer Out, or anywhere in the signal chain. The pre-filter DRIVE control adds harmonic saturation before the filter stages.',
+  'ladder-ao':     'Ladder Audio Out — filtered audio output. 24dB/oct rolloff with ladder topology character. Patch to VCA IN or directly to master output.',
+  'ladder-cv':     'Ladder Cutoff CV — modulation input for cutoff frequency. CV sums with the CUTOFF knob. Patch LFO → here for filter sweeps, ADSR → here for filter envelope. Same 1V/oct response as the main VCF.',
+  'ladder-res-cv': 'Ladder Resonance CV — patch an LFO or envelope here to modulate resonance over time. At high RESO, this can push the filter into and out of self-oscillation rhythmically.',
+  'ladder-drive':  'Ladder Drive — pre-filter saturation (1×–8×). Warms the sound before the filter stages. The transistor ladder naturally saturates at higher signal levels — DRIVE replicates this. Light drive (1–2×): warm. Heavy drive (6–8×): growling, overdriven Moog bass.',
+  'ladder-cutoff': 'Cutoff — the ladder filter\'s corner frequency. Below cutoff: harmonics pass. Above: they roll off at 24dB/oct (steeper than VCF\'s 12dB). Use as low as 60–120 Hz for heavy bass resonances, or sweep it open during a filter solo.',
+  'ladder-reso':   'Resonance — filter feedback amount. At low values: gentle emphasis at cutoff. At 0.7–0.9: strong, singing resonance peaks. At 0.95+: self-oscillation begins — the filter rings as a pure sine at the cutoff frequency. Maximum resonance = use the filter as a VCO.',
+  'ladder-kb-track':'KB TRACK — keyboard tracking on the ladder filter. When ON, cutoff follows sequencer and MIDI pitch at 1V/oct. Essential for melodic bass patches so the filter opens with higher notes.',
+  'slew-ci':      'Slew CV In — the incoming CV signal to be slewed (smoothed). Patch a sequencer CV, LFO, or S&H output here. Abrupt voltage changes are turned into smooth glides by the RISE and FALL controls.',
+  'slew-co':      'Slew CV Out — the smoothed CV signal output. Patch to VCO CV↓ for pitch portamento (glide), VCF CV↓ for smooth filter sweeps, or VCA ENV↓ for soft envelope shapes. The original Moog portamento sound.',
+  'slew-rise':    'Rise — how long it takes the CV to slide UP to a new higher target value (1ms–5s). Long rise time = slow glide up to pitch. Short rise time = snappy attack. Most musical range: 30–200ms.',
+  'slew-fall':    'Fall — how long it takes the CV to slide DOWN from a higher value (1ms–5s). Long fall time = slow pitch decay / filter close. Short fall time = crisp response. Independent from RISE, so you can have fast attack + slow decay.',
+  'delay-drive':  'Delay Drive — pre-delay saturation (0–4×). At 0 the delay echoes are pristine digital. Higher values add tape-like warmth and harmonic saturation to the repeats. With high feedback: lo-fi tape delay trails. Classic technique: drive 2–3 + long time + 0.6 feedback = degrading echo loops.',
   'delay-in':     'Delay Audio In — connect from VCA Out or anywhere in the chain. Delay works best after the VCA so the echo also fades naturally with the envelope.',
   'delay-out':    'Delay Audio Out — connect to the master output or another effect. The delayed signal has both dry and wet components controlled by the MIX knob.',
   'delay-time':   'Delay Time — how long before the echo repeats (0.01–2 seconds). Musical tip: at 120 BPM, a quarter note = 0.5s, 8th note = 0.25s, dotted 8th = 0.375s. Use BPM SYNC button to auto-calculate.',
@@ -617,6 +636,7 @@ const TIPS = {
 
   // ── Attenuverter ──────────────────────────────────────────────────────────
   'mod-att':     'ATTENUVERTER — scales and optionally inverts a CV signal. ATT knob goes from -2× (inverted+amplified) through 0 (silence) to +2× (amplified). Use to precisely dial how much LFO reaches a destination, or flip its direction so rising modulation closes the filter instead of opening it. Essential glue module.',
+  'mod-slew':    'SLEW LIMITER — smooths abrupt CV changes into gradual glides. RISE controls how long it takes to ramp up; FALL controls ramp-down. Patch sequencer CV OUT → SLEW IN → VCO CV↓ for classic portamento glide between notes. Patch a random S&H → SLEW → VCF for smoothed stepped filter sweeps. Independent RISE/FALL lets you define asymmetric glide shapes.',
   'att-in':      'Attenuverter CV Input — connect any CV source: LFO, S&H output, clock divider. The signal is scaled by ATT then shifted by OFFSET before exiting.',
   'att-out':     'Attenuverter CV Output — scaled and offset signal. Patch to VCF CV, VCA ENV, or any CV destination. Placing an attenuverter between LFO and filter gives exact modulation depth control without touching the LFO itself.',
   'att-knob':    'ATT — attenuation/inversion, -2 to +2. At 0: silence. At +1: signal unchanged. At -1: inverted (flipped upside down). Try -1 on VCF CV to hear the filter close when it normally opens — inverted movement opens up entirely new sounds.',
@@ -630,6 +650,7 @@ const TIPS = {
   'microcosm-mode-glitch':   'GLTCH — Glitch mode. Automatically cycles through short frozen slices of the buffer, creating a stutter/cascade loop effect. The signature Microcosm glitch texture.',
   'microcosm-mode-shimmer':  'SHIM — Shimmer mode. Like granular but each grain plays back one octave higher. Creates a crystalline shimmering halo. Pair with long reverb for a classic atmospheric shimmer sound.',
   'microcosm-hold': 'HOLD — Freezes the recording buffer. New audio stops writing in; grains loop forever over whatever was captured at the moment of freeze. Hold a chord, freeze it, and watch it sustain infinitely. Press again to unfreeze.',
+  'microcosm-file': 'FILE — Full-file granular mode. Uses the loaded SAMPLER buffer directly as the grain source instead of the 4-second rolling capture. Grain positions scatter around the SAMPLER POSITION knob — scrub POSITION live to scan through the entire file. Works with GRAN, GLTCH, and SHIM modes. Load a long recording in SAMPLER first.',
   'mc-blend':  'Blend — 0 = dry only, 1 = granular only. Most musical range is 0.5–0.85. Try HOLD at full blend for a pure granular drone from any sound.',
   'mc-size':   'Grain Size — length of each grain (0.02–0.5 s). Very short (0.02–0.06s) = buzzy, grainy texture. Long (0.2–0.5s) = smooth, smeared cloud. This is the most timbral parameter in granular synthesis.',
   'mc-scat':   'Scatter — how far back in the buffer grains are read. Low = grains from near the present (coherent). High = grains scattered up to 2 seconds into the past (temporal blur). Full scatter = time is smeared.',
@@ -745,7 +766,23 @@ const TIPS = {
   // ── Sequencer additions ───────────────────────────────────────────────────
   'seq-prob':   'Probability — the chance this step will fire each time the sequencer reaches it. 100% = always fires. 50% = fires half the time, randomly. 0% = never fires (same as turning the step off). Best technique: set most steps to 100%, then drop a few key steps to 60–80%. The pattern becomes generative — it sounds different every loop but stays musical because the rhythm skeleton is preserved. This is the core of generative sequencer technique in ambient music.',
   'seq-dir':    'Direction — how the sequencer moves through its steps each tick. FWD (→): left to right, loops back to step 1. REV (←): right to left, loops back to the last step — your melody plays backwards. P-P: ping-pong, bounces between step 1 and the last step; with 8 steps this gives a 14-step (not 16) pattern before repeating because the endpoints don\'t double. RND: jumps to a completely random step each tick — non-repeating, generative. Try switching direction while playing to hear the phrase mutate live. Ctrl+Z undoes a direction change.',
+  // ── Chaos oscillator ──────────────────────────────────────────────────────
+  'mod-chaos':   'CHAOS — modulation-only oscillator combining organic beating with brownian drift. CHAOS=0: pure sine LFO. CHAOS=0.5: two detuned oscillators beating against each other. CHAOS=1: filtered noise brownian walk — a CV signal that wanders slowly and unpredictably. Patch to VCF CV for Strega-style organic filter drift, or VCO CV for microtonal pitch wandering.',
+  'chaos-out':   'Chaos CV Out — the organic modulation signal. Range scales with AMOUNT. Patch to VCF CV↓, VCO CV↓, Reverb Mix, or anywhere a CV destination accepts modulation. Unlike an LFO, CHAOS never repeats the same pattern — it is always slightly different.',
+  'chaos-rate':  'Rate — base oscillation frequency (0.01–20 Hz). At 0.1 Hz: very slow glacier-drift. At 1 Hz: medium cyclic movement. At 10 Hz+: rapid flutter. The brownian walk speed also scales with RATE — higher RATE = faster wandering.',
+  'chaos-chaos': 'Chaos — morphs from ordered to disordered. 0: pure sine LFO (periodic, predictable). 0.3: beating (two oscillators slightly detuned, creates phasing pattern). 0.7: complex beating (fast detuning ratio). 1: brownian drift dominates (filtered pink noise — smooth but never repeating). Best range: 0.3–0.7 for living, breathing modulation.',
+  'chaos-amount':'Amount — modulation depth in Hz (0–1000). At 100: gentle, musical pitch drift or filter movement. At 500+: dramatic sweeps. Scale it to match the destination: VCF cutoff needs larger amounts (200–600) than VCO pitch (10–50 for subtle microtonal drift).',
   'seq-steps':  'Step count — 8 or 16 steps per loop. At 120 BPM, 8 steps = 2-second loop; 16 steps = 4-second loop. When you switch from 8 to 16, your existing 8-step pattern is automatically copied into slots 9–16, so the loop doubles in length without any silence. You can then edit the second half to create variation — a classic technique for building evolving sequences. Switching back to 8 hides the second half but preserves it. Ctrl+Z undoes a step count change.',
+  'seq-vel':    'Per-step velocity — sets how hard this step hits (0–1). The velocity value is emitted on SEQ VEL OUT as a CV pulse when the step fires. Patch SEQ VEL OUT → VCA ENV or VCF CV for per-note dynamics: soft steps whisper, loud steps punch through. Toggle VEL/PIT button to switch between pitch and velocity views.',
+  'seq-vel-out':'SEQ Velocity Out — emits a CV pulse (0–1) on each fired step, matching that step\'s velocity knob. Patch to VCA ENV IN for expressive per-note dynamics, or VCF CV for per-note brightness variation. A velocity of 0 on a step = step is effectively silenced dynamically.',
+  'seq-g1':     'Step 1 Gate Out — fires a 10ms gate pulse (0→1→0) every time step 1 is active and the sequencer reaches it. Patch to ADSR gate IN, Sample trigger, or any gate-sensitive input. Gate fires even if the step\'s probability check fails — it only tracks whether the step is ON.',
+  'seq-g2':     'Step 2 Gate Out — fires a 10ms gate pulse when step 2 is active.',
+  'seq-g3':     'Step 3 Gate Out — fires a 10ms gate pulse when step 3 is active.',
+  'seq-g4':     'Step 4 Gate Out — fires a 10ms gate pulse when step 4 is active. Patch to a second ADSR for polyrhythmic envelope control — step 4 can trigger a different envelope than step 1.',
+  'seq-g5':     'Step 5 Gate Out — fires a 10ms gate pulse when step 5 is active.',
+  'seq-g6':     'Step 6 Gate Out — fires a 10ms gate pulse when step 6 is active.',
+  'seq-g7':     'Step 7 Gate Out — fires a 10ms gate pulse when step 7 is active.',
+  'seq-g8':     'Step 8 Gate Out — fires a 10ms gate pulse when step 8 is active. Patch steps 1 and 5 to two different sampler triggers for a kick/snare pattern locked to your sequence.',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -759,9 +796,21 @@ function makeVCO(instanceId = 1) {
   osc.frequency.value = 440;
   osc.connect(gain);
   osc.start();
-  const m = { osc, gain, type:'sawtooth', oct:4, coarse:0, fine:0 };
+  // Sub-oscillator: always square wave, one octave below main VCO
+  const subOsc = ctx.createOscillator();
+  const subGain = ctx.createGain();
+  subOsc.type = 'square';
+  subOsc.frequency.value = 220;
+  subGain.gain.value = 0.7;
+  subOsc.connect(subGain);
+  subOsc.start();
+  const m = { osc, gain, subOsc, subGain, type:'sawtooth', oct:4, coarse:0, fine:0 };
   m.freq = () => 440 * Math.pow(2, (m.oct-4) + m.coarse/12 + m.fine/1200);
-  m.sync = () => osc.frequency.setTargetAtTime(m.freq(), ctx.currentTime, 0.005);
+  m.sync = () => {
+    const f = m.freq();
+    osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.005);
+    subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.005);
+  };
   m.setType = t => { m.type=t; osc.type=t; };
   m.setOct = v => { m.oct=v; m.sync(); };
   m.setCoarse = v => { m.coarse=v; m.sync(); };
@@ -769,8 +818,12 @@ function makeVCO(instanceId = 1) {
   m.setPitchCV = semi => {
     const f = m.freq() * Math.pow(2, semi/12);
     osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.003);
+    subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.003);
   };
-  m.cleanup = () => { try { osc.stop(); } catch(e){} try { gain.disconnect(); } catch(e){} };
+  m.cleanup = () => {
+    try { osc.stop(); subOsc.stop(); } catch(e){}
+    try { gain.disconnect(); subGain.disconnect(); } catch(e){}
+  };
   mods[modsKey('vco', instanceId)] = m; return m;
 }
 
@@ -792,20 +845,94 @@ function makeLFO(instanceId = 1) {
 
 function makeVCF(instanceId = 1) {
   const inlet = ctx.createGain();
+  // Pre-filter drive (tanh WaveShaper)
+  const driveNode = ctx.createWaveShaper();
+  driveNode.oversample = '2x';
   const filt = ctx.createBiquadFilter();
   const cvGain = ctx.createGain();
+  const resCVGain = ctx.createGain(); // VC resonance input
   filt.type = 'lowpass';
   filt.frequency.value = 1200;
   filt.Q.value = 2;
   cvGain.gain.value = 1;
-  inlet.connect(filt);
+  resCVGain.gain.value = 1;
+  inlet.connect(driveNode); driveNode.connect(filt);
   cvGain.connect(filt.frequency);
-  const m = { inlet, filt, cvGain, cutoff:1200, res:2, ftype:'lowpass' };
+  resCVGain.connect(filt.Q);
+  const m = { inlet, driveNode, filt, cvGain, resCVGain, cutoff:1200, res:2, ftype:'lowpass', driveVal:1 };
   m.setCutoff = v => { m.cutoff=v; filt.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setRes = v => { m.res=v; filt.Q.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setType = t => { m.ftype=t; filt.type=t; };
+  m.setDrive = v => {
+    m.driveVal = v;
+    const N=256, c=new Float32Array(N);
+    for(let i=0;i<N;i++){const x=(i*2/N-1)*v; c[i]=Math.tanh(x);}
+    driveNode.curve = c;
+  };
+  m.setDrive(1); // init: unity gain (tanh(x)≈x for small x)
+  m.kbTrack = false;
+  m.trackNote = semi => {
+    if (!m.kbTrack) return;
+    const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi/12)));
+    filt.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+  };
+  m.setKbTrack = on => {
+    m.kbTrack = on;
+    if (!on) filt.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05);
+  };
   m.cleanup = () => { try { inlet.disconnect(); filt.disconnect(); } catch(e){} };
   mods[modsKey('vcf', instanceId)] = m; return m;
+}
+
+function makeLadder() {
+  // Transistor ladder: 2 cascaded 12dB/oct lowpass (= 24dB/oct), pre-filter tanh drive
+  const inlet = ctx.createGain();
+  const driveNode = ctx.createWaveShaper(); driveNode.oversample = '2x';
+  // Two cascaded biquad lowpass stages (matched Q for 24dB/oct Butterworth response)
+  const f1 = ctx.createBiquadFilter(); f1.type = 'lowpass';
+  const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass';
+  const cvGain = ctx.createGain(); cvGain.gain.value = 1;
+  const resCVGain = ctx.createGain(); resCVGain.gain.value = 1;
+  const outlet = ctx.createGain(); outlet.gain.value = 1;
+  // Chain: inlet → drive → f1 → f2 → outlet
+  inlet.connect(driveNode); driveNode.connect(f1); f1.connect(f2); f2.connect(outlet);
+  // CV connections: cvGain drives both filter stages' frequency
+  cvGain.connect(f1.frequency); cvGain.connect(f2.frequency);
+  resCVGain.connect(f1.Q); resCVGain.connect(f2.Q);
+  f1.frequency.value = 800; f2.frequency.value = 800;
+  f1.Q.value = 1; f2.Q.value = 1;
+  const m = { inlet, driveNode, f1, f2, cvGain, resCVGain, outlet, cutoff:800, res:0, driveVal:1, kbTrack:false };
+  m.setCutoff = v => {
+    m.cutoff = v;
+    f1.frequency.setTargetAtTime(v, ctx.currentTime, 0.01);
+    f2.frequency.setTargetAtTime(v, ctx.currentTime, 0.01);
+  };
+  m.setRes = v => {
+    m.res = v;
+    // Map 0–1 to Q: 0→0.7, 0.9→8, 0.95→30, 1.0→80 (self-oscillation)
+    const Q = v < 0.95 ? 0.7 + v * 75 : 0.7 + 0.95 * 75 + (v - 0.95) * 1000;
+    f1.Q.setTargetAtTime(Q, ctx.currentTime, 0.01);
+    f2.Q.setTargetAtTime(Q, ctx.currentTime, 0.01);
+  };
+  m.setDrive = v => {
+    m.driveVal = v;
+    const N=256, c=new Float32Array(N);
+    if (v < 0.01) { for(let i=0;i<N;i++) c[i]=(i*2/N-1); }
+    else { const k=1+v*1.5; for(let i=0;i<N;i++){const x=(i*2/N-1)*k; c[i]=Math.tanh(x)/Math.tanh(k);} }
+    driveNode.curve = c;
+  };
+  m.trackNote = semi => {
+    if (!m.kbTrack) return;
+    const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi/12)));
+    f1.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+    f2.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+  };
+  m.setKbTrack = on => {
+    m.kbTrack = on;
+    if (!on) { f1.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05); f2.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05); }
+  };
+  m.setRes(0); m.setDrive(1);
+  mods.ladder = m; return m;
 }
 
 function makeADSR(instanceId = 1) {
@@ -852,8 +979,14 @@ function makeSeq() {
   const m = {
     bpm:120, playing:false, step:-1, timer:null,
     direction:'fwd', pingDir:1, stepCount:8,
-    steps: Array.from({length:16},(_,i)=>({on:!!defaultOn[i], pitch:defaultPitches[i], prob:1.0}))
+    steps: Array.from({length:16},(_,i)=>({on:!!defaultOn[i], pitch:defaultPitches[i], prob:1.0, vel:0.7}))
   };
+  // CV outputs: velocity and per-step gates
+  const velSrc = ctx.createConstantSource(); velSrc.offset.value = 0; velSrc.start();
+  m.velSrc = velSrc;
+  m.gateNodes = Array.from({length:8}, () => {
+    const g = ctx.createConstantSource(); g.offset.value = 0; g.start(); return g;
+  });
   m.setBPM = v => { m.bpm = Math.round(v); };
   m.fireTick = () => {
     const sc = m.stepCount;
@@ -879,6 +1012,13 @@ function makeSeq() {
     const ms = (60 / m.bpm / 2) * 1000;
     const s = m.steps[m.step];
     const fires = s.on && Math.random() < (s.prob ?? 1.0);
+    // Per-step gate pulse (steps 0–7 only; gate fires regardless of probability)
+    if (s.on && m.step < 8) {
+      const g = m.gateNodes[m.step];
+      const gateDur = ms * 0.4 / 1000;
+      g.offset.setValueAtTime(1, ctx.currentTime);
+      g.offset.setValueAtTime(0, ctx.currentTime + gateDur);
+    }
     if (fires) {
       let pitch = s.pitch;
       if (mods.quant?.active) {
@@ -887,12 +1027,17 @@ function makeSeq() {
       mods.vco.setPitchCV(pitch);
       mods.vco2?.setPitchCV(pitch);
       mods.chord?.trigger(pitch);
+      mods.vcf?.trackNote(pitch);
+      mods.ladder?.trackNote(pitch);
       if (mods.quant?.active) {
         const lbl = document.getElementById('quant-note-lbl');
         if (lbl) lbl.textContent = ROOT_NAMES[((pitch % 12) + 12) % 12] || '—';
       }
+      // Emit velocity CV
+      velSrc.offset.setValueAtTime(s.vel ?? 0.7, ctx.currentTime);
       mods.adsr.on(); setTimeout(() => mods.adsr.off(), ms * 0.65);
     } else {
+      velSrc.offset.setValueAtTime(0, ctx.currentTime);
       mods.adsr.off();
     }
   };
@@ -965,11 +1110,12 @@ async function loadMicrocosmWorklet() {
 class MicrocosmProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      {name:'blend',   defaultValue:0.7,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
-      {name:'grainSz', defaultValue:0.12, minValue:0.02, maxValue:0.5, automationRate:'k-rate'},
-      {name:'scatter', defaultValue:0.3,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
-      {name:'pitch',   defaultValue:1.0,  minValue:0.25, maxValue:4.0, automationRate:'k-rate'},
-      {name:'density', defaultValue:12,   minValue:2,    maxValue:40,  automationRate:'k-rate'},
+      {name:'blend',    defaultValue:0.7,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
+      {name:'grainSz',  defaultValue:0.12, minValue:0.02, maxValue:0.5, automationRate:'k-rate'},
+      {name:'scatter',  defaultValue:0.3,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
+      {name:'pitch',    defaultValue:1.0,  minValue:0.25, maxValue:4.0, automationRate:'k-rate'},
+      {name:'density',  defaultValue:12,   minValue:2,    maxValue:40,  automationRate:'k-rate'},
+      {name:'position', defaultValue:0.5,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
     ];
   }
   constructor() {
@@ -985,9 +1131,14 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
     this.glitchLen = Math.floor(sampleRate * 0.08);
     this.glitchPhase = 0;
     this.glitchTimer = 0;
+    this.fileBuf = null;
+    this.fileMode = false;
+    this.glitchIsFile = false;
     this.port.onmessage = ({data}) => {
-      if (data.mode !== undefined) this.mode = data.mode;
-      if (data.freeze !== undefined) this.freeze = data.freeze;
+      if (data.mode    !== undefined) this.mode = data.mode;
+      if (data.freeze  !== undefined) this.freeze = data.freeze;
+      if (data.fileBuffer !== undefined) this.fileBuf = data.fileBuffer;
+      if (data.fileMode   !== undefined) { this.fileMode = data.fileMode; if (!data.fileMode) this.glitchIsFile = false; }
     };
   }
   hann(t) { return 0.5 * (1 - Math.cos(6.2832 * t)); }
@@ -997,15 +1148,23 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
     const f = pos - Math.floor(pos);
     return this.buf[i] * (1 - f) + this.buf[j] * f;
   }
+  readFileBuf(pos) {
+    const len = this.fileBuf.length;
+    const i = ((Math.floor(pos) % len) + len) % len;
+    const j = (i + 1) % len;
+    const f = pos - Math.floor(pos);
+    return this.fileBuf[i] * (1-f) + this.fileBuf[j] * f;
+  }
   process(inputs, outputs, params) {
     const inp = inputs[0] && inputs[0][0];
     const out = outputs[0][0];
     const n = out.length;
-    const blend   = params.blend[0];
-    const grainSz = params.grainSz[0];
-    const scatter = params.scatter[0];
-    const pitch   = params.pitch[0];
-    const density = params.density[0];
+    const blend    = params.blend[0];
+    const grainSz  = params.grainSz[0];
+    const scatter  = params.scatter[0];
+    const pitch    = params.pitch[0];
+    const density  = params.density[0];
+    const position = params.position[0];
     for (let i = 0; i < n; i++) {
       const dry = inp ? inp[i] : 0;
       if (!this.freeze) {
@@ -1018,11 +1177,25 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
         if (this.glitchTimer > Math.floor(sampleRate * 0.4)) {
           this.glitchTimer = 0;
           this.glitchLen = Math.floor(sampleRate * (0.04 + Math.random() * 0.12));
-          const back = Math.floor(sampleRate * (0.1 + Math.random() * 1.5));
-          this.glitchStart = ((this.writeHead - back) % this.bufSize + this.bufSize) % this.bufSize;
+          if (this.fileMode && this.fileBuf) {
+            const fLen = this.fileBuf.length;
+            const center = Math.floor(position * fLen);
+            const spread = Math.floor(0.25 * fLen);
+            const off = Math.floor((Math.random()-0.5)*2*spread);
+            this.glitchStart = Math.max(0, Math.min(fLen - this.glitchLen - 1, center + off));
+            this.glitchIsFile = true;
+          } else {
+            const back = Math.floor(sampleRate * (0.1 + Math.random() * 1.5));
+            this.glitchStart = ((this.writeHead - back) % this.bufSize + this.bufSize) % this.bufSize;
+            this.glitchIsFile = false;
+          }
           this.glitchPhase = 0;
         }
-        wet = this.buf[(this.glitchStart + this.glitchPhase) % this.bufSize];
+        if (this.glitchIsFile && this.fileBuf) {
+          wet = this.fileBuf[Math.min(this.fileBuf.length-1, this.glitchStart + this.glitchPhase)] || 0;
+        } else {
+          wet = this.buf[(this.glitchStart + this.glitchPhase) % this.bufSize];
+        }
         wet *= this.hann(this.glitchPhase / this.glitchLen);
         this.glitchPhase = (this.glitchPhase + 1) % this.glitchLen;
       } else {
@@ -1030,10 +1203,19 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
         const grainSamp = Math.floor(sampleRate * grainSz);
         if (this.nextGrainSamp <= 0) {
           if (this.grains.length < 32) {
-            const back = Math.floor(sampleRate * scatter * 2) + grainSamp;
-            const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(sampleRate * scatter * 0.5)));
-            const startPos = ((this.writeHead - back - jitter) % this.bufSize + this.bufSize) % this.bufSize;
-            this.grains.push({ pos: startPos, len: grainSamp, played: 0, speed: pitchRatio });
+            if (this.fileMode && this.fileBuf) {
+              const fLen = this.fileBuf.length;
+              const center = Math.floor(position * fLen);
+              const spread = Math.floor(scatter * fLen * 0.3);
+              const jitter = spread > 0 ? Math.floor((Math.random()-0.5)*2*spread) : 0;
+              const startPos = Math.max(0, Math.min(fLen - grainSamp - 1, center + jitter));
+              this.grains.push({ pos: startPos, len: grainSamp, played: 0, speed: pitchRatio, file: true });
+            } else {
+              const back = Math.floor(sampleRate * scatter * 2) + grainSamp;
+              const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(sampleRate * scatter * 0.5)));
+              const startPos = ((this.writeHead - back - jitter) % this.bufSize + this.bufSize) % this.bufSize;
+              this.grains.push({ pos: startPos, len: grainSamp, played: 0, speed: pitchRatio });
+            }
           }
           this.nextGrainSamp = (sampleRate / density) * (0.75 + Math.random() * 0.5);
         }
@@ -1042,7 +1224,12 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
         for (const g of this.grains) {
           const t = g.played / g.len;
           if (t >= 1) continue;
-          wet += this.readBuf((g.pos + g.played * g.speed) % this.bufSize) * this.hann(t);
+          if (g.file && this.fileBuf) {
+            const safePos = Math.max(0, Math.min(this.fileBuf.length - 2, g.pos + g.played * g.speed));
+            wet += this.readFileBuf(safePos) * this.hann(t);
+          } else {
+            wet += this.readBuf((g.pos + g.played * g.speed) % this.bufSize) * this.hann(t);
+          }
           g.played++;
           alive.push(g);
         }
@@ -1055,6 +1242,36 @@ class MicrocosmProcessor extends AudioWorkletProcessor {
   }
 }
 registerProcessor('microcosm', MicrocosmProcessor);`;
+  const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url);
+}
+
+async function loadSlewWorklet() {
+  const code = `
+class SlewProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      {name:'rise', defaultValue:0.05, minValue:0.001, maxValue:5, automationRate:'k-rate'},
+      {name:'fall', defaultValue:0.05, minValue:0.001, maxValue:5, automationRate:'k-rate'},
+    ];
+  }
+  constructor() { super(); this._v = 0; }
+  process(inputs, outputs, params) {
+    const inp = inputs[0] && inputs[0][0];
+    const out = outputs[0][0];
+    const riseRate = 1 / (params.rise[0] * sampleRate);
+    const fallRate = 1 / (params.fall[0] * sampleRate);
+    for (let i = 0; i < out.length; i++) {
+      const target = inp ? inp[i] : 0;
+      const delta = target - this._v;
+      if (delta > 0) this._v = Math.min(this._v + riseRate, target);
+      else           this._v = Math.max(this._v - fallRate, target);
+      out[i] = this._v;
+    }
+    return true;
+  }
+}
+registerProcessor('slew', SlewProcessor);`;
   const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
   await ctx.audioWorklet.addModule(url);
 }
@@ -1185,6 +1402,8 @@ function makeMixer(instanceId = 1) {
 
 function makeDelay(instanceId = 1) {
   const inlet    = ctx.createGain();
+  const driveNode = ctx.createWaveShaper(); // pre-delay saturation
+  driveNode.oversample = '2x';
   const delayNode = ctx.createDelay(2.0);
   const feedback  = ctx.createGain();
   const dryGain   = ctx.createGain();
@@ -1197,15 +1416,23 @@ function makeDelay(instanceId = 1) {
   wetGain.gain.value   = 0.35;
 
   inlet.connect(dryGain);    dryGain.connect(outlet);
-  inlet.connect(delayNode);
+  inlet.connect(driveNode);  driveNode.connect(delayNode); // drive before delay
   delayNode.connect(feedback); feedback.connect(delayNode); // feedback loop
   delayNode.connect(wetGain);  wetGain.connect(outlet);
 
-  const m = { inlet, delayNode, feedback, dryGain, wetGain, outlet,
-              timeVal:0.375, fbVal:0.35, mixVal:0.35 };
+  const m = { inlet, driveNode, delayNode, feedback, dryGain, wetGain, outlet,
+              timeVal:0.375, fbVal:0.35, mixVal:0.35, driveVal:0 };
   m.setTime     = v => { m.timeVal=v; delayNode.delayTime.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setFeedback = v => { m.fbVal=v;   feedback.gain.setTargetAtTime(Math.min(v,0.95), ctx.currentTime, 0.01); };
   m.setMix      = v => { m.mixVal=v;  wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setDrive    = v => {
+    m.driveVal = v;
+    const N=256, c=new Float32Array(N);
+    if (v < 0.01) { for(let i=0;i<N;i++) c[i]=(i*2/N-1); }        // linear
+    else { const k=1+v*2; for(let i=0;i<N;i++){const x=(i*2/N-1)*k; c[i]=Math.tanh(x);} } // tanh
+    driveNode.curve = c;
+  };
+  m.setDrive(0); // init: clean (linear passthrough)
   m.syncToBPM   = () => {
     const bpm = mods.seq ? mods.seq.bpm : 120;
     const dotted8th = (60/bpm) * 0.75;
@@ -1318,6 +1545,56 @@ function makeAttenuverter(instanceId = 1) {
   m.setOffset = v => { m.offsetVal=v; offsetSrc.offset.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.cleanup = () => { try { offsetSrc.stop(); attGain.disconnect(); outlet.disconnect(); } catch(e){} };
   mods[modsKey('att', instanceId)] = m; return m;
+}
+
+function makeSlew() {
+  const inlet  = ctx.createGain();
+  const node   = new AudioWorkletNode(ctx, 'slew', {
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1]
+  });
+  const outlet = ctx.createGain();
+  inlet.connect(node); node.connect(outlet);
+  const p = node.parameters;
+  const m = { inlet, node, outlet, riseVal:0.05, fallVal:0.05 };
+  m.setRise = v => { m.riseVal=v; p.get('rise').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setFall = v => { m.fallVal=v; p.get('fall').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  mods.slew = m; return m;
+}
+
+function makeChaos() {
+  // Two detuned oscillators for beating (low CHAOS) + filtered noise brownian walk (high CHAOS)
+  const oscA = ctx.createOscillator(); oscA.type = 'sine';
+  const oscB = ctx.createOscillator(); oscB.type = 'sine';
+  const gainA = ctx.createGain(); gainA.gain.value = 1;
+  const gainB = ctx.createGain(); gainB.gain.value = 0;
+  // Brownian: pink noise through very-low-freq lowpass
+  const noiseSrc = new AudioWorkletNode(ctx, 'pink-noise', {numberOfInputs:0, outputChannelCount:[1]});
+  const noiseFilt = ctx.createBiquadFilter(); noiseFilt.type = 'lowpass'; noiseFilt.frequency.value = 3; noiseFilt.Q.value = 0.5;
+  const noiseGain = ctx.createGain(); noiseGain.gain.value = 0;
+  const outlet = ctx.createGain(); outlet.gain.value = 200;
+  oscA.connect(gainA); gainA.connect(outlet);
+  oscB.connect(gainB); gainB.connect(outlet);
+  noiseSrc.connect(noiseFilt); noiseFilt.connect(noiseGain); noiseGain.connect(outlet);
+  oscA.start(); oscB.start();
+  const m = { oscA, oscB, outlet, rateVal:0.5, chaosVal:0, amountVal:200 };
+  m.setRate = v => {
+    m.rateVal = v;
+    oscA.frequency.setTargetAtTime(v, ctx.currentTime, 0.05);
+    const detuneHz = v * (1 + m.chaosVal * 3); // 1× to 4× detuning
+    oscB.frequency.setTargetAtTime(detuneHz, ctx.currentTime, 0.05);
+    noiseFilt.frequency.setTargetAtTime(Math.max(0.5, v * 4), ctx.currentTime, 0.05);
+  };
+  m.setChaos = v => {
+    m.chaosVal = v;
+    gainA.gain.setTargetAtTime(Math.max(0, 1 - v * 1.2), ctx.currentTime, 0.05);
+    gainB.gain.setTargetAtTime(Math.min(1, v * 1.2), ctx.currentTime, 0.05);
+    noiseGain.gain.setTargetAtTime(v * v * 2, ctx.currentTime, 0.05);
+    const detuneHz = m.rateVal * (1 + v * 3);
+    oscB.frequency.setTargetAtTime(detuneHz, ctx.currentTime, 0.05);
+  };
+  m.setAmount = v => { m.amountVal = v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setRate(0.5); m.setChaos(0); m.setAmount(200);
+  mods.chaos = m; return m;
 }
 
 // ── Scale data & utility ────────────────────────────────────────────────────
@@ -1440,7 +1717,7 @@ function makeArp() {
     const idx = ((m.step % n) + n) % n;
     let pitch = notes[idx];
     if (mods.quant?.active) pitch = mods.quant.quantizeSemi(pitch);
-    mods.vco?.setPitchCV(pitch); mods.vco2?.setPitchCV(pitch); mods.chord?.trigger(pitch);
+    mods.vco?.setPitchCV(pitch); mods.vco2?.setPitchCV(pitch); mods.chord?.trigger(pitch); mods.vcf?.trackNote(pitch); mods.ladder?.trackNote(pitch);
     const ms = (60 / (mods.seq?.bpm||120)) * 1000 / m.rateMul;
     mods.adsr?.on(); setTimeout(()=>mods.adsr?.off(), ms*0.42);
     // Advance step
@@ -1509,6 +1786,7 @@ function makeSampler() {
       const ab = await file.arrayBuffer();
       const decoded = await ctx.decodeAudioData(ab);
       m.buffer = decoded;
+      if (mods.microcosm && mods.microcosm.fileMode) mods.microcosm.setFileBuffer(decoded);
       m._onLoad && m._onLoad();
     } catch(e) { console.warn('Sampler: decode failed', e); }
   };
@@ -1562,6 +1840,7 @@ function makeSampler() {
       src.loopStart = v * m.buffer.duration;
       src.loopEnd   = Math.min(m.buffer.duration, src.loopStart + m.sizeVal * m.buffer.duration);
     }
+    if (mods.microcosm) mods.microcosm.syncFilePos(v);
     m._onLoad && m._onLoad(); // redraw waveform window overlay
   };
   m.setSize = v => {
@@ -1734,7 +2013,7 @@ function makeMicrocosm() {
   const p = node.parameters;
   const m = { inlet, node, outlet,
     blendVal:0.7, grainSzVal:0.12, scatterVal:0.3, pitchVal:1.0, densityVal:12,
-    mode:'granular', frozen:false };
+    mode:'granular', frozen:false, fileMode:false };
   m.setBlend   = v => { m.blendVal=v;    p.get('blend').setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setGrainSz = v => { m.grainSzVal=v; p.get('grainSz').setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setScatter = v => { m.scatterVal=v; p.get('scatter').setTargetAtTime(v, ctx.currentTime, 0.05); };
@@ -1742,6 +2021,20 @@ function makeMicrocosm() {
   m.setDensity = v => { m.densityVal=v; p.get('density').setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setMode    = md => { m.mode=md; node.port.postMessage({mode:md}); };
   m.setFreeze  = on => { m.frozen=on;   node.port.postMessage({freeze:on}); };
+  m.setFileBuffer = audioBuffer => {
+    if (!audioBuffer) return;
+    const ch = audioBuffer.getChannelData(0);
+    node.port.postMessage({ fileBuffer: Float32Array.from(ch) });
+  };
+  m.setFileMode = on => {
+    m.fileMode = on;
+    node.port.postMessage({ fileMode: on });
+    if (on && mods.sampler && mods.sampler.buffer) {
+      m.setFileBuffer(mods.sampler.buffer);
+      p.get('position').value = mods.sampler.posVal;
+    }
+  };
+  m.syncFilePos = v => { if (m.fileMode) p.get('position').value = v; };
   mods.microcosm = m; return m;
 }
 
@@ -1755,8 +2048,8 @@ function wireDefault() {
   mods.vca.outlet.connect(masterOut);
   // ADSR → VCA env
   mods.adsr.src.connect(mods.vca.envGain.gain);
-  // LFO → VCF cutoff
-  mods.lfo.depth.connect(mods.vcf.filt.frequency);
+  // LFO → VCF cutoff (through cvGain so patch cable disconnect works correctly)
+  mods.lfo.depth.connect(mods.vcf.cvGain);
   // Effects outlets → master (send model: patch into any effect's IN to activate it)
   mods.delay.outlet.connect(masterOut);
   mods.reverb.outlet.connect(masterOut);
@@ -1789,6 +2082,7 @@ function regPP(id, getNode, isParam) {
 
 function buildPPRegistry() {
   regPP('vco-out',  ()=>mods.vco.gain);
+  regPP('vco-sub',  ()=>mods.vco.subGain);
   regPP('vco-cv',   ()=>mods.vco.osc.frequency, true);
   regPP('vco2-out', ()=>mods.vco2.gain);
   regPP('vco2-cv',  ()=>mods.vco2.osc.frequency, true);
@@ -1804,10 +2098,18 @@ function buildPPRegistry() {
   regPP('clk-div2',  ()=>mods.clkdiv.gate2);
   regPP('clk-div4',  ()=>mods.clkdiv.gate4);
   regPP('clk-div8',  ()=>mods.clkdiv.gate8);
+  regPP('seq-vel-out', ()=>mods.seq.velSrc);
+  for (let i=0;i<8;i++) regPP(`seq-g${i+1}`, ()=>mods.seq.gateNodes[i]);
+  regPP('chaos-out', ()=>mods.chaos.outlet);
+  regPP('ladder-ai',     ()=>mods.ladder.inlet);
+  regPP('ladder-ao',     ()=>mods.ladder.outlet);
+  regPP('ladder-cv',     ()=>mods.ladder.cvGain);
+  regPP('ladder-res-cv', ()=>mods.ladder.resCVGain);
   regPP('lfo-out',   ()=>mods.lfo.depth);
-  regPP('vcf-in',   ()=>mods.vcf.inlet);
-  regPP('vcf-cv',   ()=>mods.vcf.filt.frequency, true);
-  regPP('vcf-out',  ()=>mods.vcf.filt);
+  regPP('vcf-in',     ()=>mods.vcf.inlet);
+  regPP('vcf-cv',     ()=>mods.vcf.cvGain);
+  regPP('vcf-res-cv', ()=>mods.vcf.resCVGain);
+  regPP('vcf-out',    ()=>mods.vcf.filt);
   regPP('adsr-out', ()=>mods.adsr.src);
   regPP('vca-in',   ()=>mods.vca.inlet);
   regPP('vca-env',  ()=>mods.vca.envGain.gain, true);
@@ -1817,6 +2119,8 @@ function buildPPRegistry() {
   regPP('lfo2-out',  ()=>mods.lfo2.depth);
   regPP('att-in',    ()=>mods.att.attGain);
   regPP('att-out',   ()=>mods.att.outlet);
+  regPP('slew-ci',   ()=>mods.slew.inlet);
+  regPP('slew-co',   ()=>mods.slew.outlet);
   regPP('chorus-in',     ()=>mods.chorus.inlet);
   regPP('chorus-out',    ()=>mods.chorus.outlet);
   regPP('panner-in',     ()=>mods.panner.inlet);
@@ -2535,6 +2839,7 @@ function buildVCOPanel(instanceId = 1) {
   d.appendChild(mkKnob({id:pk('fine'),label:'FINE',min:-100,max:100,val:0,sz:'sm',tip:TIPS.fine,onChange:v=>mods[mk].setFine(v)}));
   d.appendChild(document.createElement('hr'));
   d.appendChild(mkPP(pk('out'),'ao','OUT','out'));
+  if (instanceId === 1) d.appendChild(mkPP('vco-sub','ao','SUB','out'));
   d.appendChild(mkPP(pk('cv'),'ci','CV↓','in'));
   return panel('vco',instanceId,'VCO',d);
 }
@@ -2566,11 +2871,45 @@ function buildVCFPanel(instanceId = 1) {
   d.appendChild(waveSelector([['LP','lowpass'],['HP','highpass'],['BP','bandpass']],'lowpass',t=>mods[mk].setType(t),'ftype-',pk('type')));
   d.appendChild(mkKnob({id:pk('cutoff'),label:'CUTOFF',min:20,max:20000,val:1200,log:true,sz:'lg',tip:TIPS.cutoff,onChange:v=>mods[mk].setCutoff(v)}));
   d.appendChild(mkKnob({id:pk('res'),label:'RES',min:.1,max:25,val:2,log:true,sz:'sm',tip:TIPS.resonance,onChange:v=>mods[mk].setRes(v)}));
+  if (instanceId === 1) d.appendChild(mkKnob({id:pk('drive'),label:'DRIVE',min:1,max:8,val:1,tip:TIPS['vcf-drive'],onChange:v=>mods[mk].setDrive(v)}));
+  if (instanceId === 1) {
+    const kbBtn = document.createElement('button');
+    kbBtn.className = 'btn'; kbBtn.id = 'vcf-kb-track-btn'; kbBtn.textContent = 'KB TRACK';
+    kbBtn.style.cssText = 'width:100%;font-size:7px;letter-spacing:1px;margin:2px 0;';
+    kbBtn.addEventListener('mouseenter',e=>showTip(TIPS['vcf-kb-track'],e));
+    kbBtn.addEventListener('mousemove',moveTip); kbBtn.addEventListener('mouseleave',hideTip);
+    kbBtn.addEventListener('click', () => {
+      mods[mk].setKbTrack(!mods[mk].kbTrack);
+      kbBtn.classList.toggle('on', mods[mk].kbTrack);
+    });
+    d.appendChild(kbBtn);
+  }
   d.appendChild(document.createElement('hr'));
   d.appendChild(mkPP(pk('in'),'ai','IN','in'));
   d.appendChild(mkPP(pk('cv'),'ci','CV↓','in'));
+  if (instanceId === 1) d.appendChild(mkPP('vcf-res-cv','ci','RES↓','in'));
   d.appendChild(mkPP(pk('out'),'ao','OUT','out'));
   return panel('vcf', instanceId, 'VCF', d);
+}
+
+function buildLadderPanel() {
+  const d = document.createElement('div');
+  d.appendChild(mkKnob({id:'ladder-cutoff', label:'CUTOFF', min:20, max:20000, val:800, log:true, sz:'lg', tip:TIPS['ladder-cutoff'], onChange:v=>mods.ladder.setCutoff(v)}));
+  d.appendChild(mkKnob({id:'ladder-reso',   label:'RESO',   min:0,  max:1,     val:0,           sz:'sm', tip:TIPS['ladder-reso'],   onChange:v=>mods.ladder.setRes(v)}));
+  d.appendChild(mkKnob({id:'ladder-drive',  label:'DRIVE',  min:1,  max:8,     val:1,                   tip:TIPS['ladder-drive'],  onChange:v=>mods.ladder.setDrive(v)}));
+  const kbBtn = document.createElement('button');
+  kbBtn.className='btn'; kbBtn.id='ladder-kb-track-btn'; kbBtn.textContent='KB TRACK';
+  kbBtn.style.cssText='width:100%;font-size:7px;letter-spacing:1px;margin:2px 0;';
+  kbBtn.addEventListener('mouseenter',e=>showTip(TIPS['ladder-kb-track'],e));
+  kbBtn.addEventListener('mousemove',moveTip); kbBtn.addEventListener('mouseleave',hideTip);
+  kbBtn.addEventListener('click',()=>{ mods.ladder.setKbTrack(!mods.ladder.kbTrack); kbBtn.classList.toggle('on',mods.ladder.kbTrack); });
+  d.appendChild(kbBtn);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('ladder-ai',    'ai','IN','in'));
+  d.appendChild(mkPP('ladder-cv',    'ci','CV↓','in'));
+  d.appendChild(mkPP('ladder-res-cv','ci','RES↓','in'));
+  d.appendChild(mkPP('ladder-ao',    'ao','OUT','out'));
+  return panel('ladder','LADDER',d);
 }
 
 function buildADSRPanel(instanceId = 1) {
@@ -2798,6 +3137,7 @@ function buildSamplerPanel() {
 function buildSeqPanel() {
   const d=document.createElement('div'); d.style.minWidth='240px';
   const grid=document.createElement('div'); grid.className='seq-grid'; grid.id='seq-grid';
+  let velView = false; // false = show pitch knobs, true = show velocity knobs
   mods.seq.steps.forEach((step,i)=>{
     const cell=document.createElement('div'); cell.className='seq-step'; cell.id=`ss${i}`;
     if(i>=8) cell.className += ' seq-extra';
@@ -2809,8 +3149,10 @@ function buildSeqPanel() {
     });
     tog.addEventListener('mouseenter',e=>showTip(TIPS['seq-step'],e)); tog.addEventListener('mousemove',moveTip); tog.addEventListener('mouseleave',hideTip);
     const kp=mkKnob({id:`seq-pitch-${i}`,label:i+1,min:-12,max:12,val:step.pitch,sz:'sm',tip:TIPS['seq-pitch'],onChange:v=>{step.pitch=Math.round(v);}});
+    const kv=mkKnob({id:`seq-vel-${i}`,label:`v${i+1}`,min:0,max:1,val:step.vel??0.7,sz:'sm',tip:TIPS['seq-vel'],onChange:v=>{step.vel=v;}});
+    kv.style.display='none';
     const kprob=mkKnob({id:`seq-prob-${i}`,label:'P%',min:0,max:1,val:1,sz:'sm',tip:TIPS['seq-prob'],onChange:v=>{step.prob=v;}});
-    cell.appendChild(tog); cell.appendChild(kp); cell.appendChild(kprob); grid.appendChild(cell);
+    cell.appendChild(tog); cell.appendChild(kp); cell.appendChild(kv); cell.appendChild(kprob); grid.appendChild(cell);
   });
   d.appendChild(grid);
   // 16-step toggle
@@ -2868,8 +3210,25 @@ function buildSeqPanel() {
     dirRow.appendChild(b);
   });
   d.appendChild(dirRow);
+  // VEL/PIT view toggle
+  const velRow=document.createElement('div'); velRow.className='transport'; velRow.style.marginTop='4px';
+  const velLbl=document.createElement('span'); velLbl.style.cssText='font-size:7px;color:#555;letter-spacing:1px;margin-right:2px;'; velLbl.textContent='VIEW:';
+  velRow.appendChild(velLbl);
+  const pitBtn=document.createElement('button'); pitBtn.className='btn on'; pitBtn.textContent='PIT'; pitBtn.style.padding='2px 5px';
+  const velBtn=document.createElement('button'); velBtn.className='btn'; velBtn.textContent='VEL'; velBtn.style.padding='2px 5px';
+  velBtn.addEventListener('mouseenter',e=>showTip(TIPS['seq-vel'],e)); velBtn.addEventListener('mousemove',moveTip); velBtn.addEventListener('mouseleave',hideTip);
+  const toggleVelView = show => {
+    velView = show;
+    pitBtn.classList.toggle('on', !show); velBtn.classList.toggle('on', show);
+    grid.querySelectorAll('[id^="seq-pitch-"]').forEach(el=>el.style.display=show?'none':'');
+    grid.querySelectorAll('[id^="seq-vel-"]').forEach(el=>el.style.display=show?'':'none');
+  };
+  pitBtn.addEventListener('click', ()=>toggleVelView(false));
+  velBtn.addEventListener('click', ()=>toggleVelView(true));
+  velRow.appendChild(pitBtn); velRow.appendChild(velBtn);
+  d.appendChild(velRow);
   const tr=document.createElement('div'); tr.className='transport';
-  const playBtn=document.createElement('button'); playBtn.className='btn'; playBtn.textContent='▶ PLAY';
+  const playBtn=document.createElement('button'); playBtn.className='btn'; playBtn.id='seq-play-btn'; playBtn.textContent='▶ PLAY';
   playBtn.addEventListener('mouseenter',e=>showTip(TIPS['seq-play'],e)); playBtn.addEventListener('mousemove',moveTip); playBtn.addEventListener('mouseleave',hideTip);
   playBtn.addEventListener('click',()=>{
     mods.seq.playing=!mods.seq.playing;
@@ -2879,6 +3238,13 @@ function buildSeqPanel() {
   const bpmK=mkKnob({id:'seq-bpm',label:'BPM',min:40,max:220,val:120,tip:TIPS.bpm,onChange:v=>mods.seq.setBPM(v)});
   tr.appendChild(playBtn); tr.appendChild(bpmK);
   d.appendChild(tr);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('seq-vel-out','co','VEL','out'));
+  const gateRow=document.createElement('div'); gateRow.style.cssText='display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;';
+  for(let i=0;i<8;i++){
+    gateRow.appendChild(mkPP(`seq-g${i+1}`,'co',`G${i+1}`,'out'));
+  }
+  d.appendChild(gateRow);
   return panel('seq','SEQUENCER',d);
 }
 
@@ -2889,6 +3255,7 @@ function buildDelayPanel(instanceId = 1) {
   d.appendChild(mkKnob({id:pk('time'),label:'TIME',min:.01,max:2,val:.375,log:true,tip:TIPS['delay-time'],onChange:v=>mods[mk].setTime(v)}));
   d.appendChild(mkKnob({id:pk('fb'),label:'FDBK',min:0,max:.95,val:.35,tip:TIPS['delay-fb'],onChange:v=>mods[mk].setFeedback(v)}));
   d.appendChild(mkKnob({id:pk('mix'),label:'MIX',min:0,max:1,val:.35,tip:TIPS['delay-mix'],onChange:v=>mods[mk].setMix(v)}));
+  if (instanceId === 1) d.appendChild(mkKnob({id:pk('drive'),label:'DRIVE',min:0,max:4,val:0,tip:TIPS['delay-drive'],onChange:v=>mods[mk].setDrive(v)}));
   const bsBtn=document.createElement('button'); bsBtn.className='btn'; bsBtn.textContent='BPM SYNC';
   bsBtn.title='Set delay time to dotted 8th note at current BPM';
   bsBtn.addEventListener('click',()=>{
@@ -2978,6 +3345,26 @@ function buildAttenuverterPanel(instanceId = 1) {
   d.appendChild(mkPP(pk('in'),'ci','CV IN','in'));
   d.appendChild(mkPP(pk('out'),'co','CV OUT','out'));
   return panel('att', instanceId, 'ATTENUVTR', d);
+}
+
+function buildSlewPanel() {
+  const d = document.createElement('div');
+  d.appendChild(mkKnob({id:'slew-rise', label:'RISE', min:0.001, max:5, val:0.05, log:true, tip:TIPS['slew-rise'], onChange:v=>mods.slew.setRise(v)}));
+  d.appendChild(mkKnob({id:'slew-fall', label:'FALL', min:0.001, max:5, val:0.05, log:true, tip:TIPS['slew-fall'], onChange:v=>mods.slew.setFall(v)}));
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('slew-ci','ci','CV IN','in'));
+  d.appendChild(mkPP('slew-co','co','CV OUT','out'));
+  return panel('slew', 'SLEW', d);
+}
+
+function buildChaosPanel() {
+  const d = document.createElement('div');
+  d.appendChild(mkKnob({id:'chaos-rate',   label:'RATE',   min:0.01, max:20,   val:0.5,  log:true, tip:TIPS['chaos-rate'],   onChange:v=>mods.chaos.setRate(v)}));
+  d.appendChild(mkKnob({id:'chaos-chaos',  label:'CHAOS',  min:0,    max:1,    val:0,              tip:TIPS['chaos-chaos'],  onChange:v=>mods.chaos.setChaos(v)}));
+  d.appendChild(mkKnob({id:'chaos-amount', label:'AMT',    min:0,    max:1000, val:200,  log:true, tip:TIPS['chaos-amount'], onChange:v=>mods.chaos.setAmount(v)}));
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('chaos-out','co','CV OUT','out'));
+  return panel('chaos','CHAOS',d);
 }
 
 function buildChorusPanel(instanceId = 1) {
@@ -3085,10 +3472,12 @@ function buildMicrocosmPanel() {
   });
   regBtnRow('mc-mode-sel', modeRow);
   d.appendChild(modeRow);
-  // Hold button
+  // Hold + File buttons row
+  const holdFileRow = document.createElement('div');
+  holdFileRow.style.cssText = 'display:flex;gap:2px;margin:3px 0 2px;';
   const holdBtn = document.createElement('button');
   holdBtn.className = 'btn'; holdBtn.textContent = '◈ HOLD';
-  holdBtn.style.cssText = 'width:100%;margin:3px 0 2px;font-size:8px;letter-spacing:2px;';
+  holdBtn.style.cssText = 'flex:1;font-size:8px;letter-spacing:2px;';
   holdBtn.addEventListener('mouseenter',e=>showTip(TIPS['microcosm-hold'],e));
   holdBtn.addEventListener('mousemove',moveTip); holdBtn.addEventListener('mouseleave',hideTip);
   holdBtn.addEventListener('click', () => {
@@ -3097,7 +3486,25 @@ function buildMicrocosmPanel() {
     holdBtn.classList.toggle('on', on);
     holdBtn.textContent = on ? '◈ HELD' : '◈ HOLD';
   });
-  d.appendChild(holdBtn);
+  const fileBtn = document.createElement('button');
+  fileBtn.className = 'btn'; fileBtn.textContent = '⊞ FILE';
+  fileBtn.style.cssText = 'flex:1;font-size:8px;letter-spacing:2px;';
+  fileBtn.addEventListener('mouseenter',e=>showTip(TIPS['microcosm-file'],e));
+  fileBtn.addEventListener('mousemove',moveTip); fileBtn.addEventListener('mouseleave',hideTip);
+  fileBtn.addEventListener('click', () => {
+    if (!mods.microcosm.fileMode) {
+      if (!mods.sampler.buffer) { showToast('Load a sample in SAMPLER first'); return; }
+      mods.microcosm.setFileMode(true);
+      fileBtn.classList.add('on');
+      fileBtn.textContent = '⊞ FILE';
+    } else {
+      mods.microcosm.setFileMode(false);
+      fileBtn.classList.remove('on');
+    }
+  });
+  holdFileRow.appendChild(holdBtn);
+  holdFileRow.appendChild(fileBtn);
+  d.appendChild(holdFileRow);
   // Knob rows
   const row1 = document.createElement('div'); row1.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;';
   row1.appendChild(mkKnob({id:'mc-blend', label:'BLEND', min:0,    max:1,   val:0.7,  tip:TIPS['mc-blend'],  onChange:v=>mods.microcosm.setBlend(v)}));
@@ -3776,16 +4183,20 @@ function getConfig() {
     vco2:  {type:mods.vco2.type,oct:mods.vco2.oct,coarse:mods.vco2.coarse,detune:mods.vco2.detune,hardSync:mods.vco2.hardSync},
     noise: {type:mods.noise.type,level:mods.noise.level},
     mixer:  {a:mods.mixer.chA.gain.value,b:mods.mixer.chB.gain.value,c:mods.mixer.chC.gain.value},
-    delay:  {time:mods.delay.timeVal,fb:mods.delay.fbVal,mix:mods.delay.mixVal},
+    delay:  {time:mods.delay.timeVal,fb:mods.delay.fbVal,mix:mods.delay.mixVal,drive:mods.delay.driveVal},
     reverb: {size:mods.reverb.sizeVal,decay:mods.reverb.decayVal,mix:mods.reverb.mixVal},
     lfo:    {type:mods.lfo.type,rate:mods.lfo.rate,depth:mods.lfo.depthVal},
     lfo2:   {type:mods.lfo2.type,rate:mods.lfo2.rate,depth:mods.lfo2.depthVal},
     sandh:  {trigSrc:mods.sandh.trigSrc},
     att:    {att:mods.att.attVal,offset:mods.att.offsetVal},
-    vcf:{cutoff:mods.vcf.cutoff,res:mods.vcf.res,ftype:mods.vcf.ftype},
+    slew:   {rise:mods.slew.riseVal,fall:mods.slew.fallVal},
+    chaos:  {rate:mods.chaos.rateVal,chaos:mods.chaos.chaosVal,amount:mods.chaos.amountVal},
+    vcfKbTrack: mods.vcf.kbTrack,
+    vcf:{cutoff:mods.vcf.cutoff,res:mods.vcf.res,ftype:mods.vcf.ftype,drive:mods.vcf.driveVal},
+    ladder:{cutoff:mods.ladder.cutoff,res:mods.ladder.res,drive:mods.ladder.driveVal,kbTrack:mods.ladder.kbTrack},
     adsr:{A:mods.adsr.A,D:mods.adsr.D,S:mods.adsr.S,R:mods.adsr.R},
     vca:{gain:mods.vca.gainVal},
-    seq:{bpm:mods.seq.bpm,direction:mods.seq.direction,stepCount:mods.seq.stepCount,steps:mods.seq.steps.map(s=>({on:s.on,pitch:s.pitch,prob:s.prob??1}))},
+    seq:{bpm:mods.seq.bpm,direction:mods.seq.direction,stepCount:mods.seq.stepCount,steps:mods.seq.steps.map(s=>({on:s.on,pitch:s.pitch,prob:s.prob??1,vel:s.vel??0.7}))},
     arp:{chord:mods.arp.chordName,dir:mods.arp.direction,rateMul:mods.arp.rateMul,octaves:mods.arp.octaves,root:mods.arp.root},
     sidechain:{attack:mods.sidechain.attackVal,release:mods.sidechain.releaseVal,amount:mods.sidechain.amountVal},
     chorus:   {rate:mods.chorus.rateVal,depth:mods.chorus.depthVal,width:mods.chorus.widthVal,mix:mods.chorus.mixVal},
@@ -3795,7 +4206,7 @@ function getConfig() {
     wavefolder:{fold:mods.wavefolder.foldVal,symm:mods.wavefolder.symmVal},
     chord:    {name:mods.chord.chordName,spread:mods.chord.spreadVal,level:mods.chord.levelVal,wave:mods.chord.waveType},
     quant:    {active:mods.quant.active,randMode:mods.quant.randMode,scale:mods.quant.scaleName,root:mods.quant.root},
-    microcosm:{blend:mods.microcosm.blendVal,grainSz:mods.microcosm.grainSzVal,scatter:mods.microcosm.scatterVal,pitch:mods.microcosm.pitchVal,density:mods.microcosm.densityVal,mode:mods.microcosm.mode},
+    microcosm:{blend:mods.microcosm.blendVal,grainSz:mods.microcosm.grainSzVal,scatter:mods.microcosm.scatterVal,pitch:mods.microcosm.pitchVal,density:mods.microcosm.densityVal,mode:mods.microcosm.mode,fileMode:mods.microcosm.fileMode},
     stutter: {slice:mods.stutter.sliceVal,repeat:mods.stutter.repeatVal,mix:mods.stutter.mixVal,active:mods.stutter.activeVal},
     mic:     {level:mods.mic.levelVal},
     miclooper: {levelIn:mods.miclooper.levelInVal, levelOut:mods.miclooper.levelOutVal},
@@ -3839,7 +4250,15 @@ function applyConfig(cfg) {
   if(cfg.lfo2){ mods.lfo2.setType(cfg.lfo2.type); sk('lfo2-wave',cfg.lfo2.type); mods.lfo2.setRate(cfg.lfo2.rate); sk('lfo2-rate',cfg.lfo2.rate); mods.lfo2.setDepth(cfg.lfo2.depth); sk('lfo2-depth',cfg.lfo2.depth); }
   if(cfg.sandh){ mods.sandh.setTrigSrc(cfg.sandh.trigSrc); }
   if(cfg.att){ mods.att.setAtt(cfg.att.att); sk('att-knob',cfg.att.att); mods.att.setOffset(cfg.att.offset); sk('att-offset',cfg.att.offset); }
-  if(cfg.vcf){ mods.vcf.setCutoff(cfg.vcf.cutoff); sk('vcf-cutoff',cfg.vcf.cutoff); mods.vcf.setRes(cfg.vcf.res); sk('vcf-res',cfg.vcf.res); mods.vcf.setType(cfg.vcf.ftype); sk('vcf-type',cfg.vcf.ftype); }
+  if(cfg.slew){ mods.slew.setRise(cfg.slew.rise); sk('slew-rise',cfg.slew.rise); mods.slew.setFall(cfg.slew.fall); sk('slew-fall',cfg.slew.fall); }
+  if(cfg.chaos){ mods.chaos.setRate(cfg.chaos.rate); sk('chaos-rate',cfg.chaos.rate); mods.chaos.setChaos(cfg.chaos.chaos); sk('chaos-chaos',cfg.chaos.chaos); mods.chaos.setAmount(cfg.chaos.amount); sk('chaos-amount',cfg.chaos.amount); }
+  if(cfg.vcfKbTrack != null){
+    mods.vcf.setKbTrack(!!cfg.vcfKbTrack);
+    const b = document.getElementById('vcf-kb-track-btn');
+    if(b) b.classList.toggle('on', !!cfg.vcfKbTrack);
+  }
+  if(cfg.vcf){ mods.vcf.setCutoff(cfg.vcf.cutoff); sk('vcf-cutoff',cfg.vcf.cutoff); mods.vcf.setRes(cfg.vcf.res); sk('vcf-res',cfg.vcf.res); mods.vcf.setType(cfg.vcf.ftype); sk('vcf-type',cfg.vcf.ftype); if(cfg.vcf.drive!=null){mods.vcf.setDrive(cfg.vcf.drive);sk('vcf-drive',cfg.vcf.drive);} }
+  if(cfg.ladder){ mods.ladder.setCutoff(cfg.ladder.cutoff); sk('ladder-cutoff',cfg.ladder.cutoff); mods.ladder.setRes(cfg.ladder.res); sk('ladder-reso',cfg.ladder.res); mods.ladder.setDrive(cfg.ladder.drive); sk('ladder-drive',cfg.ladder.drive); if(cfg.ladder.kbTrack!=null){mods.ladder.setKbTrack(!!cfg.ladder.kbTrack);const b=document.getElementById('ladder-kb-track-btn');if(b)b.classList.toggle('on',!!cfg.ladder.kbTrack);} }
   if(cfg.adsr){ mods.adsr.A=cfg.adsr.A; sk('adsr-A',cfg.adsr.A); mods.adsr.D=cfg.adsr.D; sk('adsr-D',cfg.adsr.D); mods.adsr.S=cfg.adsr.S; sk('adsr-S',cfg.adsr.S); mods.adsr.R=cfg.adsr.R; sk('adsr-R',cfg.adsr.R); drawEnv(); }
   if(cfg.vca){ mods.vca.setGain(cfg.vca.gain); sk('vca-gain',cfg.vca.gain); }
   if(cfg.chorus){ mods.chorus.setRate(cfg.chorus.rate); sk('chorus-rate',cfg.chorus.rate); mods.chorus.setDepth(cfg.chorus.depth); sk('chorus-depth',cfg.chorus.depth); mods.chorus.setWidth(cfg.chorus.width); sk('chorus-width',cfg.chorus.width); mods.chorus.setMix(cfg.chorus.mix); sk('chorus-mix',cfg.chorus.mix); }
@@ -3856,8 +4275,17 @@ function applyConfig(cfg) {
     mods.microcosm.setPitch(cfg.microcosm.pitch);      sk('mc-pitch',cfg.microcosm.pitch);
     mods.microcosm.setDensity(cfg.microcosm.density);  sk('mc-dnsty',cfg.microcosm.density);
     if(cfg.microcosm.mode){ mods.microcosm.setMode(cfg.microcosm.mode); sk('mc-mode-sel',cfg.microcosm.mode); }
+    // Restore fileMode UI state (worklet buffer transfer happens on next user interaction)
+    if(cfg.microcosm.fileMode !== undefined){
+      mods.microcosm.fileMode = !!cfg.microcosm.fileMode;
+      const fb = document.querySelector('#mod-microcosm .btn');
+      // Find FILE button by text
+      document.querySelectorAll('#mod-microcosm .btn').forEach(b => {
+        if(b.textContent.includes('FILE')) b.classList.toggle('on', !!cfg.microcosm.fileMode);
+      });
+    }
   }
-  if(cfg.delay){ mods.delay.setTime(cfg.delay.time); sk('delay-time',cfg.delay.time); mods.delay.setFeedback(cfg.delay.fb); sk('delay-fb',cfg.delay.fb); mods.delay.setMix(cfg.delay.mix); sk('delay-mix',cfg.delay.mix); }
+  if(cfg.delay){ mods.delay.setTime(cfg.delay.time); sk('delay-time',cfg.delay.time); mods.delay.setFeedback(cfg.delay.fb); sk('delay-fb',cfg.delay.fb); mods.delay.setMix(cfg.delay.mix); sk('delay-mix',cfg.delay.mix); if(cfg.delay.drive!=null){mods.delay.setDrive(cfg.delay.drive);sk('delay-drive',cfg.delay.drive);} }
   if(cfg.seq){
     mods.seq.bpm=cfg.seq.bpm; sk('seq-bpm',cfg.seq.bpm);
     if(cfg.seq.direction){
@@ -3871,10 +4299,11 @@ function applyConfig(cfg) {
     }
     cfg.seq.steps.forEach((s,i)=>{
       if(!mods.seq.steps[i]) return;
-      mods.seq.steps[i].on=s.on; mods.seq.steps[i].pitch=s.pitch; mods.seq.steps[i].prob=s.prob??1;
+      mods.seq.steps[i].on=s.on; mods.seq.steps[i].pitch=s.pitch; mods.seq.steps[i].prob=s.prob??1; mods.seq.steps[i].vel=s.vel??0.7;
       const tog=document.getElementById(`step-tog-${i}`); if(tog) tog.classList.toggle('on',s.on);
       sk(`seq-pitch-${i}`,s.pitch);
       sk(`seq-prob-${i}`,s.prob??1);
+      sk(`seq-vel-${i}`,s.vel??0.7);
     });
   }
   if(cfg.arp){
@@ -4015,6 +4444,8 @@ function handleMIDI(ev) {
     if (mods.quant?.active) pitch = mods.quant.quantizeSemi(pitch);
     mods.vco?.setPitchCV(pitch);
     mods.vco2?.setPitchCV(pitch);
+    mods.vcf?.trackNote(pitch);
+    mods.ladder?.trackNote(pitch);
     mods.chord?.trigger(pitch);
     mods.adsr?.on(d2 / 127);
   } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
@@ -4632,12 +5063,17 @@ function randomPatch() {
 // SIGNAL FLOW VISUALIZER
 // ═══════════════════════════════════════════════════════════════════════════════
 const FLOW_NAMES = {
-  'vco-out':'VCO','vco-cv':'VCO CV','vco2-out':'VCO2','vco2-cv':'VCO2 CV',
+  'vco-out':'VCO','vco-sub':'VCO SUB','vco-cv':'VCO CV','vco2-out':'VCO2','vco2-cv':'VCO2 CV',
   'noise-out':'NOISE','mix-a-in':'MIX A','mix-b-in':'MIX B','mix-c-in':'MIX C','mix-out':'MIX',
-  'lfo-out':'LFO','lfo2-out':'LFO2','vcf-in':'VCF IN','vcf-cv':'VCF CV','vcf-out':'VCF',
+  'lfo-out':'LFO','lfo2-out':'LFO2','vcf-in':'VCF IN','vcf-cv':'VCF CV','vcf-res-cv':'VCF RES','vcf-out':'VCF',
+  'ladder-ai':'LADDER IN','ladder-cv':'LADR CV','ladder-res-cv':'LADR RES','ladder-ao':'LADDER',
+  'slew-ci':'SLEW IN','slew-co':'SLEW OUT',
+  'chaos-out':'CHAOS',
   'adsr-out':'ADSR','vca-in':'VCA IN','vca-env':'VCA ENV','vca-out':'VCA',
   'delay-in':'DLY IN','delay-out':'DLY','reverb-in':'RVB IN','reverb-out':'RVB',
   'clk-div2':'CLK÷2','clk-div4':'CLK÷4','clk-div8':'CLK÷8',
+  'seq-vel-out':'SEQ VEL','seq-g1':'SEQ G1','seq-g2':'SEQ G2','seq-g3':'SEQ G3','seq-g4':'SEQ G4',
+  'seq-g5':'SEQ G5','seq-g6':'SEQ G6','seq-g7':'SEQ G7','seq-g8':'SEQ G8',
   'sandh-in':'S&H IN','sandh-out':'S&H','att-in':'ATT IN','att-out':'ATT',
   'chorus-in':'CHR IN','chorus-out':'CHORUS',
   'panner-in':'PAN IN','panner-out':'PANNER',
@@ -6403,12 +6839,12 @@ async function init() {
   analyserNode.connect(ctx.destination);
 
   // Load AudioWorklets (both use data URLs — safe on file:// and http://)
-  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet()]);
+  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet()]);
 
   makeVCO(); makeVCO2(); makeNoise(); makeMixer();
-  makeLFO(); makeVCF(); makeADSR(); makeVCA();
+  makeLFO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
   makeDelay(); makeReverb(); makeClkDiv(); makeSeq();
-  makeSandH(); makeLFO2(); makeAttenuverter();
+  makeSandH(); makeLFO2(); makeAttenuverter(); makeSlew(); makeChaos();
   makeChorus(); makePanner(); makeTape(); makePhaser(); makeWavefolder();
   makeChord(); makeQuantizer(); makeMicrocosm();
   makeArp(); makeSidechain(); makeSampler(); makePadSampler(); makeStutter(); makeMicInput(); makeMicLooper();
@@ -6423,6 +6859,7 @@ async function init() {
   rack.appendChild(buildMixerPanel());
   rack.appendChild(buildLFOPanel());
   rack.appendChild(buildVCFPanel());
+  rack.appendChild(buildLadderPanel());
   rack.appendChild(buildADSRPanel());
   rack.appendChild(buildVCAPanel());
   rack.appendChild(buildDelayPanel());
@@ -6436,6 +6873,8 @@ async function init() {
   rack.appendChild(buildSandHPanel());
   rack.appendChild(buildLFO2Panel());
   rack.appendChild(buildAttenuverterPanel());
+  rack.appendChild(buildSlewPanel());
+  rack.appendChild(buildChaosPanel());
   rack.appendChild(buildMicrocosmPanel());
   rack.appendChild(buildChordPanel());
   rack.appendChild(buildQuantizerPanel());
