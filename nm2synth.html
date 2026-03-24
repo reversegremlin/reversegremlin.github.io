@@ -51,7 +51,7 @@ body.a11y-large #toolbar [style*="font-size:8px"]{font-size:var(--fs-sm) !import
 #rack{display:flex;flex-wrap:wrap;gap:16px;padding:18px;background:#0a0a18;border:1px solid #e066ff22;border-radius:6px;box-shadow:0 0 40px #e066ff11,inset 0 0 60px rgba(0,0,0,.4);}
 
 /* ── Module panel ── */
-.module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:14px 12px 12px;position:relative;min-width:130px;box-shadow:0 0 12px rgba(0,0,0,.6);}
+.module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:16px 14px 14px;position:relative;min-width:140px;box-shadow:0 0 12px rgba(0,0,0,.6);}
 .module:hover{border-color:#e066ff33;}
 .module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:#e066ff;text-shadow:0 0 8px #e066ff33;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #e066ff22;}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
@@ -105,14 +105,14 @@ body.edit-mode .module-drag-handle{display:inline;}
 .wbtn.on{background:#ff00ff22;border-color:#ff00ff;color:#ff00ff;box-shadow:0 0 6px #ff00ff44;}
 
 /* ── Patch points ── */
-.pp-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:var(--fs-xs);color:#666;}
-.pp{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s;flex-shrink:0;}
+.pp-row{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:var(--fs-sm);color:#888;}
+.pp{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.4);transition:transform .15s,box-shadow .15s;flex-shrink:0;}
 .pp:hover{transform:scale(1.5);}
-.pp.ao{background:#ff6600;box-shadow:0 0 8px #ff6600;}
-.pp.co{background:#00ffff;box-shadow:0 0 8px #00ffff;}
-.pp.ai{background:#ffff00;box-shadow:0 0 8px #ffff00;}
-.pp.ci{background:#00ff88;box-shadow:0 0 8px #00ff88;}
-.pp.gi{background:#ff44aa;box-shadow:0 0 8px #ff44aa;}
+.pp.ao{background:#ff0088;box-shadow:0 0 6px #ff0088,0 0 16px #ff008866;}
+.pp.co{background:#00aaff;box-shadow:0 0 6px #00aaff,0 0 16px #00aaff66;}
+.pp.ai{background:#ff2244;box-shadow:0 0 6px #ff2244,0 0 16px #ff224466;}
+.pp.ci{background:#cc00ff;box-shadow:0 0 6px #cc00ff,0 0 16px #cc00ff66;}
+.pp.gi{background:#ffee00;box-shadow:0 0 6px #ffee00,0 0 16px #ffee0066;}
 .pp.pending{animation:ppulse .4s infinite alternate;}
 @keyframes ppulse{from{transform:scale(1);}to{transform:scale(1.7);}}
 .pp.linked{filter:brightness(1.4);}
@@ -149,7 +149,7 @@ canvas{display:block;border-radius:3px;}
 .oct-btn.on{background:#00ffff22;border-color:#00ffff;color:#00ffff;}
 
 /* ── Divider ── */
-hr{border:none;border-top:1px solid #ff00ff22;margin:10px 0;}
+hr{border:none;border-top:1px solid #ff00ff22;margin:14px 0;}
 
 /* ── Toolbar ── */
 #toolbar{display:flex;gap:6px;padding:10px 16px;background:#04040e;border-top:1px solid #ff00ff33;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;}
@@ -494,7 +494,7 @@ let editMode = false;
 
 const CABLE_PAL = ['#ff00ff','#00ffff','#ffff00','#ff6600','#00ff88','#ff4488','#88aaff']; // legacy fallback
 // Patch-point type → colour (mirrors CSS .pp.ao / .ai / etc.)
-const PP_COLOR = { ao:'#ff6600', co:'#00ffff', ai:'#ffff00', ci:'#00ff88', gi:'#ff44aa' };
+const PP_COLOR = { ao:'#ff0088', co:'#00aaff', ai:'#ff2244', ci:'#cc00ff', gi:'#ffee00' };
 const TIPS = {
   // ── Modules (hover on label) ──────────────────────────────────────────────
   'mod-vco':  'VCO — Voltage Controlled Oscillator. This is your sound source — it generates a continuous waveform. Everything else shapes it. No VCO = no sound. Think of it as the vocal cords of your synth.',
