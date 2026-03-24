@@ -6490,7 +6490,7 @@ document.getElementById('start').addEventListener('click',()=>{
 });
 
 // ── Keyboard shortcuts ──────────────────────────────────────────────────────
-// Ctrl+Z: undo  |  Q-R/A-F: pad sampler  |  1-4: loop REC  |  Space: stop all loops
+// Ctrl+Z: undo  |  Shift+R: random patch  |  Q-R/A-F: pad sampler  |  1-4: loop REC  |  Space: stop all loops
 document.addEventListener('keydown', e => {
   if (!ctx) return;
   const tag = document.activeElement.tagName;
@@ -6509,9 +6509,16 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  // Shift+R — random patch
+  if (e.code === 'KeyR' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    randomPatch();
+    return;
+  }
+
   // Pad sampler — Q W E R / A S D F
   const padIdx = PAD_CODES.indexOf(e.code);
-  if (padIdx !== -1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  if (padIdx !== -1 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
     e.preventDefault();
     mods.padsampler?.trigger(padIdx);
     return;
