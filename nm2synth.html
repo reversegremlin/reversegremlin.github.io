@@ -492,7 +492,9 @@ function syncRackOrder() {
 let midiIn = null;
 let editMode = false;
 
-const CABLE_PAL = ['#ff00ff','#00ffff','#ffff00','#ff6600','#00ff88','#ff4488','#88aaff'];
+const CABLE_PAL = ['#ff00ff','#00ffff','#ffff00','#ff6600','#00ff88','#ff4488','#88aaff']; // legacy fallback
+// Patch-point type → colour (mirrors CSS .pp.ao / .ai / etc.)
+const PP_COLOR = { ao:'#ff6600', co:'#00ffff', ai:'#ffff00', ci:'#00ff88', gi:'#ff44aa' };
 const TIPS = {
   // ── Modules (hover on label) ──────────────────────────────────────────────
   'mod-vco':  'VCO — Voltage Controlled Oscillator. This is your sound source — it generates a continuous waveform. Everything else shapes it. No VCO = no sound. Think of it as the vocal cords of your synth.',
@@ -2139,16 +2141,30 @@ function addCable(fromId, toId, color) {
   const replacedFrom  = existing?.fromId  ?? null;
   const replacedColor = existing?.color   ?? null;
   if (existing) { const prev = ignoreUndo; ignoreUndo = true; delCable(existing); ignoreUndo = prev; }
-  color = color || CABLE_PAL[Math.floor(Math.random()*CABLE_PAL.length)];
+  // Derive colors from patch-point types — color param kept for undo compat but ignored
+  const srcColor = PP_COLOR[ppMap[fromId]?.cls] || '#ff00ff';
+  const dstColor = PP_COLOR[ppMap[toId]?.cls]   || '#ff00ff';
+  color = srcColor; // store src color for legacy undo
+  // Create per-cable linearGradient in SVG defs
+  const gradId = 'cg_' + (fromId + '_' + toId).replace(/[^a-zA-Z0-9_-]/g,'_');
+  const defs = document.querySelector('#cables defs');
+  const gradEl = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+  gradEl.id = gradId; gradEl.setAttribute('gradientUnits','userSpaceOnUse');
+  const s1 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+  s1.setAttribute('offset','0%');   s1.setAttribute('stop-color', srcColor);
+  const s2 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+  s2.setAttribute('offset','100%'); s2.setAttribute('stop-color', dstColor);
+  gradEl.appendChild(s1); gradEl.appendChild(s2);
+  defs.appendChild(gradEl);
   const el = document.createElementNS('http://www.w3.org/2000/svg','path');
-  el.setAttribute('stroke',color); el.setAttribute('stroke-width','3');
+  el.setAttribute('stroke',`url(#${gradId})`); el.setAttribute('stroke-width','3');
   el.setAttribute('fill','none'); el.setAttribute('filter','url(#cglow)');
   el.setAttribute('stroke-dasharray','6 12');
   el.style.animation='cable-flow 1s linear infinite';
   el.style.opacity='.9'; el.style.cursor='pointer';
   el.addEventListener('click',()=>{ const c=cables.find(c=>c.el===el); if(c)delCable(c); });
   document.getElementById('cables').appendChild(el);
-  const cable = {fromId,toId,color,el};
+  const cable = {fromId,toId,color,el,gradEl,gradId};
   cables.push(cable);
   ppMap[fromId].el.classList.add('linked');
   ppMap[toId].el.classList.add('linked');
@@ -2170,6 +2186,7 @@ function delCable(cable) {
   }});
   cables.splice(cables.indexOf(cable),1);
   cable.el.remove();
+  cable.gradEl?.remove();
   ppMap[cable.fromId].el.classList.remove('linked');
   ppMap[cable.toId].el.classList.remove('linked');
   disconnectAudio(cable.fromId, cable.toId);
@@ -2183,6 +2200,10 @@ function moveCable(cable) {
   const x2=r2.left+r2.width/2, y2=r2.top+r2.height/2;
   const sag=Math.max(35,Math.hypot(x2-x1,y2-y1)*0.32);
   cable.el.setAttribute('d',`M${x1} ${y1} C${x1} ${y1+sag},${x2} ${y2+sag},${x2} ${y2}`);
+  if (cable.gradEl) {
+    cable.gradEl.setAttribute('x1',x1); cable.gradEl.setAttribute('y1',y1);
+    cable.gradEl.setAttribute('x2',x2); cable.gradEl.setAttribute('y2',y2);
+  }
 }
 
 function updateCables(){ cables.forEach(moveCable); }
@@ -2195,9 +2216,10 @@ setInterval(updateCables, 120);
 // The cable tip follows the mouse with spring + gravity so it dangles naturally.
 const ghostMouse = {x:0, y:0};
 const ghostTip   = {x:0, y:0, vx:0, vy:0};
-let ghostEl   = null;
-let ghostRaf  = null;
-let ghostSnap = null; // ppMap id currently snapped to, or null
+let ghostEl      = null;
+let ghostGradEl  = null; // SVG linearGradient for the ghost cable
+let ghostRaf     = null;
+let ghostSnap    = null; // ppMap id currently snapped to, or null
 
 window.addEventListener('mousemove', e => { ghostMouse.x = e.clientX; ghostMouse.y = e.clientY; });
 
@@ -2218,13 +2240,23 @@ function startGhost(fromId) {
   const sx = r.left + r.width/2, sy = r.top + r.height/2;
   ghostTip.x = sx; ghostTip.y = sy; ghostTip.vx = 0; ghostTip.vy = 0;
 
-  const cls   = ppMap[fromId].cls;
-  const color = cls === 'co' ? '#00ffff' : cls === 'ao' ? '#ff8833' : '#cccccc';
+  const srcColor = PP_COLOR[ppMap[fromId].cls] || '#cccccc';
+  // Ghost gradient: src color → src color initially; tip color updates to dst on snap
+  const defs = document.querySelector('#cables defs');
+  ghostGradEl = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+  ghostGradEl.id = 'ghost-grad'; ghostGradEl.setAttribute('gradientUnits','userSpaceOnUse');
+  const gs1 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+  gs1.setAttribute('offset','0%');   gs1.setAttribute('stop-color', srcColor);
+  const gs2 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+  gs2.setAttribute('offset','100%'); gs2.setAttribute('stop-color', srcColor);
+  ghostGradEl.appendChild(gs1); ghostGradEl.appendChild(gs2);
+  defs.appendChild(ghostGradEl);
+
   ghostEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  ghostEl.setAttribute('stroke', color);
+  ghostEl.setAttribute('stroke', 'url(#ghost-grad)');
   ghostEl.setAttribute('stroke-width', '2.5');
   ghostEl.setAttribute('fill', 'none');
-  ghostEl.setAttribute('stroke-opacity', '0.55');
+  ghostEl.setAttribute('stroke-opacity', '0.6');
   ghostEl.setAttribute('stroke-dasharray', '6 12');
   ghostEl.setAttribute('filter', 'url(#cglow)');
   ghostEl.setAttribute('pointer-events', 'none');
@@ -2234,9 +2266,10 @@ function startGhost(fromId) {
 }
 
 function stopGhost() {
-  if (ghostEl)  { ghostEl.remove(); ghostEl = null; }
-  if (ghostRaf) { cancelAnimationFrame(ghostRaf); ghostRaf = null; }
-  if (ghostSnap){ ppMap[ghostSnap]?.el.classList.remove('ghost-snap'); ghostSnap = null; }
+  if (ghostEl)     { ghostEl.remove(); ghostEl = null; }
+  if (ghostGradEl) { ghostGradEl.remove(); ghostGradEl = null; }
+  if (ghostRaf)    { cancelAnimationFrame(ghostRaf); ghostRaf = null; }
+  if (ghostSnap)   { ppMap[ghostSnap]?.el.classList.remove('ghost-snap'); ghostSnap = null; }
   clearAvailable();
 }
 
@@ -2287,6 +2320,15 @@ function ghostLoop() {
   // Draw catenary bezier — same formula as moveCable()
   const sag = Math.max(30, Math.hypot(ghostTip.x - sx, ghostTip.y - sy) * 0.32);
   ghostEl.setAttribute('d', `M${sx} ${sy} C${sx} ${sy+sag},${ghostTip.x} ${ghostTip.y+sag},${ghostTip.x} ${ghostTip.y}`);
+
+  // Update ghost gradient: x1/y1=source, x2/y2=tip; tip color = dst color when snapped
+  if (ghostGradEl) {
+    ghostGradEl.setAttribute('x1', sx);  ghostGradEl.setAttribute('y1', sy);
+    ghostGradEl.setAttribute('x2', ghostTip.x); ghostGradEl.setAttribute('y2', ghostTip.y);
+    const srcColor = PP_COLOR[ppMap[pendingPP]?.cls] || '#cccccc';
+    const tipColor = newSnap ? (PP_COLOR[ppMap[newSnap]?.cls] || srcColor) : srcColor;
+    ghostGradEl.lastElementChild.setAttribute('stop-color', tipColor);
+  }
 
   ghostRaf = requestAnimationFrame(ghostLoop);
 }
