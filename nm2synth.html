@@ -6961,6 +6961,13 @@ async function init() {
   limKnobs.appendChild(mkKnob({id:'lim-ceil',  label:'CEIL', min:0.3,max:1, val:0.85,          sz:'sm',tip:TIPS['lim-ceil'],  onChange:v=>mods.limiter.setCeil(v)}));
 
   setStatus('nm² modsynth v1.0.1 — POWERED ON');
+
+  // First-launch: auto-open tutorial picker
+  if (!localStorage.getItem('nm2-tut-seen')) {
+    localStorage.setItem('nm2-tut-seen', '1');
+    tutShowPicker();
+    document.getElementById('tut-panel').classList.add('open');
+  }
 }
 
 document.getElementById('start').addEventListener('click',()=>{
