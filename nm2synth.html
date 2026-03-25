@@ -185,8 +185,8 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:14px 0;}
 /* ── Loop Station ── */
 #loopstation{padding:8px 16px;background:#04040e;border-top:1px solid #ff00ff22;border-bottom:1px solid #ff00ff22;}
 .ls-title{font-size:var(--fs-sm);letter-spacing:3px;color:#ff00ff;text-shadow:0 0 8px #ff00ff;margin-bottom:6px;}
-.ls-tracks{display:flex;gap:8px;flex-wrap:wrap;}
-.ls-track{background:#080818;border:1px solid #ff00ff22;border-radius:4px;padding:8px;display:flex;align-items:center;gap:8px;min-width:220px;flex:1;}
+.ls-tracks{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ls-track{background:#080818;border:1px solid #ff00ff22;border-radius:4px;padding:8px;display:flex;align-items:center;gap:8px;min-width:0;}
 .ls-track.armed{border-color:#ff0000;box-shadow:0 0 8px #ff000044;}
 .ls-track.recording{border-color:#ff0000;box-shadow:0 0 12px #ff000066;animation:recblink 1s infinite;}
 .ls-track.has-loop{border-color:#00ffff44;}
