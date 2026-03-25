@@ -50,6 +50,11 @@ body.a11y-large #toolbar [style*="font-size:8px"]{font-size:var(--fs-sm) !import
 #rack-title{text-align:center;font-size:20px;letter-spacing:12px;color:#e066ff;text-shadow:0 0 20px #e066ff44;padding:8px 0 12px;}
 #rack{display:flex;flex-wrap:wrap;gap:16px;padding:18px;background:#0a0a18;border:1px solid #e066ff22;border-radius:6px;box-shadow:0 0 40px #e066ff11,inset 0 0 60px rgba(0,0,0,.4);}
 
+/* ── Rack group dividers ── */
+.rack-group{flex:1 0 100%;display:flex;align-items:center;gap:10px;padding:6px 2px 0;pointer-events:none;user-select:none;margin-bottom:-4px;}
+.rack-group::before,.rack-group::after{content:'';flex:1;height:1px;background:linear-gradient(to right,transparent,#e066ff22,transparent);}
+.rack-group span{font-size:6px;letter-spacing:3px;color:#e066ff55;font-family:'Courier New',monospace;white-space:nowrap;}
+
 /* ── Module panel ── */
 .module{background:linear-gradient(160deg,#0d0d22,#080815);border:1px solid #333;border-radius:4px;padding:16px 14px 14px;position:relative;min-width:140px;box-shadow:0 0 12px rgba(0,0,0,.6);}
 .module:hover{border-color:#e066ff33;}
@@ -2674,6 +2679,15 @@ function disconnectAudio(fId, tId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // panel(type, label, content)             — legacy 3-arg form, instanceId=1
 // panel(type, instanceId, label, content) — new 4-arg form for duplicates
+function mkRackGroup(label) {
+  const d = document.createElement('div');
+  d.className = 'rack-group';
+  const s = document.createElement('span');
+  s.textContent = label;
+  d.appendChild(s);
+  return d;
+}
+
 function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   let instanceId, label, content;
   if (typeof instanceIdOrLabel === 'number') {
@@ -6853,44 +6867,64 @@ async function init() {
 
   // Build UI
   const rack=document.getElementById('rack');
+  // ── VOICE ── the primary signal chain: clock → source → shape → amplify
+  rack.appendChild(mkRackGroup('VOICE'));
+  rack.appendChild(buildSeqPanel());
   rack.appendChild(buildVCOPanel());
-  rack.appendChild(buildVCO2Panel());
-  rack.appendChild(buildNoisePanel());
-  rack.appendChild(buildMixerPanel());
-  rack.appendChild(buildLFOPanel());
   rack.appendChild(buildVCFPanel());
-  rack.appendChild(buildLadderPanel());
   rack.appendChild(buildADSRPanel());
   rack.appendChild(buildVCAPanel());
-  rack.appendChild(buildDelayPanel());
-  rack.appendChild(buildReverbPanel());
-  rack.appendChild(buildChorusPanel());
-  rack.appendChild(buildPannerPanel());
-  rack.appendChild(buildTapePanel());
-  rack.appendChild(buildPhaserPanel());
-  rack.appendChild(buildWavefolderPanel());
-  rack.appendChild(buildClkDivPanel());
-  rack.appendChild(buildSandHPanel());
+
+  // ── MODULATION ── things that move the voice
+  rack.appendChild(mkRackGroup('MODULATION'));
+  rack.appendChild(buildLFOPanel());
   rack.appendChild(buildLFO2Panel());
+  rack.appendChild(buildSandHPanel());
   rack.appendChild(buildAttenuverterPanel());
   rack.appendChild(buildSlewPanel());
   rack.appendChild(buildChaosPanel());
-  rack.appendChild(buildMicrocosmPanel());
-  rack.appendChild(buildChordPanel());
-  rack.appendChild(buildQuantizerPanel());
-  rack.appendChild(buildArpPanel());
+  rack.appendChild(buildClkDivPanel());
+  rack.appendChild(buildEuclidPanel());
   rack.appendChild(buildSidechainPanel());
+
+  // ── SOURCES ── alternate and additive sound generators
+  rack.appendChild(mkRackGroup('SOURCES'));
+  rack.appendChild(buildVCO2Panel());
+  rack.appendChild(buildNoisePanel());
+  rack.appendChild(buildMixerPanel());
+  rack.appendChild(buildLadderPanel());
+  rack.appendChild(buildChordPanel());
+  rack.appendChild(buildArpPanel());
+  rack.appendChild(buildQuantizerPanel());
+
+  // ── CHARACTER ── saturation, distortion, and rhythmic destruction
+  rack.appendChild(mkRackGroup('CHARACTER'));
+  rack.appendChild(buildTapePanel());
+  rack.appendChild(buildWavefolderPanel());
+  rack.appendChild(buildCrusherPanel());
+  rack.appendChild(buildStutterPanel());
+
+  // ── SPACE ── time-based and modulation effects
+  rack.appendChild(mkRackGroup('SPACE'));
+  rack.appendChild(buildDelayPanel());
+  rack.appendChild(buildReverbPanel());
+  rack.appendChild(buildChorusPanel());
+  rack.appendChild(buildPhaserPanel());
+  rack.appendChild(buildPannerPanel());
+
+  // ── LIVE ── sampling, looping, and microphone sources
+  rack.appendChild(mkRackGroup('LIVE'));
   rack.appendChild(buildSamplerPanel());
   rack.appendChild(buildPadSamplerPanel());
-  rack.appendChild(buildStutterPanel());
   rack.appendChild(buildMicInputPanel());
   rack.appendChild(buildMicLooperPanel());
-  rack.appendChild(buildSeqPanel());
+  rack.appendChild(buildMicrocosmPanel());
+
+  // ── ANALYSIS ── read-only signal inspection and emotional mapping
+  rack.appendChild(mkRackGroup('ANALYSIS'));
   rack.appendChild(buildScopePanel());
   rack.appendChild(buildSpectrumPanel());
   rack.appendChild(buildLissajousPanel());
-  rack.appendChild(buildCrusherPanel());
-  rack.appendChild(buildEuclidPanel());
   rack.appendChild(buildAffectPanel());
 
   buildPPRegistry();
