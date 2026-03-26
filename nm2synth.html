@@ -518,7 +518,7 @@ const TIPS = {
   'adsr-out': 'ADSR Envelope Out — a 0→1→sustain→0 CV signal matching your A/D/S/R curve. Connect to VCA ENV IN to animate volume. Connect to VCF CV IN to make the filter follow the envelope — the filter blooms on attack and closes on release. Try both!',
   'vca-in':   'VCA Audio In — filtered audio enters here. The VCA acts like a gate: the envelope (via ENV IN) controls whether signal passes through and at what volume. Without a signal here, nothing comes out no matter how the envelope is set.',
   'vca-env':  'VCA Envelope CV In — THIS is the most important patch in a basic synth. Connect ADSR Out here to bring notes to life. The envelope\'s 0→1 signal becomes the amplifier\'s gain — shaping silence into attack, sustain, and release.',
-  'vca-out':  'VCA Audio Out — the finished, envelope-shaped sound. This goes to the master output (already wired). You can also re-patch it into another module for further processing — chains can be as long as you want.',
+  'vca-out':  'VCA Audio Out — the finished, envelope-shaped sound. This is already wired to the speakers. You can also patch it into effects (e.g. Reverb IN, Delay IN) or other modules for further processing — chains can be as long as you want.',
 
   // ── VCO knobs ─────────────────────────────────────────────────────────────
   'coarse':   'Coarse Tune — shifts pitch in semitones (half-steps on a piano). 12 = one octave up, -12 = one octave down. Use to transpose the entire melody, or set two VCOs to +7 semitones apart for a perfect fifth — a staple of ambient drone music.',
@@ -592,9 +592,9 @@ const TIPS = {
   'vcf-res-cv':   'VCF Resonance CV — patch an LFO, envelope, or S&H here to modulate resonance over time. CV sums with the manual RES knob. Patch a slow LFO here for time-varying resonance sweeps, or an ADSR for resonance peaks on each note attack.',
   'vcf-kb-track': 'KB TRACK — keyboard tracking. When ON, VCF cutoff follows the sequencer and MIDI pitch at 1V/oct (1 octave = 2× cutoff freq). Classic technique for acoustic realism: high notes naturally have brighter timbre, so the filter opens as pitch rises.',
   // ── Transistor Ladder VCF ──────────────────────────────────────────────────
-  'mod-ladder':    'LADDER — Moog transistor ladder filter emulation. Two cascaded 12dB/oct lowpass stages (24dB/oct total rolloff). Darker, warmer character than the state-variable VCF — the classic Minimoog "wool" sound. At RESO 0.95+, it self-oscillates into a sine wave at the cutoff frequency: a tunable sine oscillator. Patch ladder-ai ← VCO and ladder-ao → master for the signature Moog bass sound.',
+  'mod-ladder':    'LADDER — Moog transistor ladder filter emulation. Two cascaded 12dB/oct lowpass stages (24dB/oct total rolloff). Darker, warmer character than the state-variable VCF — the classic Minimoog "wool" sound. At RESO 0.95+, it self-oscillates into a sine wave at the cutoff frequency: a tunable sine oscillator. Patch ladder-ai ← VCO and ladder-ao → VCA IN for the signature Moog bass sound.',
   'ladder-ai':     'Ladder Audio In — audio input to the transistor ladder filter. Patch from VCO Out, Mixer Out, or anywhere in the signal chain. The pre-filter DRIVE control adds harmonic saturation before the filter stages.',
-  'ladder-ao':     'Ladder Audio Out — filtered audio output. 24dB/oct rolloff with ladder topology character. Patch to VCA IN or directly to master output.',
+  'ladder-ao':     'Ladder Audio Out — filtered audio output. 24dB/oct rolloff with ladder topology character. Patch to VCA IN or into a send effect like Reverb IN.',
   'ladder-cv':     'Ladder Cutoff CV — modulation input for cutoff frequency. CV sums with the CUTOFF knob. Patch LFO → here for filter sweeps, ADSR → here for filter envelope. Same 1V/oct response as the main VCF.',
   'ladder-res-cv': 'Ladder Resonance CV — patch an LFO or envelope here to modulate resonance over time. At high RESO, this can push the filter into and out of self-oscillation rhythmically.',
   'ladder-drive':  'Ladder Drive — pre-filter saturation (1×–8×). Warms the sound before the filter stages. The transistor ladder naturally saturates at higher signal levels — DRIVE replicates this. Light drive (1–2×): warm. Heavy drive (6–8×): growling, overdriven Moog bass.',
@@ -607,7 +607,7 @@ const TIPS = {
   'slew-fall':    'Fall — how long it takes the CV to slide DOWN from a higher value (1ms–5s). Long fall time = slow pitch decay / filter close. Short fall time = crisp response. Independent from RISE, so you can have fast attack + slow decay.',
   'delay-drive':  'Delay Drive — pre-delay saturation (0–4×). At 0 the delay echoes are pristine digital. Higher values add tape-like warmth and harmonic saturation to the repeats. With high feedback: lo-fi tape delay trails. Classic technique: drive 2–3 + long time + 0.6 feedback = degrading echo loops.',
   'delay-in':     'Delay Audio In — connect from VCA Out or anywhere in the chain. Delay works best after the VCA so the echo also fades naturally with the envelope.',
-  'delay-out':    'Delay Audio Out — connect to the master output or another effect. The delayed signal has both dry and wet components controlled by the MIX knob.',
+  'delay-out':    'Delay Audio Out — already wired to the speakers (send effect). You can also patch this into another effect to chain them. The delayed signal has both dry and wet components controlled by the MIX knob.',
   'delay-time':   'Delay Time — how long before the echo repeats (0.01–2 seconds). Musical tip: at 120 BPM, a quarter note = 0.5s, 8th note = 0.25s, dotted 8th = 0.375s. Use BPM SYNC button to auto-calculate.',
   'delay-fb':     'Feedback — how much of the delay output feeds back into itself, creating multiple repeats. 0 = one single echo. 0.5 = several decaying repeats. 0.85+ = long trails. Never go to 1.0 — it creates infinite feedback and will clip loudly.',
   'delay-mix':    'Dry/Wet Mix — 0 = fully dry (no delay heard), 1 = fully wet (only delay heard). Most musical range is 0.2–0.5. Keep it subtle to add depth without overwhelming the original sound.',
@@ -615,7 +615,7 @@ const TIPS = {
   // ── Reverb ─────────────────────────────────────────────────────────────────
   'mod-reverb':   'REVERB — simulates the natural reverberation of a physical space. Small size = tight room. Large size = hall or cathedral. The signature ambient sound relies heavily on long reverb — patches that would sound thin or sparse become vast and immersive with reverb.',
   'reverb-in':    'Reverb Audio In — connect from VCA Out (or after Delay for delay-into-reverb, a classic ambient technique). Putting reverb last in the chain makes it sound most natural.',
-  'reverb-out':   'Reverb Audio Out — connect to master output. Contains both dry and wet signal controlled by the MIX knob.',
+  'reverb-out':   'Reverb Audio Out — already wired to the speakers (send effect). You can also patch this into another effect to chain them. Contains both dry and wet signal controlled by the MIX knob.',
   'reverb-size':  'Reverb Size — length of the reverb impulse response (0.3–8 seconds). Small values (0.3–1s) = room or studio space. Large values (3–8s) = cathedral, cave, infinite space. Longer sizes are more CPU-intensive.',
   'reverb-decay': 'Reverb Decay — how quickly the reverb tail fades. 0.1 = sharp, percussive room. 0.5 = natural room decay. 0.9 = long, dense, lush hall. High decay + large size = the classic ambient wash.',
   'reverb-mix':   'Reverb Dry/Wet — 0 = no reverb. 0.3–0.5 = natural space. 0.7–1.0 = drenched in reverb (very ambient). Try 0.8+ with a slow attack and long release for a pure atmospheric ambient sound.',
@@ -676,7 +676,7 @@ const TIPS = {
   // ── Chorus ────────────────────────────────────────────────────────────────
   'mod-chorus':   'CHORUS — stereo ensemble effect. Takes a mono signal and creates two slightly detuned, time-varying copies, panned left and right. The result is a wide, lush stereo image that sounds like multiple instruments playing together. This is the single most impactful effect for making synthesizer pads sound large and warm. Lush pads and ensemble textures both rely on chorus-style processing.',
   'chorus-in':    'Chorus Audio In — patch from VCA OUT, Tape OUT, or anywhere in the chain. The chorus works at any point in the signal path, but sounds best after filtering and enveloping.',
-  'chorus-out':   'Chorus Audio Out — stereo signal (left voice panned left, right voice panned right). Connect to Reverb IN or master output. The reverb will expand the stereo image even further.',
+  'chorus-out':   'Chorus Audio Out — stereo signal (left voice panned left, right voice panned right). Already wired to the speakers (send effect). You can also chain into Reverb IN to expand the stereo image even further.',
   'chorus-rate':  'Chorus Rate — speed of the LFO that modulates the two delay lines (0.1–8 Hz). Slow (0.2–1 Hz) = gentle, organic movement. Fast (3–8 Hz) = vibrato-like shimmer. The left and right LFOs run at slightly different rates for a natural, asymmetric quality. Typical ambient setting: 0.5–1.5 Hz.',
   'chorus-depth': 'Chorus Depth — how much the LFO moves the delay time (subtle → deep). Low depth = clean, airy stereo width. High depth = pronounced pitch wobble, more obvious "chorus" effect. Keep low (0.2–0.4) for transparent width, push high (0.7+) for vintage chorus character.',
   'chorus-width': 'Stereo Width — how far left and right the two delayed voices are panned (0 = both center, 1 = hard L/R). Full width (1.0) creates the widest stereo image. Pull back if the mix collapses in mono. 0.7–0.9 is a good default.',
@@ -685,7 +685,7 @@ const TIPS = {
   // ── Auto-Panner ───────────────────────────────────────────────────────────
   'mod-panner':   'AUTO-PANNER — slowly sweeps the signal between left and right channels using an LFO. At very slow rates (0.05–0.2 Hz) it creates a subtle, barely-perceptible spatial movement that adds depth without distraction. At moderate rates (0.5–2 Hz) it becomes a rhythmic, swaying motion. Use after chorus for layered spatial effects.',
   'panner-in':    'Panner Audio In — patch any audio signal here. Works well after the VCA or as a last step before reverb.',
-  'panner-out':   'Panner Audio Out — sweeping stereo signal. Connect to reverb or master. The reverb will smear the panning movement into a spacious blur.',
+  'panner-out':   'Panner Audio Out — sweeping stereo signal. Already wired to the speakers (send effect). You can also chain into Reverb IN — the reverb will smear the panning movement into a spacious blur.',
   'pan-rate':     'Pan Rate — LFO speed for the stereo sweep (0.02–4 Hz). At 0.05 Hz the movement takes 20 seconds for a full cycle — barely audible as panning, just felt as spatial depth. At 1 Hz it becomes a clear rhythmic pan effect.',
   'pan-depth':    'Pan Depth — how far left/right the sweep travels (0 = no panning, 1 = full hard L/R sweep). At 0.3–0.5 the sweep is subtle and musical. Full depth (1.0) is dramatic and obvious.',
 
@@ -803,7 +803,7 @@ function makeVCO(instanceId = 1) {
   const subGain = ctx.createGain();
   subOsc.type = 'square';
   subOsc.frequency.value = 220;
-  subGain.gain.value = 0.7;
+  subGain.gain.value = 0.3;
   subOsc.connect(subGain);
   subOsc.start();
   const m = { osc, gain, subOsc, subGain, type:'sawtooth', oct:4, coarse:0, fine:0 };
@@ -833,11 +833,11 @@ function makeLFO(instanceId = 1) {
   const osc = ctx.createOscillator();
   const depth = ctx.createGain();
   osc.type = 'sine';
-  osc.frequency.value = 2;
-  depth.gain.value = 300;
+  osc.frequency.value = 0.4;
+  depth.gain.value = 150;
   osc.connect(depth);
   osc.start();
-  const m = { osc, depth, type:'sine', rate:2, depthVal:300 };
+  const m = { osc, depth, type:'sine', rate:0.4, depthVal:150 };
   m.setType = t => { m.type=t; osc.type=t; };
   m.setRate = v => { m.rate=v; osc.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setDepth = v => { m.depthVal=v; depth.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
@@ -854,14 +854,14 @@ function makeVCF(instanceId = 1) {
   const cvGain = ctx.createGain();
   const resCVGain = ctx.createGain(); // VC resonance input
   filt.type = 'lowpass';
-  filt.frequency.value = 1200;
+  filt.frequency.value = 800;
   filt.Q.value = 2;
   cvGain.gain.value = 1;
   resCVGain.gain.value = 1;
   inlet.connect(driveNode); driveNode.connect(filt);
   cvGain.connect(filt.frequency);
   resCVGain.connect(filt.Q);
-  const m = { inlet, driveNode, filt, cvGain, resCVGain, cutoff:1200, res:2, ftype:'lowpass', driveVal:1 };
+  const m = { inlet, driveNode, filt, cvGain, resCVGain, cutoff:800, res:2, ftype:'lowpass', driveVal:1 };
   m.setCutoff = v => { m.cutoff=v; filt.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setRes = v => { m.res=v; filt.Q.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.setType = t => { m.ftype=t; filt.type=t; };
@@ -941,7 +941,7 @@ function makeADSR(instanceId = 1) {
   const src = ctx.createConstantSource();
   src.offset.value = 0;
   src.start();
-  const m = { src, A:0.02, D:0.15, S:0.65, R:0.4, gateOn:false };
+  const m = { src, A:0.3, D:0.2, S:0.7, R:1.5, gateOn:false };
   m.on = (vel=1) => {
     m.gateOn = true;
     const t = ctx.currentTime, p = src.offset;
@@ -976,10 +976,10 @@ function makeVCA(instanceId = 1) {
 }
 
 function makeSeq() {
-  const defaultPitches = [0,7,12,7,3,0,-5,5, 0,3,7,12,7,0,-5,3];
-  const defaultOn     = [1,1,1,1,1,0,1,1,   0,0,0,0,0,0,0,0];
+  const defaultPitches = [0,3,7,12,7,3,0,-5, 0,3,7,12,7,3,0,-5];
+  const defaultOn     = [1,1,1,1,0,1,1,0,   0,0,0,0,0,0,0,0];
   const m = {
-    bpm:120, playing:false, step:-1, timer:null,
+    bpm:72, playing:false, step:-1, timer:null,
     direction:'fwd', pingDir:1, stepCount:8,
     steps: Array.from({length:16},(_,i)=>({on:!!defaultOn[i], pitch:defaultPitches[i], prob:1.0, vel:0.7}))
   };
@@ -2375,7 +2375,7 @@ function teachPatch(fromId, toId) {
   // Send-effect input: reassure user the OUT is already handled
   if (SEND_INPUTS[toId]) {
     showToast(
-      SEND_INPUTS[toId] + ' IN connected \u2014 wet signal mixes into master output automatically. ' +
+      SEND_INPUTS[toId] + ' IN connected \u2014 wet signal reaches the speakers automatically. ' +
       'No need to patch OUT unless you want to chain effects.',
       'info'
     );
@@ -2864,8 +2864,8 @@ function buildLFOPanel(instanceId = 1) {
     d.appendChild(cv);
   }
   d.appendChild(waveSelector([['∿','sine'],['⊿','triangle'],['⊓','square']],'sine',t=>mods[mk].setType(t),'wave-',pk('wave')));
-  d.appendChild(mkKnob({id:pk('rate'),label:'RATE',min:.01,max:20,val:2,log:true,tip:TIPS['lfo-rate'],onChange:v=>mods[mk].setRate(v)}));
-  d.appendChild(mkKnob({id:pk('depth'),label:'DEPTH',min:0,max:2000,val:300,tip:TIPS['lfo-depth'],onChange:v=>mods[mk].setDepth(v)}));
+  d.appendChild(mkKnob({id:pk('rate'),label:'RATE',min:.01,max:20,val:0.4,log:true,tip:TIPS['lfo-rate'],onChange:v=>mods[mk].setRate(v)}));
+  d.appendChild(mkKnob({id:pk('depth'),label:'DEPTH',min:0,max:2000,val:150,tip:TIPS['lfo-depth'],onChange:v=>mods[mk].setDepth(v)}));
   d.appendChild(document.createElement('hr'));
   d.appendChild(mkPP(pk('out'),'co','CV OUT','out'));
   return panel('lfo', instanceId, 'LFO', d);
@@ -2880,7 +2880,7 @@ function buildVCFPanel(instanceId = 1) {
     d.appendChild(cv);
   }
   d.appendChild(waveSelector([['LP','lowpass'],['HP','highpass'],['BP','bandpass']],'lowpass',t=>mods[mk].setType(t),'ftype-',pk('type')));
-  d.appendChild(mkKnob({id:pk('cutoff'),label:'CUTOFF',min:20,max:20000,val:1200,log:true,sz:'lg',tip:TIPS.cutoff,onChange:v=>mods[mk].setCutoff(v)}));
+  d.appendChild(mkKnob({id:pk('cutoff'),label:'CUTOFF',min:20,max:20000,val:800,log:true,sz:'lg',tip:TIPS.cutoff,onChange:v=>mods[mk].setCutoff(v)}));
   d.appendChild(mkKnob({id:pk('res'),label:'RES',min:.1,max:25,val:2,log:true,sz:'sm',tip:TIPS.resonance,onChange:v=>mods[mk].setRes(v)}));
   if (instanceId === 1) d.appendChild(mkKnob({id:pk('drive'),label:'DRIVE',min:1,max:8,val:1,tip:TIPS['vcf-drive'],onChange:v=>mods[mk].setDrive(v)}));
   if (instanceId === 1) {
@@ -2932,10 +2932,10 @@ function buildADSRPanel(instanceId = 1) {
     d.appendChild(cv);
   }
   const row=document.createElement('div'); row.style.display='flex'; row.style.gap='4px';
-  const kA=mkKnob({id:pk('A'),label:'A',min:.001,max:4,val:.02,log:true,sz:'sm',tip:TIPS.attack,onChange:v=>{mods[mk].A=v;if(instanceId===1)drawEnv();}});
-  const kD=mkKnob({id:pk('D'),label:'D',min:.01,max:4,val:.15,log:true,sz:'sm',tip:TIPS.decay,onChange:v=>{mods[mk].D=v;if(instanceId===1)drawEnv();}});
-  const kS=mkKnob({id:pk('S'),label:'S',min:0,max:1,val:.65,sz:'sm',tip:TIPS.sustain,onChange:v=>{mods[mk].S=v;if(instanceId===1)drawEnv();}});
-  const kR=mkKnob({id:pk('R'),label:'R',min:.01,max:6,val:.4,log:true,sz:'sm',tip:TIPS.release,onChange:v=>{mods[mk].R=v;if(instanceId===1)drawEnv();}});
+  const kA=mkKnob({id:pk('A'),label:'A',min:.001,max:4,val:.3,log:true,sz:'sm',tip:TIPS.attack,onChange:v=>{mods[mk].A=v;if(instanceId===1)drawEnv();}});
+  const kD=mkKnob({id:pk('D'),label:'D',min:.01,max:4,val:.2,log:true,sz:'sm',tip:TIPS.decay,onChange:v=>{mods[mk].D=v;if(instanceId===1)drawEnv();}});
+  const kS=mkKnob({id:pk('S'),label:'S',min:0,max:1,val:.7,sz:'sm',tip:TIPS.sustain,onChange:v=>{mods[mk].S=v;if(instanceId===1)drawEnv();}});
+  const kR=mkKnob({id:pk('R'),label:'R',min:.01,max:6,val:1.5,log:true,sz:'sm',tip:TIPS.release,onChange:v=>{mods[mk].R=v;if(instanceId===1)drawEnv();}});
   [kA,kD,kS,kR].forEach(k=>row.appendChild(k));
   d.appendChild(row);
   d.appendChild(document.createElement('hr'));
@@ -3246,7 +3246,7 @@ function buildSeqPanel() {
     if(mods.seq.playing){mods.seq.start();playBtn.textContent='■ STOP';playBtn.classList.add('on');}
     else{mods.seq.stop();playBtn.textContent='▶ PLAY';playBtn.classList.remove('on');}
   });
-  const bpmK=mkKnob({id:'seq-bpm',label:'BPM',min:40,max:220,val:120,tip:TIPS.bpm,onChange:v=>mods.seq.setBPM(v)});
+  const bpmK=mkKnob({id:'seq-bpm',label:'BPM',min:40,max:220,val:72,tip:TIPS.bpm,onChange:v=>mods.seq.setBPM(v)});
   tr.appendChild(playBtn); tr.appendChild(bpmK);
   d.appendChild(tr);
   d.appendChild(document.createElement('hr'));
@@ -5158,7 +5158,7 @@ function renderFlowChain(container, chain) {
 const TUTORIALS = [
   { name:'1 — Filter Sweep Drone', steps:[
     { title:'Start the Engine', hl:['vco','vcf','vca','seq'],
-      text:'The default patch is already wired: VCO → VCF → VCA → Output, ADSR → VCA, LFO → VCF. Hit PLAY if needed. You\'ll hear a repeating pattern. This is subtractive synthesis at its simplest — one oscillator, shaped by a filter, given an envelope.' },
+      text:'The default patch is already wired: VCO → VCF → VCA → speakers, ADSR → VCA, LFO → VCF. Hit PLAY if needed. You\'ll hear a repeating pattern. This is subtractive synthesis at its simplest — one oscillator, shaped by a filter, given an envelope. Important concept: send effects (Reverb, Delay, Chorus, Tape, Phaser) are already connected to the speakers — you only need to patch something INTO their IN to hear the effect. There is no "master" panel to find.' },
     { title:'Sweep the Filter', hl:['vcf'],
       text:'Turn the VCF CUTOFF knob slowly from far left (dark, muffled) to far right (bright, buzzy). This is the core move of electronic music. Low cutoff = warm bass. High cutoff = sharp lead. The filter is your most expressive tool — every live performance uses this sweep.' },
     { title:'Add Resonance', hl:['vcf'],
@@ -5168,7 +5168,7 @@ const TUTORIALS = [
     { title:'Shape the Envelope', hl:['adsr'],
       text:'Set ADSR ATTACK to 0.4s, RELEASE to 2s. Notes now swell in and fade out softly. Long attack + long release = phrases that blur and overlap. Drop BPM to 70 and feel how the sequencer becomes more meditative. This slow envelope is the signature of expressive slow ambient synthesis.' },
     { title:'Add Reverb', hl:['vca','reverb'],
-      text:'Patch VCA OUT → Reverb IN, Reverb OUT anywhere (for now back to VCF IN to complete the circuit, or disconnect VCA from master first). Set Reverb SIZE to 6, DECAY to 0.85, MIX to 0.65. Your drone now lives in an enormous hall. Congratulations — ambient drone complete.' },
+      text:'Patch VCA OUT → Reverb IN. That\'s all you need — the Reverb output is already wired to the speakers (all send effects like Reverb, Delay, Chorus, Tape, and Phaser work this way: patch IN to activate, the wet signal reaches your speakers automatically). Set Reverb SIZE to 6, DECAY to 0.85, MIX to 0.65. Your drone now lives in an enormous hall. Congratulations — ambient drone complete.' },
   ]},
   { name:'2 — Slow Ambient Pad', steps:[
     { title:'Two Oscillators', hl:['vco','vco2','mixer','vcf'],
@@ -5178,7 +5178,7 @@ const TUTORIALS = [
     { title:'Dual LFO Movement', hl:['lfo','lfo2','vca'],
       text:'LFO is already sweeping VCF cutoff. Now patch LFO2 OUT → VCA ENV. Set LFO2 RATE to 0.2 Hz, DEPTH to 600. Volume now heaves slowly in and out. Two LFOs at different rates produce complex, non-repeating movement — the sound never loops exactly. This is living texture.' },
     { title:'Cathedral Reverb', hl:['reverb','microcosm'],
-      text:'Patch VCA OUT → Reverb IN, Reverb OUT to master. Set SIZE to 7.5, DECAY to 0.9, MIX to 0.75. For an extra layer of depth: insert the MICROCOSM between VCA and Reverb (VCA OUT → MICROCOSM IN → MICROCOSM OUT → REVERB IN). Set MICROCOSM to SHIM mode, BLEND 0.6. The granular shimmer feeds into the reverb and becomes part of the space itself — this is the complete ambient architecture.' },
+      text:'Patch VCA OUT → Reverb IN (remember: the Reverb output is already wired to the speakers — just patching IN is enough). Set SIZE to 7.5, DECAY to 0.9, MIX to 0.75. For an extra layer of depth: insert the MICROCOSM between VCA and Reverb (VCA OUT → MICROCOSM IN → MICROCOSM OUT → REVERB IN). Set MICROCOSM to SHIM mode, BLEND 0.6. The granular shimmer feeds into the reverb and becomes part of the space itself — this is the complete ambient architecture.' },
     { title:'Pentatonic Sequence', hl:['seq'],
       text:'Edit sequencer pitches to 0, 2, 4, 7, 9, 0, 4, 7 (all consonant pentatonic intervals). Toggle step 6 and 7 off for space. At slow BPM with long envelopes, even simple patterns sound compositional. Silence between notes is as important as the notes themselves.' },
   ]},
@@ -5192,7 +5192,7 @@ const TUTORIALS = [
     { title:'Insert an Attenuverter', hl:['sandh','att','vcf'],
       text:'Route: S&H OUT → ATT IN, ATT OUT → VCF CV. The ATT knob now scales how much S&H reaches the filter (0 = none, +1 = full, -1 = inverted). This is the attenuverter\'s purpose: precise control over modulation depth without touching the source. Essential glue module.' },
     { title:'Tempo-Locked Echo', hl:['delay'],
-      text:'Patch VCA OUT → Delay IN, Delay OUT to master. Click BPM SYNC on the Delay. The echo repeats at a dotted-8th interval — rhythmically locking to your tempo. Combined with generative filter steps, every loop sounds different but feels intentional. This is the Buchla tradition.' },
+      text:'Patch VCA OUT → Delay IN (the Delay output is already wired to the speakers — no output patching needed). Click BPM SYNC on the Delay. The echo repeats at a dotted-8th interval — rhythmically locking to your tempo. Combined with generative filter steps, every loop sounds different but feels intentional. This is the Buchla tradition.' },
   ]},
   { name:'4 — Percussive Noise Hit', steps:[
     { title:'Noise Source', hl:['noise','mixer'],
@@ -5224,7 +5224,7 @@ const TUTORIALS = [
     { title:'What is the Microcosm?', hl:['microcosm'],
       text:'The MICROCOSM module is a granular processor — it records a rolling 4-second loop of whatever audio enters it, then plays back overlapping fragments of that recording called grains. Each grain is a tiny Hann-windowed slice of sound, 20–500ms long. Dozens overlap simultaneously, blurring the source into a shimmering cloud. It\'s inspired by the Hologram Electronics Microcosm pedal, used by ambient artists to turn any sound into an infinite atmospheric texture. You\'ll use it to transform the synth\'s output into something that sounds much larger than it is.' },
     { title:'Route the Signal Chain', hl:['vca','microcosm'],
-      text:'The default patch sends VCA OUT directly to the master output. We\'re going to insert the Microcosm between VCA and the output. First: click the VCA OUT patch point (orange). Now click MICROCOSM IN (yellow) — a cable connects them. Next: click MICROCOSM OUT (orange), then click the VCF IN or any already-connected input to reroute output through the Microcosm. The simplest approach: leave the existing VCA→master wire and add MICROCOSM IN from VCA OUT too — the module runs in parallel. You\'ll hear the dry sound plus the granular cloud simultaneously.' },
+      text:'The default patch sends VCA OUT directly to the speakers. We\'re going to insert the Microcosm between VCA and Reverb. First: click the VCA OUT patch point (orange). Now click MICROCOSM IN (yellow) — a cable connects them. MICROCOSM is an inline processor (not a send effect), so you also need to patch its output: click MICROCOSM OUT (orange), then click REVERB IN or VCF IN. The simplest approach: leave the existing VCA→speakers wire and add VCA OUT → MICROCOSM IN too — the module runs in parallel. You\'ll hear the dry sound plus the granular cloud simultaneously.' },
     { title:'Your First Grain Cloud', hl:['microcosm'],
       text:'The sequencer should be playing. On the MICROCOSM: make sure GRAN mode is selected (button lit). Set BLEND to 0.65. Set SIZE to around 0.15 (15% across the knob). Set SCAT to 0.4. Set DNSTY to about 15 grains/sec. Set PITCH to 1.0 (center). You should hear the synth\'s notes plus a soft, blurry cloud of sound following them with a slight delay. That cloud is dozens of tiny fragments of recent audio overlapping — the granular texture. It sounds like the notes are leaving a vapor trail.' },
     { title:'Sculpt with SIZE and SCAT', hl:['microcosm'],
@@ -5232,15 +5232,15 @@ const TUTORIALS = [
     { title:'The HOLD Button — Freeze Time', hl:['microcosm'],
       text:'This is the most dramatic feature. While a note or chord is sustained, press ◈ HOLD. The recording buffer freezes at that instant — the Microcosm is now looping grains over that frozen moment indefinitely, with no new audio writing in. The sequencer can stop; silence can fall; but the granular cloud of that held moment sustains forever. Press HOLD again to unfreeze and let new audio back in. In live performance, HOLD lets you capture and sustain a beautiful moment while the rest of the patch evolves around it. It\'s one of the most expressive gestures in modern ambient performance.' },
     { title:'Shimmer Mode + Reverb', hl:['microcosm','reverb'],
-      text:'Switch MICROCOSM to SHIM mode. SHIM is granular but every grain plays back one octave higher — the Microcosm adds a shimmering upper halo one octave above the source. Set BLEND to 0.75, SIZE to 0.2, SCAT to 0.5, PITCH to 1.0. Now chain it into reverb: patch MICROCOSM OUT → REVERB IN, REVERB OUT to master. Set Reverb SIZE to 7, DECAY to 0.9, MIX to 0.75. The shimmer grains bloom upward into the reverb tail, creating an almost orchestral wash of texture. This combination — granular shimmer into long reverb — is the signature sound of contemporary ambient music.' },
+      text:'Switch MICROCOSM to SHIM mode. SHIM is granular but every grain plays back one octave higher — the Microcosm adds a shimmering upper halo one octave above the source. Set BLEND to 0.75, SIZE to 0.2, SCAT to 0.5, PITCH to 1.0. Now chain it into reverb: patch MICROCOSM OUT → REVERB IN (Reverb is a send effect — its output is already wired to the speakers, so just patching IN is enough). Set Reverb SIZE to 7, DECAY to 0.9, MIX to 0.75. The shimmer grains bloom upward into the reverb tail, creating an almost orchestral wash of texture. This combination — granular shimmer into long reverb — is the signature sound of contemporary ambient music.' },
     { title:'Build the Full Ambient Track', hl:['vco','vco2','mixer','adsr','lfo','lfo2','microcosm','reverb','seq'],
-      text:'Put everything together for a complete ambient composition. Set BPM to 52. Set ADSR: ATTACK = 2s, DECAY = 0.3s, SUSTAIN = 0.8, RELEASE = 5s. Patch VCO OUT → Mixer A IN, VCO2 OUT → Mixer B IN, Mixer OUT → VCF IN. Set VCO2 DETUNE to +5 cents. Set LFO RATE to 0.15 Hz, DEPTH to 400 (slow filter sweep). Patch LFO2 OUT → VCA ENV at RATE 0.08 Hz, DEPTH 500 (very slow volume swell). Sequencer pitches: 0, 0, 7, 12, 7, 0, 5, 0. Keep steps 1, 2, 3, 5 on, rest off. MICROCOSM in SHIM mode → REVERB → master. Press HOLD when a chord blooms to its peak. Let it run without touching anything. The patch breathes on its own — two LFOs, a granular halo, a cathedral reverb, notes emerging and dissolving. This is ambient music as a living system.' },
+      text:'Put everything together for a complete ambient composition. Set BPM to 52. Set ADSR: ATTACK = 2s, DECAY = 0.3s, SUSTAIN = 0.8, RELEASE = 5s. Patch VCO OUT → Mixer A IN, VCO2 OUT → Mixer B IN, Mixer OUT → VCF IN. Set VCO2 DETUNE to +5 cents. Set LFO RATE to 0.15 Hz, DEPTH to 400 (slow filter sweep). Patch LFO2 OUT → VCA ENV at RATE 0.08 Hz, DEPTH 500 (very slow volume swell). Sequencer pitches: 0, 0, 7, 12, 7, 0, 5, 0. Keep steps 1, 2, 3, 5 on, rest off. MICROCOSM in SHIM mode → REVERB IN (output reaches speakers automatically). Press HOLD when a chord blooms to its peak. Let it run without touching anything. The patch breathes on its own — two LFOs, a granular halo, a cathedral reverb, notes emerging and dissolving. This is ambient music as a living system.' },
   ]},
   { name:'7 — Stereo Width & Warmth', steps:[
     { title:'Why Mono Feels Flat', hl:['vca','chorus'],
       text:'Everything built so far plays in mono — a single point of sound. Real music fills a stereo field: sounds come from left, right, center, near, far. Ambient music especially relies on spatial width for its immersive quality. Ambient music is spatial — it surrounds you. Expressive live ambient sets feel enormous because every sound occupies its own position in the stereo field. The good news: three modules (CHORUS, PANNER, PHASER) each add stereo dimension through different mechanisms. We\'ll use all three.' },
     { title:'Chorus: Width from a Single Voice', hl:['chorus'],
-      text:'Patch VCA OUT → CHORUS IN, CHORUS OUT → Reverb IN (or master). Set CHORUS RATE to 0.8 Hz, DEPTH to 0.3, WIDTH to 0.9, MIX to 0.5. Listen — the formerly mono signal now sits wide in the stereo field. The two chorus voices are slightly detuned against each other and panned opposite; their phase drift creates a natural, beating warmth. This is exactly how vintage string synthesizers (Solina, Korg PE-1000) achieved their famous lush width. Turn WIDTH down to 0 — mono again. Turn it back up — instant width. This knob is your stereo on/off switch.' },
+      text:'Patch VCA OUT → CHORUS IN, CHORUS OUT → Reverb IN (or leave it — Chorus output already reaches the speakers). Set CHORUS RATE to 0.8 Hz, DEPTH to 0.3, WIDTH to 0.9, MIX to 0.5. Listen — the formerly mono signal now sits wide in the stereo field. The two chorus voices are slightly detuned against each other and panned opposite; their phase drift creates a natural, beating warmth. This is exactly how vintage string synthesizers (Solina, Korg PE-1000) achieved their famous lush width. Turn WIDTH down to 0 — mono again. Turn it back up — instant width. This knob is your stereo on/off switch.' },
     { title:'Tape: From Digital to Analog', hl:['tape'],
       text:'Patch VCA OUT → TAPE IN, TAPE OUT → CHORUS IN (chain them). Set TAPE DRIVE to 3, WOW to 0.25, MIX to 0.6. The tanh waveshaper adds even harmonics that digital oscillators naturally lack — the sound becomes warmer, slightly rounded, less perfectly defined. The WOW adds micro-pitch flutter like a real tape machine. Turn DRIVE up to 6 — hear it start to clip and saturate. The oscillator\'s waveform is being pushed beyond its linear range and folding back, adding harmonic complexity. This is why analog hardware "sounds better" — it\'s saturating constantly, adding richness at every stage.' },
     { title:'Phaser: The Breathing Pad', hl:['phaser'],
@@ -5248,7 +5248,7 @@ const TUTORIALS = [
     { title:'Auto-Panner: Spatial Motion', hl:['panner'],
       text:'Insert the PANNER anywhere in your chain — try after CHORUS. Set RATE to 0.07 Hz (very slow) and DEPTH to 0.5. At this rate, the sweep takes over 14 seconds for a full cycle — not audible as panning, just felt as a gradual drift from left to right and back. Close your eyes and listen. The sound moves through space. This is the subconscious dimension of stereo: the brain uses spatial position to separate sounds, so a moving sound feels different from a static one even when the difference is subtle. At 0.5 Hz the sweep becomes more obvious — try it on a pad that needs rhythmic variation without a hard beat.' },
     { title:'The Full Character Chain', hl:['vca','tape','chorus','phaser','reverb'],
-      text:'The complete ambient character chain: VCA OUT → TAPE IN → TAPE OUT → PHASER IN → PHASER OUT → CHORUS IN → CHORUS OUT → REVERB IN → REVERB OUT → master. Set Tape DRIVE 2.5, WOW 0.2, MIX 0.55. Phaser RATE 0.1 Hz, DEPTH 0.5, MIX 0.6. Chorus RATE 0.7, DEPTH 0.25, WIDTH 0.85, MIX 0.55. Reverb SIZE 6, DECAY 0.88, MIX 0.7. Now set ADSR ATTACK to 1.5s, RELEASE to 4s, BPM to 60. Turn QUANTIZER to RAND + DORIAN. The signal passes through: warmth (tape) → breathing (phaser) → width (chorus) → space (reverb). This is a finished ambient sound — it could go directly on a record.' },
+      text:'The complete ambient character chain: VCA OUT → TAPE IN → TAPE OUT → PHASER IN → PHASER OUT → CHORUS IN → CHORUS OUT → REVERB IN (Reverb output already reaches the speakers). Set Tape DRIVE 2.5, WOW 0.2, MIX 0.55. Phaser RATE 0.1 Hz, DEPTH 0.5, MIX 0.6. Chorus RATE 0.7, DEPTH 0.25, WIDTH 0.85, MIX 0.55. Reverb SIZE 6, DECAY 0.88, MIX 0.7. Now set ADSR ATTACK to 1.5s, RELEASE to 4s, BPM to 60. Turn QUANTIZER to RAND + DORIAN. The signal passes through: warmth (tape) → breathing (phaser) → width (chorus) → space (reverb). This is a finished ambient sound — it could go directly on a record.' },
   ]},
   { name:'8 — Rhythm, Arpeggios & Living Sequences', steps:[
     { title:'Why Sequences Feel Mechanical', hl:['seq'],
@@ -5268,7 +5268,7 @@ const TUTORIALS = [
     { title:'Thinking Like a Composer', hl:[],
       text:'Every great ambient track has an arc: it begins somewhere, builds toward something, reaches a peak, and resolves. A great ambient live set follows this shape instinctively — a drone becomes a melody, textures accumulate, granular processing transforms everything into abstraction, and then it strips back. We\'ll build this arc in four layers. Each layer is added and removed through the Scenes system (A B C D buttons in the toolbar). Scene A = sparse intro. Scene B = chord pad added. Scene C = arpeggiated melody + full effects chain. Scene D = granular climax. This tutorial guides you through setting up and transitioning between them.' },
     { title:'Layer 1: The Drone Foundation', hl:['vco','adsr','reverb'],
-      text:'Start with a single tone that establishes the harmonic center. Set VCO to sine wave, octave 3. ADSR: ATTACK 2.5s, DECAY 0.5s, SUSTAIN 0.9, RELEASE 5s. Start the sequencer at BPM 65 with only step 1 active (pitch 0). Route VCO → VCF → VCA → REVERB → master. Set REVERB SIZE 7, DECAY 0.94, MIX 0.75. The tone should emerge slowly and decay for 5 seconds after the step fires. This is the foundation — a breath of sound. Once it feels right, save this as Scene A: click ● SAVE in the toolbar, then click A. You can always recall this starting point.' },
+      text:'Start with a single tone that establishes the harmonic center. Set VCO to sine wave, octave 3. ADSR: ATTACK 2.5s, DECAY 0.5s, SUSTAIN 0.9, RELEASE 5s. Start the sequencer at BPM 65 with only step 1 active (pitch 0). Patch VCA OUT → REVERB IN (the dry signal and reverb wet signal both reach the speakers automatically). Set REVERB SIZE 7, DECAY 0.94, MIX 0.75. The tone should emerge slowly and decay for 5 seconds after the step fires. This is the foundation — a breath of sound. Once it feels right, save this as Scene A: click ● SAVE in the toolbar, then click A. You can always recall this starting point.' },
     { title:'Layer 2: The Chord Pad', hl:['chord','chorus','tape'],
       text:'Add harmonic richness by enabling the Chord module. Set CHORD to MIN7 (melancholic, floating). SPREAD to 8 cents (voices gently beating against each other). Patch CHORD OUT → TAPE IN → TAPE OUT → CHORUS IN → CHORUS OUT → REVERB IN. Set TAPE DRIVE 2.5, WOW 0.2, MIX 0.6. CHORUS RATE 0.6, DEPTH 0.25, WIDTH 0.9, MIX 0.55. Enable steps 1, 3, 5 in the sequencer — the chord fires on those beats, always min7 voicing. The drone and chord now blend through the reverb tail. Save this as Scene B. Now you can cut between A and B for arrangement: long intro (A), then chord enters (B).' },
     { title:'Layer 3: The Melodic Arc', hl:['arp','quantzr','wavefolder','phaser'],
@@ -5743,9 +5743,14 @@ document.getElementById('help-btn').addEventListener('click',()=>{
   alert(`nm² modsynth — QUICK START
 
 SIGNAL FLOW (default):
-  VCO → VCF → VCA → Output
+  VCO → VCF → VCA → speakers
   ADSR → VCA (envelope)
   LFO → VCF cutoff (filter wobble)
+
+SEND EFFECTS (Reverb, Delay, Chorus, Tape, Phaser, Panner):
+  Their outputs are already wired to the speakers.
+  Just patch something INTO their IN — that's all you need.
+  There is no "master" panel. The signal reaches the speakers automatically.
 
 PATCHING:
   1. Click an OUTPUT dot (glowing)
@@ -5822,8 +5827,8 @@ PRESETS (bottom toolbar row):
 NOTES: Type patch notes in the bottom bar — auto-saved with the current preset
 
 PATCH IDEAS:
-  VCA OUT → Delay IN → Delay OUT → master output
-  VCA OUT → Reverb IN → Reverb OUT → master output
+  VCA OUT → Delay IN  (Delay output already reaches speakers — just patch IN)
+  VCA OUT → Reverb IN (Reverb output already reaches speakers — just patch IN)
   VCA OUT → TAPE IN → TAPE OUT → CHORUS IN → CHORUS OUT → REVERB IN (full character chain)
   CLK ÷4 → VCF CV IN for rhythmic filter pulses
   VCO2 SYNC ON + sweep COARSE = 80s lead sync sound
@@ -6536,10 +6541,10 @@ function makeLimiter() {
   }
   const preGain  = ctx.createGain();  preGain.gain.value  = 1.5;
   const shaper   = ctx.createWaveShaper(); shaper.oversample = '4x';
-  const postGain = ctx.createGain(); postGain.gain.value = 0.85;
+  const postGain = ctx.createGain(); postGain.gain.value = 0.65;
   shaper.curve = buildCurve(1.5);
   preGain.connect(shaper); shaper.connect(postGain);
-  const m = { inlet: preGain, outlet: postGain, threshVal: 1.5, ceilVal: 0.85 };
+  const m = { inlet: preGain, outlet: postGain, threshVal: 1.5, ceilVal: 0.65 };
   m.setThresh = v => { m.threshVal = v; preGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); shaper.curve = buildCurve(v); };
   m.setCeil   = v => { m.ceilVal   = v; postGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
   return m;
@@ -6841,7 +6846,7 @@ function startLissajous() {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
   ctx = new AudioContext();
-  masterOut = ctx.createGain(); masterOut.gain.value=0.75;
+  masterOut = ctx.createGain(); masterOut.gain.value=0.45;
   analyserNode = ctx.createAnalyser(); analyserNode.fftSize=2048;
   // Signal chain: masterOut → limiter → analyserNode → destination
   mods.limiter = makeLimiter();
@@ -6955,7 +6960,7 @@ async function init() {
   // Limiter knobs in toolbar
   const limKnobs = document.getElementById('lim-knobs');
   limKnobs.appendChild(mkKnob({id:'lim-thresh',label:'DRIVE',min:0.5,max:8,val:1.5,log:true,sz:'sm',tip:TIPS['lim-thresh'],onChange:v=>mods.limiter.setThresh(v)}));
-  limKnobs.appendChild(mkKnob({id:'lim-ceil',  label:'CEIL', min:0.3,max:1, val:0.85,          sz:'sm',tip:TIPS['lim-ceil'],  onChange:v=>mods.limiter.setCeil(v)}));
+  limKnobs.appendChild(mkKnob({id:'lim-ceil',  label:'CEIL', min:0.3,max:1, val:0.65,          sz:'sm',tip:TIPS['lim-ceil'],  onChange:v=>mods.limiter.setCeil(v)}));
 
   setStatus('nm² modsynth v1.0.1 — POWERED ON');
 
