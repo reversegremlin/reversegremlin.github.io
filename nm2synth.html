@@ -3171,6 +3171,9 @@ function buildSeqPanel() {
   const stepLbl=document.createElement('span'); stepLbl.style.cssText='font-size:7px;color:#555;letter-spacing:1px;margin-right:2px;'; stepLbl.textContent='STEPS:';
   stepLbl.addEventListener('mouseenter',e=>showTip(TIPS['seq-steps'],e)); stepLbl.addEventListener('mousemove',moveTip); stepLbl.addEventListener('mouseleave',hideTip);
   modeRow.appendChild(stepLbl);
+  const syncStepCountButtons = count => {
+    document.querySelectorAll('[data-stepcount]').forEach(x=>x.classList.toggle('on',Number(x.dataset.stepcount)===count));
+  };
   [['8',8],['16',16]].forEach(([lbl,n])=>{
     const b=document.createElement('button'); b.className=`btn${n===8?' on':''}`; b.textContent=lbl; b.style.padding='2px 6px'; b.dataset.stepcount=n;
     b.addEventListener('mouseenter',e=>showTip(TIPS['seq-steps'],e)); b.addEventListener('mousemove',moveTip); b.addEventListener('mouseleave',hideTip);
@@ -3195,11 +3198,11 @@ function buildSeqPanel() {
           setKnob(`seq-pitch-${i}`,s.pitch);
         });
         grid.querySelectorAll('.seq-extra').forEach(el=>el.classList.toggle('show',prev===16));
-        modeRow.querySelectorAll('[data-stepcount]').forEach(x=>x.classList.toggle('on',Number(x.dataset.stepcount)===prev));
+        syncStepCountButtons(prev);
       }});
       mods.seq.stepCount=n; mods.seq.step=Math.min(mods.seq.step,n-1);
       grid.querySelectorAll('.seq-extra').forEach(el=>el.classList.toggle('show',n===16));
-      modeRow.querySelectorAll('[data-stepcount]').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+      syncStepCountButtons(n);
     });
     modeRow.appendChild(b);
   });
@@ -5158,7 +5161,7 @@ function renderFlowChain(container, chain) {
 const TUTORIALS = [
   { name:'1 — Filter Sweep Drone', steps:[
     { title:'Start the Engine', hl:['vco','vcf','vca','seq'],
-      text:'The default patch is already wired: VCO → VCF → VCA → speakers, ADSR → VCA, LFO → VCF. Hit PLAY if needed. You\'ll hear a repeating pattern. This is subtractive synthesis at its simplest — one oscillator, shaped by a filter, given an envelope. Important concept: send effects (Reverb, Delay, Chorus, Tape, Phaser) are already connected to the speakers — you only need to patch something INTO their IN to hear the effect. There is no "master" panel to find.' },
+      text:'The default patch is already wired: VCO → VCF → VCA → speakers, ADSR → VCA, LFO → VCF. Hit PLAY if needed. You\'ll hear a repeating pattern. This is subtractive synthesis at its simplest — one oscillator, shaped by a filter, given an envelope. Tip: to adjust overall volume, use the LIMITER CEIL knob in the top toolbar — it\'s your master volume control. And good news: send effects (Reverb, Delay, Chorus, Tape, Phaser) are already connected to the speakers, so you only need to patch something INTO their IN to hear the effect.' },
     { title:'Sweep the Filter', hl:['vcf'],
       text:'Turn the VCF CUTOFF knob slowly from far left (dark, muffled) to far right (bright, buzzy). This is the core move of electronic music. Low cutoff = warm bass. High cutoff = sharp lead. The filter is your most expressive tool — every live performance uses this sweep.' },
     { title:'Add Resonance', hl:['vcf'],
@@ -5750,7 +5753,7 @@ SIGNAL FLOW (default):
 SEND EFFECTS (Reverb, Delay, Chorus, Tape, Phaser, Panner):
   Their outputs are already wired to the speakers.
   Just patch something INTO their IN — that's all you need.
-  There is no "master" panel. The signal reaches the speakers automatically.
+  To control overall volume, use the LIMITER CEIL knob in the top toolbar.
 
 PATCHING:
   1. Click an OUTPUT dot (glowing)
@@ -6949,7 +6952,7 @@ async function init() {
   // Auto-start sequencer
   mods.seq.playing=true; mods.seq.start();
   setTimeout(()=>{
-    const pb=document.querySelector('#mod-seq .btn');
+    const pb=document.getElementById('seq-play-btn');
     if(pb){pb.textContent='■ STOP';pb.classList.add('on');}
   },100);
 
