@@ -114,11 +114,33 @@ body.edit-mode .module-drag-handle{display:inline;}
 .kte-actions .btn{padding:10px 12px;}
 .kte-close{width:100%;}
 
+#patch-touch-banner{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);display:none;align-items:center;gap:10px;background:#040410f2;border:1px solid #00ffff33;border-radius:999px;padding:10px 14px;z-index:820;box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 18px #00ffff11;}
+#patch-touch-banner.open{display:flex;}
+.ptb-text{color:#00ffff;font-size:var(--fs-sm);letter-spacing:1px;white-space:nowrap;}
+.ptb-actions{display:flex;gap:8px;}
+.ptb-actions .btn{padding:6px 10px;font-size:var(--fs-sm);}
+
 @media (pointer: coarse) {
   .knob-wrap{margin:6px 2px;}
   .knob{position:relative;}
   .knob::before{content:'';position:absolute;inset:-10px;}
+  .pp-row{gap:12px;}
+  .pp{position:relative;transform:none;}
+  .pp::before{content:'';position:absolute;inset:-12px;}
+  .pp.pp-available:not(.pp-compatible){opacity:.45;filter:saturate(.65);}
+  #patch-touch-banner{bottom:96px;max-width:calc(100vw - 24px);}
+  .ptb-text{max-width:52vw;overflow:hidden;text-overflow:ellipsis;}
 }
+
+#patch-dest-sheet{position:fixed;inset:0;background:#000000dd;display:none;align-items:flex-end;justify-content:center;padding:12px;z-index:830;}
+#patch-dest-sheet.open{display:flex;}
+.pds-panel{width:min(420px,100%);background:#050513;border:1px solid #00ffff33;border-radius:16px 16px 6px 6px;box-shadow:0 16px 32px rgba(0,0,0,.6);padding:12px;display:flex;flex-direction:column;gap:10px;}
+.pds-head{display:flex;justify-content:space-between;align-items:center;}
+.pds-title{color:#00ffff;font-size:14px;letter-spacing:2px;}
+.pds-list{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:4px;}
+.pds-row{border:none;background:#0a0a1b;color:#ccc;padding:8px 12px;text-align:left;font-size:12px;letter-spacing:1px;border-radius:6px;cursor:pointer;font-family:'Courier New',monospace;}
+.pds-row.compatible{background:#00131f;color:#00ffcc;}
+.pds-row:hover{background:#11142b;}
 
 /* ── Wave / type buttons ── */
 .wbtns{display:flex;gap:5px;margin:6px 0;}
@@ -1298,6 +1320,52 @@ registerProcessor('slew', SlewProcessor);`;
   await ctx.audioWorklet.addModule(url);
 }
 
+async function loadBitCrusherWorklet() {
+  if (!ctx.audioWorklet) return;
+  const code = `
+class BitCrusherProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      { name: 'bits', defaultValue: 8, minValue: 1, maxValue: 16, automationRate: 'k-rate' },
+      { name: 'rate', defaultValue: 1, minValue: 1, maxValue: 32, automationRate: 'k-rate' },
+    ];
+  }
+  constructor() {
+    super();
+    this.heldL = 0;
+    this.heldR = 0;
+    this.counter = 0;
+  }
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    const output = outputs[0];
+    if (!input || !output || output.length === 0) return true;
+    const inL = input[0] || new Float32Array(output[0].length);
+    const inR = input[1] || inL;
+    const outL = output[0];
+    const outR = output[1] || outL;
+    const bitsParam = parameters.bits;
+    const rateParam = parameters.rate;
+    for (let i = 0; i < outL.length; i++) {
+      const bits = bitsParam.length > 1 ? bitsParam[i] : bitsParam[0];
+      const rate = Math.max(1, Math.round(rateParam.length > 1 ? rateParam[i] : rateParam[0]));
+      const step = Math.pow(2, -(bits - 1));
+      if (this.counter % rate === 0) {
+        this.heldL = Math.round(inL[i] / step) * step;
+        this.heldR = Math.round(inR[i] / step) * step;
+      }
+      this.counter = (this.counter + 1) % Number.MAX_SAFE_INTEGER;
+      outL[i] = this.heldL;
+      outR[i] = this.heldR;
+    }
+    return true;
+  }
+}
+registerProcessor('bitcrusher', BitCrusherProcessor);`;
+  const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url);
+}
+
 async function loadPinkNoiseWorklet() {
   const code = `
 class PinkNoiseProcessor extends AudioWorkletProcessor {
@@ -2281,6 +2349,10 @@ function isTouchKnobMode() {
   return (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
 }
 
+function isTouchPatchMode() {
+  return isTouchKnobMode();
+}
+
 let knobTouchEditor = null;
 function ensureKnobTouchEditor() {
   if (knobTouchEditor) return knobTouchEditor;
@@ -2362,6 +2434,111 @@ function ensureKnobTouchEditor() {
   });
   knobTouchEditor = editor;
   return editor;
+}
+
+let patchTouchBanner = null;
+function getPatchDisplayName(id) {
+  const pp = ppMap[id];
+  if (!pp) return id;
+  const moduleLabel = pp.el.closest('.module')?.querySelector('.module-label')?.textContent?.trim() || '';
+  return `${moduleLabel} ${pp.label}`.trim();
+}
+function ensurePatchTouchBanner() {
+  if (patchTouchBanner) return patchTouchBanner;
+  const banner = document.createElement('div');
+  banner.id = 'patch-touch-banner';
+  banner.innerHTML = `
+    <div class="ptb-text"></div>
+    <div class="ptb-actions">
+      <button class="btn ptb-dest">DESTINATIONS</button>
+      <button class="btn ptb-cancel">CANCEL</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  const ui = {
+    el: banner,
+    textEl: banner.querySelector('.ptb-text'),
+    cancelBtn: banner.querySelector('.ptb-cancel'),
+    destBtn: banner.querySelector('.ptb-dest'),
+    show(fromId) {
+      const pp = ppMap[fromId];
+      if (!pp) return;
+      this.textEl.textContent = `Patching from ${getPatchDisplayName(fromId)}`;
+      this.el.classList.add('open');
+    },
+    hide() {
+      this.el.classList.remove('open');
+    }
+  };
+  ui.cancelBtn.addEventListener('click', () => cancelPatch());
+  ui.destBtn?.addEventListener('click', () => {
+    if (!pendingPP) return;
+    ensurePatchDestSheet().show(pendingPP);
+  });
+  patchTouchBanner = ui;
+  return ui;
+}
+
+let patchDestSheet = null;
+function getCompatClasses(srcCls) {
+  return srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi'] : [];
+}
+function ensurePatchDestSheet() {
+  if (patchDestSheet) return patchDestSheet;
+  const sheet = document.createElement('div');
+  sheet.id = 'patch-dest-sheet';
+  sheet.innerHTML = `
+    <div class="pds-panel">
+      <div class="pds-head">
+        <span class="pds-title">Choose destination</span>
+        <button class="btn pds-close">DONE</button>
+      </div>
+      <div class="pds-list"></div>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  const ui = {
+    el: sheet,
+    list: sheet.querySelector('.pds-list'),
+    closeBtn: sheet.querySelector('.pds-close'),
+    show(srcId) {
+      this.populate(srcId);
+      sheet.classList.add('open');
+    },
+    hide() {
+      sheet.classList.remove('open');
+    },
+    populate(srcId) {
+      this.list.textContent = '';
+      const srcCls = ppMap[srcId]?.cls;
+      if (!srcCls) return;
+      const compat = getCompatClasses(srcCls);
+      const entries = Object.values(ppMap)
+        .filter(pp => pp.role === 'in')
+        .sort((a,b) => {
+          const da = getPatchDisplayName(a.id);
+          const db = getPatchDisplayName(b.id);
+          return da.localeCompare(db);
+        });
+      entries.forEach(pp => {
+        const row = document.createElement('button');
+        row.className = 'pds-row';
+        row.textContent = getPatchDisplayName(pp.id) || pp.label;
+        if (compat.includes(pp.cls)) row.classList.add('compatible');
+        row.addEventListener('click', () => {
+          completePatch(pp.id);
+          this.hide();
+        });
+        this.list.appendChild(row);
+      });
+    }
+  };
+  ui.closeBtn.addEventListener('click', () => ui.hide());
+  sheet.addEventListener('pointerdown', e => {
+    if (e.target === sheet) ui.hide();
+  });
+  patchDestSheet = ui;
+  return ui;
 }
 
 function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
@@ -2566,7 +2743,7 @@ function mkPP(id, cls, label, role) {
   lbl.textContent = label;
   if(role==='out'){row.appendChild(dot);row.appendChild(lbl);}
   else{row.appendChild(lbl);row.appendChild(dot);}
-  ppMap[id] = { id, el:dot, role, cls };
+  ppMap[id] = { id, el:dot, role, cls, label };
   const tip = TIPS[id];
   if(tip){ dot.addEventListener('mouseenter',e=>showTip(tip,e)); dot.addEventListener('mousemove',moveTip); dot.addEventListener('mouseleave',hideTip); }
   dot.addEventListener('click', e=>{e.stopPropagation(); patchClick(id);});
@@ -2593,15 +2770,59 @@ function clearAvailable() {
   }
 }
 
+function updatePatchTouchBanner() {
+  const ui = ensurePatchTouchBanner();
+  if (pendingPP && isTouchPatchMode()) ui.show(pendingPP);
+  else ui.hide();
+}
+
+function cancelPatch() {
+  if (!pendingPP) return;
+  ppMap[pendingPP]?.el.classList.remove('pending');
+  pendingPP = null;
+  setStatus('');
+  stopGhost();
+  updatePatchTouchBanner();
+}
+
+function beginPatch(fromId) {
+  pendingPP = fromId;
+  ppMap[fromId]?.el.classList.add('pending');
+  setStatus(isTouchPatchMode() ? 'Tap a destination jack to connect.' : 'Select input to connect...');
+  if (!isTouchPatchMode()) startGhost(fromId);
+  else {
+    highlightAvailable(fromId);
+    updatePatchTouchBanner();
+  }
+}
+
+function switchPatchSource(fromId) {
+  stopGhost();
+  if (pendingPP) ppMap[pendingPP]?.el.classList.remove('pending');
+  beginPatch(fromId);
+}
+
+function completePatch(toId) {
+  const fromId = pendingPP;
+  if (!fromId) return;
+  teachPatch(fromId,toId);
+  addCable(fromId,toId);
+  ppMap[fromId]?.el.classList.remove('pending');
+  pendingPP = null;
+  setStatus('');
+  stopGhost();
+  updatePatchTouchBanner();
+}
+
 function patchClick(id) {
   const pp = ppMap[id];
   if(pendingPP===null) {
-    if(pp.role==='out'){ pendingPP=id; pp.el.classList.add('pending'); setStatus('Select input to connect...'); startGhost(id); }
+    if(pp.role==='out'){ beginPatch(id); }
     else { const c=cables.find(c=>c.toId===id); if(c) delCable(c); }
   } else {
-    if(pendingPP===id){ ppMap[id].el.classList.remove('pending'); pendingPP=null; setStatus(''); stopGhost(); return; }
-    if(pp.role==='in'){ teachPatch(pendingPP,id); addCable(pendingPP,id); ppMap[pendingPP].el.classList.remove('pending'); pendingPP=null; setStatus(''); stopGhost(); }
-    else { stopGhost(); ppMap[pendingPP].el.classList.remove('pending'); pendingPP=id; pp.el.classList.add('pending'); startGhost(id); }
+    if(pendingPP===id){ cancelPatch(); return; }
+    if(pp.role==='in'){ completePatch(id); }
+    else { switchPatchSource(id); }
   }
 }
 
@@ -2703,15 +2924,18 @@ window.addEventListener('mousemove', e => { ghostMouse.x = e.clientX; ghostMouse
 // Clicking blank space drops the cable
 document.addEventListener('click', e => {
   if (!pendingPP) return;
+  if (e.target.closest('#patch-touch-banner') || e.target.closest('#patch-dest-sheet')) return;
   if (!e.target.closest('.pp')) {
-    ppMap[pendingPP].el.classList.remove('pending');
-    pendingPP = null;
-    setStatus('');
-    stopGhost();
+    cancelPatch();
   }
 }, true);
 
 function startGhost(fromId) {
+  if (isTouchPatchMode()) {
+    highlightAvailable(fromId);
+    updatePatchTouchBanner();
+    return;
+  }
   stopGhost();
   const r  = ppMap[fromId].el.getBoundingClientRect();
   const sx = r.left + r.width/2, sy = r.top + r.height/2;
@@ -4502,7 +4726,17 @@ function applyConfig(cfg) {
   }
   if(cfg.mic){ mods.mic.setLevel(cfg.mic.level); sk('mic-level',cfg.mic.level); }
   if(cfg.miclooper){ mods.miclooper.setLevelIn(cfg.miclooper.levelIn||1); sk('micloop-level',cfg.miclooper.levelIn||1); mods.miclooper.setLevelOut(cfg.miclooper.levelOut||0.8); sk('micloop-vol',cfg.miclooper.levelOut||0.8); }
-  if(cfg.crush){ mods.crush.bits=cfg.crush.bits||8; sk('crush-bits',cfg.crush.bits||8); mods.crush.rate=cfg.crush.rate||1; sk('crush-rate',cfg.crush.rate||1); mods.crush.setMix(cfg.crush.mix??1); sk('crush-mix',cfg.crush.mix??1); }
+  if(cfg.crush){
+    const bits = cfg.crush.bits ?? 8;
+    mods.crush.setBits(bits);
+    sk('crush-bits', bits);
+    const rate = cfg.crush.rate ?? 1;
+    mods.crush.setRate(rate);
+    sk('crush-rate', rate);
+    const mix = cfg.crush.mix ?? 1;
+    mods.crush.setMix(mix);
+    sk('crush-mix', mix);
+  }
   if(cfg.euclid){ mods.euclid.setHits(cfg.euclid.hits||3); sk('euclid-hits',cfg.euclid.hits||3); mods.euclid.setSteps(cfg.euclid.steps||8); sk('euclid-steps',cfg.euclid.steps||8); mods.euclid.setOffset(cfg.euclid.offset||0); sk('euclid-offset',cfg.euclid.offset||0); }
   if(cfg.affect){
     mods.affect.targetX=cfg.affect.x??0.5; mods.affect.targetY=cfg.affect.y??0.5;
@@ -6494,36 +6728,71 @@ function makeCrusher() {
   const outlet  = ctx.createGain();
   const dryGain = ctx.createGain(); dryGain.gain.value = 0;
   const wetGain = ctx.createGain(); wetGain.gain.value = 1;
-  // Stereo processor — 2 in, 2 out so both channels are crushed independently
-  const proc = ctx.createScriptProcessor(512, 2, 2);
   const m = { inlet, outlet, bits: 8, rate: 1, mixVal: 1 };
-  let heldL = 0, heldR = 0, heldCount = 0;
-  proc.onaudioprocess = e => {
-    const inL  = e.inputBuffer.getChannelData(0);
-    const inR  = e.inputBuffer.getChannelData(1);
-    const outL = e.outputBuffer.getChannelData(0);
-    const outR = e.outputBuffer.getChannelData(1);
-    const step = Math.pow(2, -(m.bits - 1));
-    const r = Math.max(1, Math.round(m.rate));
-    for (let i = 0; i < inL.length; i++) {
-      if (heldCount % r === 0) {
-        heldL = Math.round(inL[i] / step) * step;
-        heldR = Math.round(inR[i] / step) * step;
-      }
-      heldCount++;
-      outL[i] = heldL;
-      outR[i] = heldR;
-    }
+  const hasWorklet = typeof AudioWorkletNode !== 'undefined' && !!ctx.audioWorklet;
+  let proc = null;
+  let bitsParam = null;
+  let rateParam = null;
+  const setupWorklet = () => {
+    proc = new AudioWorkletNode(ctx, 'bitcrusher', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      channelCount: 2,
+      outputChannelCount: [2],
+      parameterData: { bits: 8, rate: 1 },
+    });
+    bitsParam = proc.parameters.get('bits');
+    rateParam = proc.parameters.get('rate');
+    inlet.connect(proc);
+    proc.connect(wetGain);
   };
-  inlet.connect(proc);
-  proc.connect(wetGain);
+  if (hasWorklet) {
+    setupWorklet();
+  } else {
+    proc = ctx.createScriptProcessor(512, 2, 2);
+    bitsParam = { setValueAtTime: (v) => { m.bits = v; } };
+    rateParam = { setValueAtTime: (v) => { m.rate = v; } };
+    let heldL = 0, heldR = 0, heldCount = 0;
+    proc.onaudioprocess = e => {
+      const inL  = e.inputBuffer.getChannelData(0);
+      const inR  = e.inputBuffer.getChannelData(1);
+      const outL = e.outputBuffer.getChannelData(0);
+      const outR = e.outputBuffer.getChannelData(1);
+      const step = Math.pow(2, -(m.bits - 1));
+      const r = Math.max(1, Math.round(m.rate));
+      for (let i = 0; i < inL.length; i++) {
+        if (heldCount % r === 0) {
+          heldL = Math.round(inL[i] / step) * step;
+          heldR = Math.round(inR[i] / step) * step;
+        }
+        heldCount++;
+        outL[i] = heldL;
+        outR[i] = heldR;
+      }
+    };
+    inlet.connect(proc);
+    proc.connect(wetGain);
+    const keepAlive = ctx.createGain(); keepAlive.gain.value = 0;
+    proc.connect(keepAlive); keepAlive.connect(ctx.destination);
+  }
   wetGain.connect(outlet);
   inlet.connect(dryGain);
   dryGain.connect(outlet);
-  // proc needs a path to ctx.destination to stay active; silence it so it doesn't leak
-  const keepAlive = ctx.createGain(); keepAlive.gain.value = 0;
-  proc.connect(keepAlive); keepAlive.connect(ctx.destination);
-  m.setMix = v => { m.mixVal = v; wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); dryGain.gain.setTargetAtTime(1-v, ctx.currentTime, 0.01); };
+  m.setBits = v => {
+    const target = Math.max(1, Math.min(16, Math.round(v)));
+    m.bits = target;
+    bitsParam?.setValueAtTime?.(target, ctx.currentTime);
+  };
+  m.setRate = v => {
+    const target = Math.max(1, Math.min(32, Math.round(v)));
+    m.rate = target;
+    rateParam?.setValueAtTime?.(target, ctx.currentTime);
+  };
+  m.setMix = v => {
+    m.mixVal = v;
+    wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01);
+    dryGain.gain.setTargetAtTime(1 - v, ctx.currentTime, 0.01);
+  };
   mods.crush = m; return m;
 }
 
@@ -6721,10 +6990,10 @@ function buildCrusherPanel() {
   const d = document.createElement('div');
   d.appendChild(mkPP('crush-ai', 'ai', 'IN',  'in'));
   d.appendChild(mkPP('crush-ao', 'ao', 'OUT', 'out'));
-  d.appendChild(mkKnob({id:'crush-bits', label:'BITS', min:1, max:16, val:8,  sz:'sm', tip:TIPS['crush-ai'],
-    onChange: v => { mods.crush.bits = Math.round(v); }}));
+    d.appendChild(mkKnob({id:'crush-bits', label:'BITS', min:1, max:16, val:8,  sz:'sm', tip:TIPS['crush-ai'],
+    onChange: v => mods.crush.setBits(v)}));
   d.appendChild(mkKnob({id:'crush-rate', label:'RATE', min:1, max:32, val:1,  sz:'sm', log:true,
-    onChange: v => { mods.crush.rate = Math.round(v); }}));
+    onChange: v => mods.crush.setRate(v)}));
   d.appendChild(mkKnob({id:'crush-mix',  label:'MIX',  min:0, max:1,  val:1,  sz:'sm',
     onChange: v => mods.crush.setMix(v)}));
   return panel('crush', 'BITCRUSH', d);
@@ -7018,7 +7287,7 @@ async function init() {
   analyserNode.connect(ctx.destination);
 
   // Load AudioWorklets (both use data URLs — safe on file:// and http://)
-  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet()]);
+  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet()]);
 
   makeVCO(); makeVCO2(); makeNoise(); makeMixer();
   makeLFO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
@@ -7149,7 +7418,7 @@ document.addEventListener('keydown', e => {
 
   // Escape — cancel pending cable
   if (e.key === 'Escape' && pendingPP) {
-    ppMap[pendingPP].el.classList.remove('pending'); pendingPP = null; setStatus(''); stopGhost(); return;
+    cancelPatch(); return;
   }
 
   // Undo
