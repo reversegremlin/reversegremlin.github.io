@@ -132,15 +132,23 @@ body.edit-mode .module-drag-handle{display:inline;}
   .ptb-text{max-width:52vw;overflow:hidden;text-overflow:ellipsis;}
 }
 
-#patch-dest-sheet{position:fixed;inset:0;background:#000000dd;display:none;align-items:flex-end;justify-content:center;padding:12px;z-index:830;}
+#patch-dest-sheet{position:fixed;inset:0;background:#000000dd;display:none;align-items:center;justify-content:center;padding:12px;z-index:830;}
 #patch-dest-sheet.open{display:flex;}
-.pds-panel{width:min(420px,100%);background:#050513;border:1px solid #00ffff33;border-radius:16px 16px 6px 6px;box-shadow:0 16px 32px rgba(0,0,0,.6);padding:12px;display:flex;flex-direction:column;gap:10px;}
+.pds-panel{width:min(420px,100%);background:#050513;border:1px solid #00ffff33;border-radius:10px;box-shadow:0 16px 32px rgba(0,0,0,.6),0 0 40px #00ffff08;padding:12px;display:flex;flex-direction:column;gap:10px;}
 .pds-head{display:flex;justify-content:space-between;align-items:center;}
 .pds-title{color:#00ffff;font-size:14px;letter-spacing:2px;}
-.pds-list{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:4px;}
-.pds-row{border:none;background:#0a0a1b;color:#ccc;padding:8px 12px;text-align:left;font-size:12px;letter-spacing:1px;border-radius:6px;cursor:pointer;font-family:'Courier New',monospace;}
+.pds-filter{width:100%;background:#0a0a1b;border:1px solid #00ffff22;color:#ccc;padding:8px 10px;font-size:12px;letter-spacing:1px;border-radius:6px;font-family:'Courier New',monospace;outline:none;}
+.pds-filter:focus{border-color:#00ffff66;}
+.pds-filter::placeholder{color:#444;}
+.pds-list{max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:4px;}
+.pds-row{border:none;background:#0a0a1b;color:#ccc;padding:8px 12px;text-align:left;font-size:12px;letter-spacing:1px;border-radius:6px;cursor:pointer;font-family:'Courier New',monospace;transition:background .1s;}
 .pds-row.compatible{background:#00131f;color:#00ffcc;}
 .pds-row:hover{background:#11142b;}
+.pds-row.hidden{display:none;}
+@media (pointer: coarse) {
+  #patch-dest-sheet{align-items:flex-end;}
+  .pds-panel{border-radius:16px 16px 6px 6px;}
+}
 
 /* ── Wave / type buttons ── */
 .wbtns{display:flex;gap:5px;margin:6px 0;}
@@ -257,6 +265,15 @@ hr{border:none;border-top:1px solid #ff00ff22;margin:14px 0;}
 #tut-panel.open{transform:translateX(-50%) translateY(0);}
 #tut-hdr{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#06061a;border-bottom:1px solid #00ffff22;font-size:var(--fs-sm);letter-spacing:3px;color:#00ffff;}
 #tut-body{padding:12px;overflow-y:auto;flex:1 1 auto;min-height:0;}
+.tut-actions{display:flex;flex-direction:column;gap:6px;margin:10px 0 6px;}
+.tut-patch-btn{display:flex;align-items:center;gap:8px;background:#0a0a1e;border:1px solid #00ffff33;color:#00ffff;padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Courier New',monospace;font-size:var(--fs-sm);letter-spacing:1px;transition:all .2s;}
+.tut-patch-btn:hover{border-color:#00ffff;background:#0c1428;box-shadow:0 0 12px #00ffff22;}
+.tut-patch-btn.done{border-color:#00ff6644;color:#00ff66;opacity:.7;}
+.tut-patch-btn.done::after{content:' ✓';color:#00ff66;}
+.tut-patch-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.tut-patch-arrow{color:#666;font-size:14px;}
+.tut-pp-highlight{animation:tut-pp-pulse .6s ease-in-out infinite alternate !important;transform:scale(1.8) !important;z-index:100;position:relative;}
+@keyframes tut-pp-pulse{from{box-shadow:0 0 8px currentColor,0 0 20px currentColor;}to{box-shadow:0 0 14px currentColor,0 0 30px currentColor,0 0 50px currentColor;}}
 .tut-pick{display:block;width:100%;text-align:left;background:#09091e;border:1px solid #00ffff1a;color:#777;padding:8px 10px;margin:4px 0;cursor:pointer;font-size:var(--fs-sm);border-radius:2px;font-family:'Courier New',monospace;letter-spacing:1px;transition:all .2s;}
 .tut-pick:hover{border-color:#00ffff55;color:#00ffff;background:#0c0c26;}
 #tut-step-title{font-size:var(--fs-lg);color:#00ffff;letter-spacing:2px;margin-bottom:8px;}
@@ -2450,7 +2467,7 @@ function ensurePatchTouchBanner() {
   banner.innerHTML = `
     <div class="ptb-text"></div>
     <div class="ptb-actions">
-      <button class="btn ptb-dest">DESTINATIONS</button>
+      <button class="btn ptb-dest">PICK DESTINATION</button>
       <button class="btn ptb-cancel">CANCEL</button>
     </div>
   `;
@@ -2481,7 +2498,7 @@ function ensurePatchTouchBanner() {
 
 let patchDestSheet = null;
 function getCompatClasses(srcCls) {
-  return srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi'] : [];
+  return srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi','ai'] : [];
 }
 function ensurePatchDestSheet() {
   if (patchDestSheet) return patchDestSheet;
@@ -2493,17 +2510,28 @@ function ensurePatchDestSheet() {
         <span class="pds-title">Choose destination</span>
         <button class="btn pds-close">DONE</button>
       </div>
+      <input class="pds-filter" type="text" placeholder="Type to filter..." />
       <div class="pds-list"></div>
     </div>
   `;
   document.body.appendChild(sheet);
+  const filterInput = sheet.querySelector('.pds-filter');
+  filterInput.addEventListener('input', () => {
+    const q = filterInput.value.toLowerCase();
+    sheet.querySelectorAll('.pds-row').forEach(row => {
+      row.classList.toggle('hidden', q && !row.textContent.toLowerCase().includes(q));
+    });
+  });
   const ui = {
     el: sheet,
     list: sheet.querySelector('.pds-list'),
+    filterInput,
     closeBtn: sheet.querySelector('.pds-close'),
     show(srcId) {
       this.populate(srcId);
+      this.filterInput.value = '';
       sheet.classList.add('open');
+      setTimeout(() => this.filterInput.focus(), 60);
     },
     hide() {
       sheet.classList.remove('open');
@@ -2516,6 +2544,10 @@ function ensurePatchDestSheet() {
       const entries = Object.values(ppMap)
         .filter(pp => pp.role === 'in')
         .sort((a,b) => {
+          // compatible destinations first, then alphabetical
+          const ac = compat.includes(a.cls) ? 0 : 1;
+          const bc = compat.includes(b.cls) ? 0 : 1;
+          if (ac !== bc) return ac - bc;
           const da = getPatchDisplayName(a.id);
           const db = getPatchDisplayName(b.id);
           return da.localeCompare(db);
@@ -2772,7 +2804,7 @@ function clearAvailable() {
 
 function updatePatchTouchBanner() {
   const ui = ensurePatchTouchBanner();
-  if (pendingPP && isTouchPatchMode()) ui.show(pendingPP);
+  if (pendingPP) ui.show(pendingPP);
   else ui.hide();
 }
 
@@ -2788,12 +2820,10 @@ function cancelPatch() {
 function beginPatch(fromId) {
   pendingPP = fromId;
   ppMap[fromId]?.el.classList.add('pending');
-  setStatus(isTouchPatchMode() ? 'Tap a destination jack to connect.' : 'Select input to connect...');
+  setStatus(isTouchPatchMode() ? 'Tap a destination jack to connect.' : 'Drag to input or click PICK DESTINATION');
   if (!isTouchPatchMode()) startGhost(fromId);
-  else {
-    highlightAvailable(fromId);
-    updatePatchTouchBanner();
-  }
+  else highlightAvailable(fromId);
+  updatePatchTouchBanner();
 }
 
 function switchPatchSource(fromId) {
@@ -2933,7 +2963,6 @@ document.addEventListener('click', e => {
 function startGhost(fromId) {
   if (isTouchPatchMode()) {
     highlightAvailable(fromId);
-    updatePatchTouchBanner();
     return;
   }
   stopGhost();
@@ -5256,6 +5285,36 @@ const FACTORY_PRESETS = [
     stutter:{slice:0.05,repeat:14,mix:0.88,active:true},
     cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'noise-out',toId:'mix-c-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'lfo2-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'vco2-cv',color:'#ff4488'},{fromId:'vca-out',toId:'fold-in',color:'#ffff00'},{fromId:'fold-out',toId:'stutter-ai',color:'#ff6600'},{fromId:'vca-out',toId:'microcosm-in',color:'#ff00ff'},{fromId:'microcosm-out',toId:'delay-in',color:'#00ffff'},{fromId:'vca-out',toId:'reverb-in',color:'#88aaff'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'vca-out',toId:'sc-in',color:'#ff4488'},{fromId:'sc-out',toId:'vcf-cv',color:'#00ff88'}]
   }},
+  { name:'Living Sequences (Tutorial 8)', desc:'Probabilistic sequencer + arpeggiator + sidechain pumping through tape/phaser/chorus/reverb — the complete Tutorial 8 composition', cfg:{v:1,
+    vco:{type:'sawtooth',oct:4,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:4,coarse:0,detune:0,hardSync:false},
+    noise:{type:'white',level:0.5}, mixer:{a:0.8,b:0.8,c:0.5},
+    delay:{time:0.375,fb:0.35,mix:0.35,drive:0}, reverb:{size:6,decay:0.88,mix:0.7},
+    lfo:{type:'sine',rate:0.4,depth:150}, lfo2:{type:'sine',rate:0.5,depth:200},
+    sandh:{trigSrc:'div4'}, att:{att:1,offset:0}, slew:{rise:0.05,fall:0.05}, chaos:{rate:0.5,chaos:0,amount:200},
+    vcf:{cutoff:800,res:2,ftype:'lowpass',drive:1}, vcfKbTrack:false,
+    ladder:{cutoff:800,res:0,drive:1,kbTrack:false},
+    adsr:{A:0.8,D:0.2,S:0.7,R:3}, vca:{gain:0.8},
+    seq:{bpm:72,direction:'pp',stepCount:8,steps:[
+      {on:true,pitch:0,prob:1,vel:0.7},{on:true,pitch:3,prob:1,vel:0.7},
+      {on:true,pitch:7,prob:0.7,vel:0.7},{on:true,pitch:12,prob:1,vel:0.7},
+      {on:false,pitch:7,prob:0.7,vel:0.7},{on:true,pitch:3,prob:1,vel:0.7},
+      {on:true,pitch:0,prob:0.4,vel:0.7},{on:false,pitch:-5,prob:1,vel:0.7},
+      {on:false,pitch:0,prob:1,vel:0.7},{on:false,pitch:3,prob:1,vel:0.7},
+      {on:false,pitch:7,prob:1,vel:0.7},{on:false,pitch:12,prob:1,vel:0.7},
+      {on:false,pitch:7,prob:1,vel:0.7},{on:false,pitch:3,prob:1,vel:0.7},
+      {on:false,pitch:0,prob:1,vel:0.7},{on:false,pitch:-5,prob:1,vel:0.7}
+    ]},
+    arp:{chord:'min7',dir:'ud',rateMul:2,octaves:2,root:0},
+    sidechain:{attack:0.005,release:0.15,amount:2},
+    chorus:{rate:0.7,depth:0.25,width:0.85,mix:0.55}, panner:{rate:0.15,depth:0.7},
+    tape:{drive:2.5,wow:0.2,mix:0.55}, phaser:{rate:0.1,depth:0.5,mix:0.6},
+    wavefolder:{fold:1.5,symm:0}, chord:{name:'min',spread:8,level:0.6,wave:'sawtooth'},
+    quant:{active:true,randMode:true,scale:'minor',root:9},
+    microcosm:{blend:0.7,grainSz:0.12,scatter:0.3,pitch:1,density:12,mode:'granular'},
+    stutter:{slice:0.125,repeat:4,mix:0.5,active:false},
+    crush:{bits:8,rate:1,mix:1}, euclid:{hits:3,steps:8,offset:0},
+    cables:[{fromId:'clk-div4',toId:'sc-in',color:'#00ffff'},{fromId:'sc-out',toId:'vca-env',color:'#00aaff'},{fromId:'vca-out',toId:'tape-in',color:'#cc00ff'},{fromId:'tape-out',toId:'phaser-in',color:'#cc00ff'},{fromId:'phaser-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'reverb-in',color:'#cc00ff'}]
+  }},
 ];
 
 function openFactoryPicker() {
@@ -5648,18 +5707,26 @@ const TUTORIALS = [
       text:'The complete ambient character chain: VCA OUT → TAPE IN → TAPE OUT → PHASER IN → PHASER OUT → CHORUS IN → CHORUS OUT → REVERB IN (Reverb output already reaches the speakers). Set Tape DRIVE 2.5, WOW 0.2, MIX 0.55. Phaser RATE 0.1 Hz, DEPTH 0.5, MIX 0.6. Chorus RATE 0.7, DEPTH 0.25, WIDTH 0.85, MIX 0.55. Reverb SIZE 6, DECAY 0.88, MIX 0.7. Now set ADSR ATTACK to 1.5s, RELEASE to 4s, BPM to 60. Turn QUANTIZER to RAND + DORIAN. The signal passes through: warmth (tape) → breathing (phaser) → width (chorus) → space (reverb). This is a finished ambient sound — it could go directly on a record.' },
   ]},
   { name:'8 — Rhythm, Arpeggios & Living Sequences', steps:[
-    { title:'Why Sequences Feel Mechanical', hl:['seq'],
-      text:'A sequence that repeats identically every 8 steps feels programmed and robotic. Real music — even electronic music — has variation: some notes dropped, some added, phrases that feel like they\'re moving somewhere rather than looping. The sequencer now has two tools to fix this: per-step Probability and Pattern Direction. The P% knob on each step sets the chance that step fires. The DIR buttons change how the sequencer moves through the pattern. These two changes transform a loop into a composition.' },
-    { title:'Per-Step Probability', hl:['seq'],
-      text:'Look at each sequencer step — there are now three controls: the on/off toggle, the pitch knob, and a small P% knob. P% = 100% means the step always fires (the default). Set a few steps to 70%: they now fire roughly 70% of the time, creating variation without destroying the pattern. Set one or two steps to 40%: they become rare, dramatic punctuation. The result: the same sequence sounds slightly different every loop, as if a musician is making spontaneous choices. Generative systems rely heavily on probabilistic firing — the pattern is the same, the variation is what makes it feel alive.' },
-    { title:'Pattern Direction', hl:['seq'],
-      text:'The DIR buttons below the grid change how the sequencer moves. FWD (default): steps 1→8 left to right. REV: steps 8→1 right to left — the same pattern backwards, which often sounds surprisingly musical. P-P (ping-pong): steps go 1→8→7→6...→2→1 and back, giving a 14-step feel from 8 notes. RND: picks a random step each tick — completely generative, never repeats. Try P-P at a slow BPM with REVERB SIZE 5 and ADSR RELEASE 3s: adjacent notes in both directions overlap into a shimmering cloud. This is how 8 notes become an endless-seeming composition.' },
-    { title:'The Arpeggiator: Chords in Motion', hl:['arp'],
-      text:'The ARPEGGIO module takes a chord shape and steps through its intervals rhythmically — turning harmony into melody. Set CHORD to MIN7, DIRECTION to U/D (up then down), RATE to ×2 (8th notes), OCTAVES to 2. Click ▶ ARP. You\'ll hear the min7 chord spread across two octaves in a flowing ascending-descending pattern. The arpeggio drives VCO pitch and triggers the ADSR, exactly like the sequencer does — but it\'s never the same as the sequence, so they layer without clashing. Stop the sequencer and let the arpeggiator run alone: even a simple C major arpeggio through a long reverb tail (SIZE 6, DECAY 0.9, MIX 0.8) becomes something beautiful.' },
-    { title:'Sidechain: The Pumping Pad', hl:['sidechain','vca'],
-      text:'The SIDECHAIN module is an envelope follower: it converts the amplitude of any audio input into a CV signal. Patch VCA OUT → SC IN. Then patch SC ENV → VCA ENV. Now the VCA\'s volume tracks the amplitude of its own output — which creates a feedback that causes the sound to pump rhythmically as it interacts with the ADSR. For the classic sidechain pumping feel: Patch CLK ÷4 → through ADSR (short attack 0.001, short release 0.1) → into SC IN instead. The SC ENV output follows the clock pulses. Patch SC ENV → VCA ENV (or Attenuverter → VCA ENV for scaled depth). Set SC ATTACK to 0.005, RELEASE to 0.15, AMT to 2. The pad now pumps — breathing in time with the clock. This is the defining production technique of modern electronic music.' },
-    { title:'The Complete Rhythmic Composition', hl:['seq','arp','sidechain','quantzr','reverb'],
-      text:'Combine everything for a complete composition: Set QUANTIZER to RAND + MINOR at root A. Set SEQ direction to P-P, drop 3-4 step probabilities to 65%. Set ARP to MIN7, U/D, ×4 rate, 2 octaves — start both SEQ and ARP running simultaneously. The sequencer plays slow, probabilistic notes; the arpeggiator fills the gaps with fast melodic movement. Route both through the character chain (TAPE → PHASER → CHORUS → REVERB). Set ADSR ATTACK 0.8s, RELEASE 3s. Add sidechain pumping from CLK ÷4. Set BPM to 72. This is a complete piece of electronic ambient music — two independent voices (sequencer + arpeggio), probabilistic variation, harmonic quantization, and spatial effects — in a single browser tab.' },
+    { title:'Get Sound Flowing', hl:['vco','seq'],
+      text:'Before we add rhythm tricks, let\'s make sure you have sound. <br><br><b>Do this now:</b><br>1. If you see the nm² logo splash screen, <b>click it</b> to power on the synth.<br>2. The <b>SEQUENCER</b> (highlighted) should already be playing — you\'ll see a step light moving across the grid. If it\'s stopped, click <b>▶ PLAY</b>.<br>3. You should hear notes. If not, check that your browser volume is up.<br><br>The sequencer sends pitch values to the VCO and triggers the ADSR envelope — this is the basic sound engine. Right now it plays all 8 steps in order, identically, every loop. Let\'s fix that.' },
+    { title:'Add Randomness with Probability', hl:['seq'],
+      text:'A sequence that plays the same way every time sounds robotic. The <b>P%</b> knobs add human-like variation.<br><br><b>Do this now:</b><br>1. Look at the SEQUENCER steps — each step has three controls: an <b>on/off toggle</b> (top), a <b>pitch knob</b> (middle), and a small <b>P%</b> knob (bottom).<br>2. Find <b>step 3</b>. Turn its P% knob down to about <b>70%</b>. This means step 3 now only fires 70% of the time.<br>3. Set <b>step 5</b> P% to about <b>70%</b> too.<br>4. Set <b>step 7</b> P% to <b>40%</b> — this step becomes rare, dramatic punctuation.<br><br>Listen for a few loops. The sequence sounds slightly different each time — some notes appear, some don\'t. This is how generative music works: same pattern, probabilistic variation.' },
+    { title:'Change the Pattern Direction', hl:['seq'],
+      text:'The <b>DIR</b> buttons below the step grid change how the sequencer moves through notes.<br><br><b>Do this now:</b><br>1. Find the four <b>DIR</b> buttons: <b>FWD</b>, <b>REV</b>, <b>P-P</b>, <b>RND</b>.<br>2. Click <b>P-P</b> (ping-pong). The sequence now goes 1→2→3→4→5→6→7→8→7→6→5...→2→1 and back — a 14-step feel from 8 notes!<br>3. Try <b>RND</b> — completely random step selection. Every loop is unique.<br>4. Go back to <b>P-P</b> for now. It\'s the sweet spot between predictable and surprising.<br><br>Combined with the probability knobs from the last step, your 8-note sequence now feels like an evolving composition rather than a loop.' },
+    { title:'Slow Down and Add Space', hl:['seq','adsr'],
+      text:'Fast sequences feel busy. Slow ones feel ambient. Let\'s create breathing room.<br><br><b>Do this now:</b><br>1. In the SEQUENCER, find the <b>BPM</b> knob. Turn it down to about <b>72 BPM</b>.<br>2. Find the <b>ADSR</b> module (highlighted). Set <b>ATTACK</b> to about <b>0.8s</b> (notes fade in gently).<br>3. Set ADSR <b>RELEASE</b> to about <b>3s</b> (notes ring out long after the step fires).<br><br>Now notes overlap and blend into each other. With P-P direction, adjacent notes in both directions create a shimmering cloud. We\'ll add reverb and effects in a later step to complete the atmosphere.' },
+    { title:'Start the Arpeggiator', hl:['arp'],
+      text:'The <b>ARPEGGIO</b> module turns a chord shape into a flowing melody. It drives the VCO pitch and triggers the ADSR automatically — no cables needed.<br><br><b>Do this now:</b><br>1. Find the <b>ARPEGGIO</b> module (highlighted).<br>2. Set <b>CHORD</b> to <b>MIN7</b> (minor 7th — melancholic and lush).<br>3. Set <b>DIR</b> to <b>U/D</b> (up then down — a flowing wave shape).<br>4. Set <b>RATE</b> to <b>×2</b> (8th notes — twice the base tempo).<br>5. Set <b>OCT</b> to <b>2</b> (spread across two octaves).<br>6. Click <b>▶ ARP</b> to start it.<br><br>You should hear the minor 7th chord spread across two octaves in an ascending-descending pattern. The arpeggiator and sequencer can run simultaneously — they layer without clashing.' },
+    { title:'Add Sidechain Pumping', hl:['sidechain','clkdiv','vca'],
+      text:'The <b>SIDECHAIN</b> module makes the sound "pump" rhythmically — the signature technique of modern electronic music.<br><br><b>Do this now:</b><br>1. Find the <b>SIDECHAIN</b> module (highlighted). Set its <b>ATTACK</b> to <b>0.005</b>, <b>RELEASE</b> to <b>0.15</b>, <b>AMT</b> to <b>2</b>.<br>2. Use the buttons below to make two cable connections — or hover over them to see which patch points light up, then drag the cables yourself.<br><br><b>How it works:</b> The first cable sends a rhythmic pulse from the <b>CLK ÷4</b> (clock divider) into the sidechain — it fires once every 4 sequencer steps, giving us a steady beat. The second cable routes the sidechain\'s envelope to control the VCA\'s volume, replacing the ADSR. The result: your pad swells and fades every 4 beats — a slow, ambient pump.',
+      patch:[{from:'clk-div4', to:'sc-in'}, {from:'sc-out', to:'vca-env'}] },
+    { title:'Route Through Effects', hl:['tape','phaser','chorus','reverb'],
+      text:'Let\'s build the full ambient character chain by routing VCA output through four effects in series. Each adds a layer of richness.<br><br><b>Do this now:</b><br>1. Use the CONNECT buttons below to wire up the effects chain. Hover each button to see the patch points light up on the modules.<br>2. After connecting, set these values:<br>   • <b>TAPE:</b> DRIVE 2.5, WOW 0.2, MIX 0.55<br>   • <b>PHASER:</b> RATE 0.1, DEPTH 0.5, MIX 0.6<br>   • <b>CHORUS:</b> RATE 0.7, DEPTH 0.25, WIDTH 0.85, MIX 0.55<br>   • <b>REVERB:</b> SIZE 6, DECAY 0.88, MIX 0.7<br><br>The signal passes through: warmth (tape) → breathing (phaser) → width (chorus) → space (reverb).',
+      patch:[{from:'vca-out', to:'tape-in'}, {from:'tape-out', to:'phaser-in'}, {from:'phaser-out', to:'chorus-in'}, {from:'chorus-out', to:'reverb-in'}] },
+    { title:'Set the Quantizer', hl:['quantzr'],
+      text:'The <b>QUANTIZER</b> forces all notes into a musical scale — so nothing sounds dissonant, even with random sequences.<br><br><b>Do this now:</b><br>1. Find the <b>QUANTIZER</b> module (highlighted).<br>2. Set <b>MODE</b> to <b>RAND</b> — this adds random variation to the pitch before quantizing.<br>3. Set <b>SCALE</b> to <b>MINOR</b>.<br>4. Set <b>ROOT</b> to <b>A</b>.<br><br>Now every note the sequencer and arpeggiator produce will land on A minor scale tones. The random mode adds subtle pitch drift that the scale catches — the notes wander but always sound harmonically correct.' },
+    { title:'The Complete Composition', hl:['seq','arp','sidechain','quantzr','reverb'],
+      text:'Take a moment to listen to what you\'ve built. You now have:<br><br>• <b>Two independent voices</b> — the probabilistic sequencer (slow, evolving) and the arpeggiator (fast, melodic)<br>• <b>Harmonic quantization</b> — everything locked to A minor<br>• <b>Sidechain pumping</b> — rhythmic breathing<br>• <b>Four effects in series</b> — tape warmth, phaser sweep, chorus width, reverb space<br><br>This is a complete piece of ambient electronic music running in a single browser tab. Try adjusting the sequencer <b>BPM</b>, or switching the arpeggiator <b>CHORD</b> to MAJ7, or nudging the probability knobs. Every small change ripples through the entire system.<br><br>When you\'re happy with the sound, click <b>⊹ SAVE AS</b> in the toolbar to save it as a preset.' },
   ]},
   { name:'9 — Record a Full Track', steps:[
     { title:'Thinking Like a Composer', hl:[],
@@ -5739,12 +5806,46 @@ function tutRenderStep() {
     <div style="font-size:7px;color:#333;letter-spacing:2px;margin-bottom:4px;">${t.name}</div>
     <div id="tut-step-title">${s.title}</div>
     <div id="tut-step-text">${s.text}</div>
+    <div id="tut-actions" class="tut-actions"></div>
     <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
       <button class="btn" id="tut-prev">◀ PREV</button>
       <button class="btn" id="tut-nxt">${tutStepIdx===t.steps.length-1?'DONE ✓':'NEXT ▶'}</button>
       <button class="btn" id="tut-list">↩ LIST</button>
       <span id="tut-prog">${tutStepIdx+1} / ${t.steps.length}</span>
     </div>`;
+  // Render guided patch buttons
+  const actionsEl = document.getElementById('tut-actions');
+  if (s.patch && s.patch.length) {
+    s.patch.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'tut-patch-btn';
+      const fromName = getPatchDisplayName(p.from) || p.from;
+      const toName = getPatchDisplayName(p.to) || p.to;
+      const fromColor = PP_COLOR[ppMap[p.from]?.cls] || '#cc00ff';
+      const toColor = PP_COLOR[ppMap[p.to]?.cls] || '#00ff66';
+      btn.innerHTML = `<span class="tut-patch-dot" style="background:${fromColor}"></span> ${fromName} <span class="tut-patch-arrow">→</span> <span class="tut-patch-dot" style="background:${toColor}"></span> ${toName}`;
+      // Check if cable already exists
+      const exists = cables.some(c => c.fromId === p.from && c.toId === p.to);
+      if (exists) btn.classList.add('done');
+      btn.addEventListener('click', () => {
+        if (!btn.classList.contains('done')) {
+          addCable(p.from, p.to);
+          btn.classList.add('done');
+        }
+        // Scroll the destination module into view
+        ppMap[p.to]?.el.closest('.module')?.scrollIntoView({behavior:'smooth', block:'nearest'});
+      });
+      btn.addEventListener('mouseenter', () => {
+        ppMap[p.from]?.el.classList.add('tut-pp-highlight');
+        ppMap[p.to]?.el.classList.add('tut-pp-highlight');
+      });
+      btn.addEventListener('mouseleave', () => {
+        ppMap[p.from]?.el.classList.remove('tut-pp-highlight');
+        ppMap[p.to]?.el.classList.remove('tut-pp-highlight');
+      });
+      actionsEl.appendChild(btn);
+    });
+  }
   const prevBtn = document.getElementById('tut-prev');
   prevBtn.disabled = tutStepIdx === 0;
   prevBtn.addEventListener('click', () => { tutStepIdx--; tutRenderStep(); });
@@ -5755,9 +5856,16 @@ function tutRenderStep() {
   document.getElementById('tut-list').addEventListener('click', () => { tutClearHl(); tutShowPicker(); });
   tutClearHl();
   (s.hl || []).forEach(id => document.getElementById(`mod-${id}`)?.classList.add('tut-highlight'));
+  // Also scroll first highlighted module into view
+  if (s.hl && s.hl.length) {
+    document.getElementById(`mod-${s.hl[0]}`)?.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
 }
 
-function tutClearHl() { document.querySelectorAll('.tut-highlight').forEach(el => el.classList.remove('tut-highlight')); }
+function tutClearHl() {
+  document.querySelectorAll('.tut-highlight').forEach(el => el.classList.remove('tut-highlight'));
+  document.querySelectorAll('.tut-pp-highlight').forEach(el => el.classList.remove('tut-pp-highlight'));
+}
 function tutClose() { tutClearHl(); document.getElementById('tut-panel').classList.remove('open'); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
