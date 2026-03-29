@@ -13,6 +13,8 @@
     const saved = localStorage.getItem('nm2-theme');
     if (saved === 'light' || saved === 'dark') {
       document.documentElement.dataset.theme = saved;
+    } else {
+      document.documentElement.dataset.theme = 'light';
     }
   })();
 </script>
@@ -6523,7 +6525,7 @@ PATCH IDEAS (NEW MODULES):
       ? 'Switch back to dark cyberpunk theme'
       : 'Switch to bright Neon White theme';
   }
-  apply(localStorage.getItem(KEY) || document.documentElement.dataset.theme || 'dark');
+  apply(localStorage.getItem(KEY) || document.documentElement.dataset.theme || 'light');
   btn.addEventListener('click', () => {
     const nextTheme = (document.documentElement.dataset.theme || 'dark') === 'light' ? 'dark' : 'light';
     apply(nextTheme);
