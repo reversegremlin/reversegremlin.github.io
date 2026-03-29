@@ -1025,10 +1025,10 @@ function makeVCA(instanceId = 1) {
   const envGain = ctx.createGain();
   const outlet = ctx.createGain();
   envGain.gain.value = 0;
-  outlet.gain.value = 0.8;
+  outlet.gain.value = 0.55;
   inlet.connect(envGain);
   envGain.connect(outlet);
-  const m = { inlet, envGain, outlet, gainVal:0.8 };
+  const m = { inlet, envGain, outlet, gainVal:0.55 };
   m.setGain = v => { m.gainVal=v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
   m.cleanup = () => { try { inlet.disconnect(); envGain.disconnect(); outlet.disconnect(); } catch(e){} };
   mods[modsKey('vca', instanceId)] = m; return m;
@@ -3360,7 +3360,7 @@ function buildVCAPanel(instanceId = 1) {
   const pk = s => ppKey('vca', instanceId, s);
   const mk = modsKey('vca', instanceId);
   const d=document.createElement('div');
-  d.appendChild(mkKnob({id:pk('gain'),label:'GAIN',min:0,max:1,val:.8,tip:TIPS['vca-gain'],onChange:v=>mods[mk].setGain(v)}));
+  d.appendChild(mkKnob({id:pk('gain'),label:'GAIN',min:0,max:1,val:.55,tip:TIPS['vca-gain'],onChange:v=>mods[mk].setGain(v)}));
   d.appendChild(document.createElement('hr'));
   d.appendChild(mkPP(pk('in'),'ai','IN','in'));
   d.appendChild(mkPP(pk('env'),'ci','ENV↓','in'));
@@ -7404,7 +7404,7 @@ function startLissajous() {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
   ctx = new AudioContext();
-  masterOut = ctx.createGain(); masterOut.gain.value=0.45;
+  masterOut = ctx.createGain(); masterOut.gain.value=0.35;
   analyserNode = ctx.createAnalyser(); analyserNode.fftSize=2048;
   // Signal chain: masterOut → limiter → analyserNode → destination
   mods.limiter = makeLimiter();
