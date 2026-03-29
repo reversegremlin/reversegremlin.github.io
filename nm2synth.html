@@ -4624,7 +4624,7 @@ function getConfig() {
     adsr:{A:mods.adsr.A,D:mods.adsr.D,S:mods.adsr.S,R:mods.adsr.R},
     vca:{gain:mods.vca.gainVal},
     seq:{bpm:mods.seq.bpm,direction:mods.seq.direction,stepCount:mods.seq.stepCount,steps:mods.seq.steps.map(s=>({on:s.on,pitch:s.pitch,prob:s.prob??1,vel:s.vel??0.7}))},
-    arp:{chord:mods.arp.chordName,dir:mods.arp.direction,rateMul:mods.arp.rateMul,octaves:mods.arp.octaves,root:mods.arp.root},
+    arp:{chord:mods.arp.chordName,dir:mods.arp.direction,rateMul:mods.arp.rateMul,octaves:mods.arp.octaves,root:mods.arp.root,active:mods.arp.active},
     sidechain:{attack:mods.sidechain.attackVal,release:mods.sidechain.releaseVal,amount:mods.sidechain.amountVal},
     chorus:   {rate:mods.chorus.rateVal,depth:mods.chorus.depthVal,width:mods.chorus.widthVal,mix:mods.chorus.mixVal},
     panner:   {rate:mods.panner.rateVal,depth:mods.panner.depthVal},
@@ -4675,7 +4675,7 @@ function applyConfig(cfg) {
   if(cfg.reverb){ mods.reverb.setSize(cfg.reverb.size); sk('reverb-size',cfg.reverb.size); mods.reverb.setDecay(cfg.reverb.decay); sk('reverb-decay',cfg.reverb.decay); mods.reverb.setMix(cfg.reverb.mix); sk('reverb-mix',cfg.reverb.mix); }
   if(cfg.lfo){ mods.lfo.setType(cfg.lfo.type); sk('lfo-wave',cfg.lfo.type); mods.lfo.setRate(cfg.lfo.rate); sk('lfo-rate',cfg.lfo.rate); mods.lfo.setDepth(cfg.lfo.depth); sk('lfo-depth',cfg.lfo.depth); }
   if(cfg.lfo2){ mods.lfo2.setType(cfg.lfo2.type); sk('lfo2-wave',cfg.lfo2.type); mods.lfo2.setRate(cfg.lfo2.rate); sk('lfo2-rate',cfg.lfo2.rate); mods.lfo2.setDepth(cfg.lfo2.depth); sk('lfo2-depth',cfg.lfo2.depth); }
-  if(cfg.sandh){ mods.sandh.setTrigSrc(cfg.sandh.trigSrc); }
+  if(cfg.sandh){ mods.sandh.setTrigSrc(cfg.sandh.trigSrc); const srcMap={step:'STEP',div2:'÷2',div4:'÷4',div8:'÷8'}; document.querySelectorAll('#mod-sandh .wbtn').forEach(b=>b.classList.toggle('on',b.textContent===srcMap[cfg.sandh.trigSrc])); }
   if(cfg.att){ mods.att.setAtt(cfg.att.att); sk('att-knob',cfg.att.att); mods.att.setOffset(cfg.att.offset); sk('att-offset',cfg.att.offset); }
   if(cfg.slew){ mods.slew.setRise(cfg.slew.rise); sk('slew-rise',cfg.slew.rise); mods.slew.setFall(cfg.slew.fall); sk('slew-fall',cfg.slew.fall); }
   if(cfg.chaos){ mods.chaos.setRate(cfg.chaos.rate); sk('chaos-rate',cfg.chaos.rate); mods.chaos.setChaos(cfg.chaos.chaos); sk('chaos-chaos',cfg.chaos.chaos); mods.chaos.setAmount(cfg.chaos.amount); sk('chaos-amount',cfg.chaos.amount); }
@@ -4694,7 +4694,17 @@ function applyConfig(cfg) {
   if(cfg.phaser){ mods.phaser.setRate(cfg.phaser.rate); sk('phaser-rate',cfg.phaser.rate); mods.phaser.setDepth(cfg.phaser.depth); sk('phaser-depth',cfg.phaser.depth); mods.phaser.setMix(cfg.phaser.mix); sk('phaser-mix',cfg.phaser.mix); }
   if(cfg.wavefolder){ mods.wavefolder.setFold(cfg.wavefolder.fold); sk('fold-fold',cfg.wavefolder.fold); mods.wavefolder.setSymm(cfg.wavefolder.symm); sk('fold-symm',cfg.wavefolder.symm); }
   if(cfg.chord){ mods.chord.setChord(cfg.chord.name); sk('chord-type-sel',cfg.chord.name); sk('chord-spread',cfg.chord.spread); mods.chord.setSpread(cfg.chord.spread); sk('chord-level',cfg.chord.level); mods.chord.setLevel(cfg.chord.level); mods.chord.setWave(cfg.chord.wave||'sawtooth'); sk('chord-wave',cfg.chord.wave||'sawtooth'); }
-  if(cfg.quant){ mods.quant.active=cfg.quant.active; mods.quant.randMode=cfg.quant.randMode; mods.quant.scaleName=cfg.quant.scale||'penta'; mods.quant.root=cfg.quant.root??9; }
+  if(cfg.quant){
+    mods.quant.active=cfg.quant.active; mods.quant.randMode=cfg.quant.randMode; mods.quant.scaleName=cfg.quant.scale||'penta'; mods.quant.root=cfg.quant.root??9;
+    const scMap={'major':'MAJ','minor':'MIN','dorian':'DOR','phrygian':'PHR','lydian':'LYD','penta':'PENT','chromatic':'CHR'};
+    document.querySelectorAll('#mod-quant .wbtn').forEach(b=>{
+      if(b.textContent==='LOCK') b.classList.toggle('on',mods.quant.active);
+      else if(b.textContent==='RAND') b.classList.toggle('on',mods.quant.randMode);
+      else { const sn=Object.entries(scMap).find(([k,v])=>v===b.textContent); if(sn) b.classList.toggle('on',sn[0]===mods.quant.scaleName); }
+    });
+    const rootSel=document.querySelector('#mod-quant select'); if(rootSel) rootSel.value=mods.quant.root;
+    const noteLbl=document.getElementById('quant-note-lbl'); if(noteLbl) noteLbl.textContent=mods.quant.active?'—':'OFF';
+  }
   if(cfg.microcosm){
     mods.microcosm.setBlend(cfg.microcosm.blend);     sk('mc-blend',cfg.microcosm.blend);
     mods.microcosm.setGrainSz(cfg.microcosm.grainSz); sk('mc-size',cfg.microcosm.grainSz);
@@ -4739,6 +4749,9 @@ function applyConfig(cfg) {
     mods.arp.setRateMul(cfg.arp.rateMul||2); sk('arp-rate-sel',cfg.arp.rateMul||2);
     mods.arp.setOctaves(cfg.arp.octaves||1); sk('arp-oct-sel',cfg.arp.octaves||1);
     mods.arp.setRoot(cfg.arp.root||0); sk('arp-root',cfg.arp.root||0);
+    const arpBtn = document.querySelector('#mod-arp .transport .btn');
+    if(cfg.arp.active){ mods.arp.start(); if(arpBtn){arpBtn.textContent='■ STOP';arpBtn.classList.add('on');} }
+    else { mods.arp.stop(); if(arpBtn){arpBtn.textContent='▶ ARP';arpBtn.classList.remove('on');} }
   }
   if(cfg.sidechain){
     mods.sidechain.setAttack(cfg.sidechain.attack); sk('sc-attack',cfg.sidechain.attack);
@@ -4772,7 +4785,10 @@ function applyConfig(cfg) {
     mods.affect.strength=cfg.affect.strength??0.5; sk('affect-strength',mods.affect.strength);
     mods.affect.wanderMode=!!cfg.affect.wanderMode;
     mods.affect.driftSpeed=cfg.affect.driftSpeed??0.3; sk('affect-drift',mods.affect.driftSpeed);
-    if(cfg.affect.active){ mods.affect.active=true; applyAffect(mods.affect.targetX, mods.affect.targetY); }
+    mods.affect.active=!!cfg.affect.active;
+    const affOnBtn=document.getElementById('affect-on-btn'); if(affOnBtn) affOnBtn.classList.toggle('on',mods.affect.active);
+    const affWanderBtn=document.getElementById('affect-wander-btn'); if(affWanderBtn) affWanderBtn.classList.toggle('on',mods.affect.wanderMode);
+    if(mods.affect.active) applyAffect(mods.affect.targetX, mods.affect.targetY);
   }
   // Restore extra module instances
   if (cfg.extraModules && cfg.extraModules.length) {
@@ -7271,14 +7287,15 @@ function buildAffectPanel() {
   const btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:4px;margin-top:4px;';
   const onBtn = document.createElement('button');
-  onBtn.className = 'btn'; onBtn.textContent = 'ON';
+  onBtn.className = 'btn'; onBtn.id = 'affect-on-btn'; onBtn.textContent = 'ON';
   onBtn.addEventListener('click', () => {
     m.active = !m.active;
     onBtn.classList.toggle('on', m.active);
-    if (m.active) applyAffect(m.x, m.y);
+    if (m.active) { applyAffect(m.x, m.y); }
+    else if (m.wanderMode) { m.wanderMode = false; wanderBtn.classList.remove('on'); driftWrap.style.display = 'none'; }
   });
   const wanderBtn = document.createElement('button');
-  wanderBtn.className = 'btn'; wanderBtn.textContent = 'WANDER';
+  wanderBtn.className = 'btn'; wanderBtn.id = 'affect-wander-btn'; wanderBtn.textContent = 'WANDER';
   wanderBtn.addEventListener('click', () => {
     m.wanderMode = !m.wanderMode;
     wanderBtn.classList.toggle('on', m.wanderMode);
