@@ -596,6 +596,8 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
   <button class="btn scene-slot" id="scene-2">C</button>
   <button class="btn scene-slot" id="scene-3">D</button>
   <button class="btn" id="morph-btn">⟿ MORPH</button>
+  <button class="btn" id="track-edit-btn">TRACK</button>
+  <button class="btn" id="track-play-btn">▶ PLAY TRACK</button>
   <span id="morph-bars" style="display:none;gap:2px;align-items:center;">
     <span id="morph-bars-label" style="font-size:7px;letter-spacing:1px;">BARS</span>
     <button class="btn morph-bar-btn on" data-bars="4">4</button>
@@ -5061,6 +5063,87 @@ function handleMIDI(ev) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function getPresets() { try { return JSON.parse(localStorage.getItem(PRESET_KEY))||[]; } catch { return []; } }
 function savePresets(arr) { localStorage.setItem(PRESET_KEY, JSON.stringify(arr)); }
+function cloneData(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+function getSceneSnapshot() { return scenes.map(s => s ? cloneData(s) : null); }
+function applySceneSet(sceneSet, persist=true) {
+  [0,1,2,3].forEach(i => { scenes[i] = sceneSet?.[i] ? cloneData(sceneSet[i]) : null; });
+  if (persist) saveScenesToStorage();
+  updateSceneButtons();
+}
+
+let currentTrackScript = '';
+let currentTrackSteps = [];
+let trackRunId = 0;
+let trackPlaying = false;
+
+function parseTrackScript(script) {
+  const src = (script || '').trim();
+  if (!src) return [];
+  return src.split(/>|,|\n/).map(s => s.trim()).filter(Boolean).map(tok => {
+    const m = tok.match(/^([ABCD])\s*(\d+)?$/i);
+    if (!m) throw new Error(`Invalid track step "${tok}"`);
+    return { sceneIdx: 'ABCD'.indexOf(m[1].toUpperCase()), bars: Math.max(1, Number(m[2] || 8)) };
+  });
+}
+function setTrackScript(script, silent=false) {
+  currentTrackScript = (script || '').trim();
+  currentTrackSteps = currentTrackScript ? parseTrackScript(currentTrackScript) : [];
+  const btn = document.getElementById('track-edit-btn');
+  if (btn) btn.classList.toggle('on', !!currentTrackSteps.length);
+  if (!silent) setStatus(currentTrackSteps.length ? `Track ready: ${currentTrackScript}` : 'Track cleared');
+}
+function barsToMs(bars) { return bars * 4 * (60000 / (mods.seq?.bpm || 120)); }
+function stopTrackPlayback(msg='Track stopped') {
+  trackRunId++;
+  trackPlaying = false;
+  const btn = document.getElementById('track-play-btn');
+  if (btn) { btn.textContent = '▶ PLAY TRACK'; btn.classList.remove('on'); }
+  if (morphing) stopMorph();
+  setStatus(msg);
+}
+function playCurrentTrack() {
+  if (!ctx) { setStatus('Power on first.'); return; }
+  if (!currentTrackSteps.length) { setStatus('No track script set. Click TRACK first.'); return; }
+  const first = currentTrackSteps[0];
+  if (first.sceneIdx < 0 || !scenes[first.sceneIdx]) { setStatus(`Scene ${'ABCD'[first.sceneIdx] || '?'} is empty.`); return; }
+  stopTrackPlayback('Track queued');
+  trackPlaying = true;
+  const runId = ++trackRunId;
+  const btn = document.getElementById('track-play-btn');
+  if (btn) { btn.textContent = '■ STOP TRACK'; btn.classList.add('on'); }
+  applyConfig(scenes[first.sceneIdx]);
+  setStatus(`Track start: ${'ABCD'[first.sceneIdx]} for ${first.bars} bar${first.bars===1?'':'s'}`);
+  const scheduleNext = (idx) => {
+    if (trackRunId !== runId || !trackPlaying) return;
+    if (idx >= currentTrackSteps.length) { stopTrackPlayback(`Track finished: ${currentTrackScript}`); return; }
+    const step = currentTrackSteps[idx];
+    if (!scenes[step.sceneIdx]) { stopTrackPlayback(`Track stopped: Scene ${'ABCD'[step.sceneIdx]} is empty.`); return; }
+    if (idx === 0) {
+      setTimeout(() => {
+        if (trackRunId !== runId || !trackPlaying) return;
+        if (currentTrackSteps.length === 1) { stopTrackPlayback(`Track finished: ${currentTrackScript}`); return; }
+        scheduleNext(1);
+      }, barsToMs(step.bars));
+      return;
+    }
+    morphBarsN = step.bars;
+    document.querySelectorAll('.morph-bar-btn').forEach(b => b.classList.toggle('on', Number(b.dataset.bars) === step.bars));
+    startMorph(step.sceneIdx);
+    setStatus(`Track morph: ${'ABCD'[step.sceneIdx]} over ${step.bars} bar${step.bars===1?'':'s'}`);
+    setTimeout(() => {
+      if (trackRunId !== runId || !trackPlaying) return;
+      if (idx === currentTrackSteps.length - 1) {
+        setTimeout(() => {
+          if (trackRunId !== runId || !trackPlaying) return;
+          stopTrackPlayback(`Track finished: ${currentTrackScript}`);
+        }, barsToMs(step.bars));
+      } else {
+        scheduleNext(idx + 1);
+      }
+    }, barsToMs(step.bars));
+  };
+  scheduleNext(0);
+}
 
 function refreshPresetDropdown() {
   const sel = document.getElementById('preset-sel');
@@ -5082,7 +5165,7 @@ function savePreset() {
   const arr = getPresets();
   const idx = arr.findIndex(p => p.name === n);
   const notes = document.getElementById('notes-area')?.value || '';
-  const entry = { name:n, config:getConfig(), notes };
+  const entry = { name:n, config:getConfig(), notes, scenes:getSceneSnapshot(), trackScript:currentTrackScript };
   if(idx>=0) arr[idx]=entry; else arr.push(entry);
   savePresets(arr);
   refreshPresetDropdown();
@@ -5094,7 +5177,15 @@ function loadPreset() {
   const name = document.getElementById('preset-sel').value;
   if(!name) { setStatus('Select a preset first.'); return; }
   const p = getPresets().find(p=>p.name===name);
-  if(p) { _sessionSuppress=true; applyConfig(p.config); const el=document.getElementById('notes-area'); if(el) el.value=p.notes||''; setStatus(`Preset "${name}" loaded ✓`); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name}); },150); }
+  if(p) {
+    _sessionSuppress=true;
+    applyConfig(p.config);
+    if (p.scenes) applySceneSet(p.scenes);
+    if (p.trackScript !== undefined) setTrackScript(p.trackScript, true);
+    const el=document.getElementById('notes-area'); if(el) el.value=p.notes||'';
+    setStatus(`Preset "${name}" loaded ✓`);
+    setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name}); },150);
+  }
 }
 
 function deletePreset() {
@@ -5120,6 +5211,73 @@ function exportPresets() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FACTORY PRESETS
 // ═══════════════════════════════════════════════════════════════════════════════
+const FULL_AMBIENT_TRACK_SCENES = [
+  {v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:0,detune:4},
+    lfo:{type:'triangle',rate:0.035,depth:340}, lfo2:{type:'sine',rate:0.012,depth:90},
+    sandh:{trigSrc:'div8'},
+    adsr:{A:5.5,D:0.9,S:0.9,R:8.5}, vcf:{cutoff:360,res:1.1,ftype:'lowpass'}, vca:{gain:0.72},
+    reverb:{size:7.5,decay:0.94,mix:0.78}, delay:{time:0.75,fb:0.42,mix:0.16},
+    chorus:{rate:0.12,depth:0.14,width:0.84,mix:0.18},
+    tape:{drive:1.5,wow:0.12,mix:0.22}, phaser:{rate:0.03,depth:0.08,mix:0.08},
+    noise:{type:'pink',level:0.008}, mixer:{a:0.55,b:0.4,c:0.2},
+    seq:{bpm:54,direction:'pp',stepCount:16,steps:Array.from({length:16},(_,i)=>({on:[1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1][i]===1,pitch:[0,2,4,7,9,7,4,2,0,-2,0,4,7,9,7,2][i],prob:[1,1,1,0.78,1,0.7,1,1,0.86,1,0.64,1,1,0.76,1,0.68][i]}))},
+    att:{att:0.1,offset:0.04}, wavefolder:{fold:1.1,symm:0}, panner:{rate:0.02,depth:0.32},
+    microcosm:{blend:0.18,grainSz:0.2,scatter:0.12,pitch:1,density:7,mode:'granular'},
+    chord:{name:'sus2',spread:8,level:0.12,wave:'triangle'}, quant:{active:true,randMode:true,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.5,amount:1}, arp:{chord:'sus2',dir:'up',rateMul:1,octaves:1,root:0,active:false},
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'noise-out',toId:'vcf-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'reverb-in',color:'#00ffff'}]
+  },
+  {v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:0,detune:5},
+    lfo:{type:'triangle',rate:0.04,depth:520}, lfo2:{type:'sine',rate:0.016,depth:130},
+    sandh:{trigSrc:'div8'},
+    adsr:{A:4.8,D:0.85,S:0.89,R:8}, vcf:{cutoff:460,res:1.2,ftype:'lowpass'}, vca:{gain:0.74},
+    reverb:{size:8,decay:0.95,mix:0.82}, delay:{time:0.75,fb:0.48,mix:0.2},
+    chorus:{rate:0.15,depth:0.18,width:0.88,mix:0.26},
+    tape:{drive:1.7,wow:0.14,mix:0.28}, phaser:{rate:0.04,depth:0.1,mix:0.1},
+    noise:{type:'pink',level:0.012}, mixer:{a:0.55,b:0.52,c:0.35},
+    seq:{bpm:54,direction:'pp',stepCount:16,steps:Array.from({length:16},(_,i)=>({on:[1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1][i]===1,pitch:[0,2,4,7,9,7,4,2,0,-2,0,4,7,9,7,2][i],prob:[1,1,1,0.8,1,0.72,1,1,0.88,1,0.66,1,1,0.78,1,0.7][i]}))},
+    att:{att:0.13,offset:0.05}, wavefolder:{fold:1.2,symm:0.01}, panner:{rate:0.024,depth:0.4},
+    microcosm:{blend:0.26,grainSz:0.19,scatter:0.18,pitch:1,density:9,mode:'granular'},
+    chord:{name:'sus2',spread:9,level:0.2,wave:'triangle'}, quant:{active:true,randMode:true,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.5,amount:1.05}, arp:{chord:'sus2',dir:'up',rateMul:1,octaves:1,root:0,active:false},
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'chord-out',toId:'vcf-in',color:'#ff00ff'},{fromId:'noise-out',toId:'vcf-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'reverb-in',color:'#00ffff'}]
+  },
+  {v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:0,detune:6},
+    lfo:{type:'triangle',rate:0.045,depth:620}, lfo2:{type:'sine',rate:0.018,depth:180},
+    sandh:{trigSrc:'div8'},
+    adsr:{A:4.5,D:0.8,S:0.88,R:7.5}, vcf:{cutoff:520,res:1.3,ftype:'lowpass'}, vca:{gain:0.76},
+    reverb:{size:8,decay:0.96,mix:0.82}, delay:{time:0.75,fb:0.52,mix:0.28},
+    chorus:{rate:0.18,depth:0.22,width:0.9,mix:0.38},
+    tape:{drive:1.9,wow:0.16,mix:0.34}, phaser:{rate:0.045,depth:0.18,mix:0.2},
+    noise:{type:'pink',level:0.015}, mixer:{a:0.55,b:0.6,c:0.5},
+    seq:{bpm:54,direction:'pp',stepCount:16,steps:Array.from({length:16},(_,i)=>({on:[1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1][i]===1,pitch:[0,2,4,7,9,7,4,2,0,-2,0,4,7,9,7,2][i],prob:[1,1,1,0.82,1,0.74,1,1,0.9,1,0.68,1,1,0.8,1,0.72][i]}))},
+    att:{att:0.16,offset:0.06}, wavefolder:{fold:1.4,symm:0.02}, panner:{rate:0.03,depth:0.55},
+    microcosm:{blend:0.42,grainSz:0.18,scatter:0.26,pitch:1,density:12,mode:'granular'},
+    chord:{name:'sus2',spread:9,level:0.26,wave:'triangle'}, quant:{active:true,randMode:true,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.5,amount:1.1}, arp:{chord:'sus2',dir:'up',rateMul:1,octaves:2,root:0,active:false},
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'chord-out',toId:'vcf-in',color:'#ff00ff'},{fromId:'noise-out',toId:'vcf-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'phaser-in',color:'#cc00ff'},{fromId:'phaser-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'delay-in',color:'#ff6600'},{fromId:'delay-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'microcosm-in',color:'#ff00ff'},{fromId:'microcosm-out',toId:'reverb-in',color:'#00ffff'}]
+  },
+  {v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:0,detune:8},
+    lfo:{type:'triangle',rate:0.055,depth:900}, lfo2:{type:'sine',rate:0.024,depth:260},
+    sandh:{trigSrc:'div4'},
+    adsr:{A:3.8,D:0.7,S:0.87,R:9}, vcf:{cutoff:760,res:1.8,ftype:'lowpass'}, vca:{gain:0.8},
+    reverb:{size:8.6,decay:0.98,mix:0.9}, delay:{time:0.75,fb:0.62,mix:0.38},
+    chorus:{rate:0.22,depth:0.28,width:0.94,mix:0.5},
+    tape:{drive:2.2,wow:0.2,mix:0.42}, phaser:{rate:0.055,depth:0.24,mix:0.28},
+    noise:{type:'pink',level:0.02}, mixer:{a:0.55,b:0.65,c:0.58},
+    seq:{bpm:54,direction:'pp',stepCount:16,steps:Array.from({length:16},(_,i)=>({on:[1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1][i]===1,pitch:[0,2,4,7,9,7,4,2,0,-2,0,4,7,9,7,2][i],prob:[1,1,1,0.84,1,0.76,1,1,0.92,1,0.7,1,1,0.82,1,0.74][i]}))},
+    att:{att:0.24,offset:0.08}, wavefolder:{fold:1.9,symm:0.03}, panner:{rate:0.04,depth:0.7},
+    microcosm:{blend:0.68,grainSz:0.16,scatter:0.34,pitch:2,density:18,mode:'shimmer'},
+    chord:{name:'min7',spread:10,level:0.34,wave:'triangle'}, quant:{active:true,randMode:true,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.6,amount:1.15}, arp:{chord:'min7',dir:'up',rateMul:1,octaves:2,root:0,active:true},
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'chord-out',toId:'vcf-in',color:'#ff00ff'},{fromId:'noise-out',toId:'vcf-in',color:'#888888'},{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vca-out',toId:'fold-in',color:'#ffff00'},{fromId:'fold-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'phaser-in',color:'#cc00ff'},{fromId:'phaser-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'delay-in',color:'#ff6600'},{fromId:'delay-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'microcosm-in',color:'#ff00ff'},{fromId:'microcosm-out',toId:'reverb-in',color:'#00ffff'}]
+  },
+];
+
 const FACTORY_PRESETS = [
   { name:'Ambient Drone', desc:'Slow evolving filter sweep — two detuned saws + huge reverb', cfg:{v:1,
     vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:2,coarse:0,detune:12},
@@ -5151,20 +5309,21 @@ const FACTORY_PRESETS = [
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
     cables:[{fromId:'chord-out',toId:'mix-b-in',color:'#ff00ff'},{fromId:'vco2-out',toId:'mix-c-in',color:'#88aaff'},{fromId:'vco-out',toId:'microcosm-in',color:'#00ff88'},{fromId:'microcosm-out',toId:'reverb-in',color:'#00ffff'}]
   }},
-  { name:'S&H Generative', desc:'Sample & Hold creates random stepped filter patterns — pure Eurorack gold', cfg:{v:1,
-    vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:2,coarse:4,detune:0},
-    lfo:{type:'sine',rate:5,depth:700}, lfo2:{type:'triangle',rate:0.15,depth:400},
-    adsr:{A:0.02,D:0.12,S:0.7,R:0.8}, vcf:{cutoff:2000,res:4,ftype:'lowpass'}, vca:{gain:0.8},
-    reverb:{size:4,decay:0.72,mix:0.6}, delay:{time:0.25,fb:0.4,mix:0.3},
-    chorus:{rate:0.5,depth:0.2,width:0.6,mix:0.3},
-    tape:{drive:2,wow:0.1,mix:0.2}, phaser:{rate:0.3,depth:0.3,mix:0.3},
+  { name:'S&H Generative', desc:'Soft stepped filter blooms — random motion without the harsh pluck', cfg:{v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sine',oct:3,coarse:0,detune:4},
+    lfo:{type:'triangle',rate:2.8,depth:420}, lfo2:{type:'sine',rate:0.08,depth:260},
+    sandh:{trigSrc:'div2'},
+    adsr:{A:0.08,D:0.45,S:0.72,R:2.4}, vcf:{cutoff:1350,res:1.8,ftype:'lowpass'}, vca:{gain:0.78},
+    reverb:{size:6.5,decay:0.86,mix:0.72}, delay:{time:0.5,fb:0.42,mix:0.33},
+    chorus:{rate:0.28,depth:0.32,width:0.82,mix:0.42},
+    tape:{drive:1.8,wow:0.14,mix:0.25}, phaser:{rate:0.09,depth:0.18,mix:0.18},
     noise:{type:'white',level:0}, mixer:{a:0.6,b:0,c:0},
-    seq:{bpm:100,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:true,pitch:[0,7,12,7,3,0,-5,5,0,3,7,12,7,0,-5,3][i],prob:1}))},
-    att:{att:1,offset:0}, wavefolder:{fold:1.5,symm:0}, panner:{rate:0.1,depth:0.4},
-    microcosm:{blend:0.5,grainSz:0.1,scatter:0.2,pitch:1,density:10,mode:'granular'},
-    chord:{name:'min',spread:4,level:0.4,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'penta',root:9},
-    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min',dir:'up',rateMul:1,octaves:1,root:0},
-    cables:[{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'}]
+    seq:{bpm:82,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<8,pitch:[0,7,10,12,7,3,0,-2,0,3,7,10,12,7,3,0][i],prob:[1,0.92,0.85,1,0.88,0.82,1,0.76,1,0.9,0.84,1,0.88,0.82,0.9,0.78][i]}))},
+    att:{att:0.28,offset:0.1}, wavefolder:{fold:1.2,symm:0}, panner:{rate:0.06,depth:0.38},
+    microcosm:{blend:0.42,grainSz:0.12,scatter:0.18,pitch:1,density:8,mode:'granular'},
+    chord:{name:'min7',spread:5,level:0.3,wave:'triangle'}, quant:{active:false,randMode:false,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:1,octaves:1,root:0},
+    cables:[{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'chorus-in',color:'#ff4488'},{fromId:'chorus-out',toId:'reverb-in',color:'#00ffff'}]
   }},
   { name:'Arpeggio in Space', desc:'Melodic arpeggiator with ping-pong delay + long reverb', cfg:{v:1,
     vco:{type:'triangle',oct:3,coarse:0,fine:0}, vco2:{type:'sine',oct:3,coarse:0,detune:5},
@@ -5196,20 +5355,20 @@ const FACTORY_PRESETS = [
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:1,octaves:1,root:0},
     cables:[{fromId:'vca-out',toId:'microcosm-in',color:'#ff00ff'},{fromId:'microcosm-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'reverb-in',color:'#88aaff'}]
   }},
-  { name:'Wavefolder Lead', desc:'Aggressive wavefold adds screaming harmonics — sweep VCF for animation', cfg:{v:1,
-    vco:{type:'sawtooth',oct:2,coarse:7,fine:0}, vco2:{type:'square',oct:2,coarse:0,detune:15},
-    lfo:{type:'sine',rate:0.4,depth:1800}, lfo2:{type:'square',rate:0.08,depth:400},
-    adsr:{A:0.005,D:0.3,S:0.7,R:1.5}, vcf:{cutoff:2000,res:5,ftype:'lowpass'}, vca:{gain:0.75},
-    reverb:{size:3.5,decay:0.65,mix:0.45}, delay:{time:0.2,fb:0.4,mix:0.3},
-    chorus:{rate:1.2,depth:0.4,width:0.7,mix:0.35},
-    tape:{drive:4,wow:0.1,mix:0.3}, phaser:{rate:0.5,depth:0.5,mix:0.4},
+  { name:'Wavefolder Lead', desc:'Warm folded lead — richer harmonics with less bite and a smoother tail', cfg:{v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sine',oct:2,coarse:7,detune:6},
+    lfo:{type:'sine',rate:0.22,depth:950}, lfo2:{type:'triangle',rate:0.06,depth:220},
+    adsr:{A:0.02,D:0.35,S:0.68,R:1.8}, vcf:{cutoff:1450,res:2.8,ftype:'lowpass'}, vca:{gain:0.78},
+    reverb:{size:5.5,decay:0.78,mix:0.58}, delay:{time:0.28,fb:0.36,mix:0.24},
+    chorus:{rate:0.32,depth:0.22,width:0.68,mix:0.25},
+    tape:{drive:2.2,wow:0.09,mix:0.28}, phaser:{rate:0.16,depth:0.2,mix:0.15},
     noise:{type:'white',level:0}, mixer:{a:0.6,b:0,c:0},
-    seq:{bpm:120,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:true,pitch:[0,7,12,7,3,0,-5,5,0,3,7,12,7,0,-5,3][i],prob:1}))},
-    att:{att:1.5,offset:0}, wavefolder:{fold:4.5,symm:0.15}, panner:{rate:0.2,depth:0.4},
-    microcosm:{blend:0.5,grainSz:0.1,scatter:0.2,pitch:1,density:10,mode:'granular'},
-    chord:{name:'min',spread:4,level:0.4,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'penta',root:0},
+    seq:{bpm:102,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:true,pitch:[0,7,10,12,7,3,0,-2,0,3,7,10,12,7,3,0][i],prob:[1,0.94,0.88,1,0.92,0.86,1,0.82,1,0.9,0.86,1,0.9,0.84,0.88,0.8][i]}))},
+    att:{att:1.1,offset:0}, wavefolder:{fold:2.6,symm:0.04}, panner:{rate:0.11,depth:0.34},
+    microcosm:{blend:0.35,grainSz:0.1,scatter:0.14,pitch:1,density:8,mode:'granular'},
+    chord:{name:'min',spread:4,level:0.3,wave:'triangle'}, quant:{active:false,randMode:false,scale:'minor',root:0},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min',dir:'up',rateMul:2,octaves:1,root:0},
-    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'fold-in',color:'#00ff88'},{fromId:'fold-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'reverb-in',color:'#88aaff'}]
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'fold-in',color:'#00ff88'},{fromId:'fold-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'chorus-in',color:'#ff4488'},{fromId:'chorus-out',toId:'reverb-in',color:'#00ffff'}]
   }},
   { name:'Percussive Noise', desc:'White noise + resonant filter = drums, snares, cymbals — fast ADSR', cfg:{v:1,
     vco:{type:'square',oct:1,coarse:0,fine:0}, vco2:{type:'square',oct:1,coarse:-5,detune:0},
@@ -5256,20 +5415,20 @@ const FACTORY_PRESETS = [
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'sus2',dir:'rnd',rateMul:2,octaves:2,root:0},
     cables:[{fromId:'lfo2-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'vco2-cv',color:'#ff4488'},{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'chorus-in',color:'#ff00ff'}]
   }},
-  { name:'Cassette Warmth', desc:'Tape saturation + phaser + chorus = sounds like it was recorded to tape in 1982', cfg:{v:1,
-    vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'triangle',oct:2,coarse:0,detune:5},
-    lfo:{type:'sine',rate:0.2,depth:600}, lfo2:{type:'sine',rate:0.07,depth:300},
-    adsr:{A:0.1,D:0.35,S:0.82,R:2.5}, vcf:{cutoff:1500,res:2.5,ftype:'lowpass'}, vca:{gain:0.82},
-    reverb:{size:3.5,decay:0.7,mix:0.5}, delay:{time:0.3,fb:0.42,mix:0.32},
-    chorus:{rate:0.6,depth:0.4,width:0.85,mix:0.55},
-    tape:{drive:5.5,wow:0.45,mix:0.72}, phaser:{rate:0.2,depth:0.5,mix:0.58},
-    noise:{type:'white',level:0.02}, mixer:{a:0.6,b:0,c:0},
-    seq:{bpm:95,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<8,pitch:[0,3,7,12,7,3,0,-5,0,3,7,12,7,3,0,-5][i],prob:1}))},
-    att:{att:1,offset:0}, wavefolder:{fold:1.8,symm:0.05}, panner:{rate:0.1,depth:0.45},
-    microcosm:{blend:0.5,grainSz:0.1,scatter:0.2,pitch:1,density:10,mode:'granular'},
-    chord:{name:'min',spread:7,level:0.5,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:2},
-    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min',dir:'up',rateMul:1,octaves:1,root:0},
-    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'vca-out',toId:'phaser-in',color:'#00ff88'},{fromId:'vca-out',toId:'chorus-in',color:'#ff4488'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'}]
+  { name:'Cassette Warmth', desc:'Soft tape bloom with gentle chorus drift and a little filtered hiss', cfg:{v:1,
+    vco:{type:'triangle',oct:2,coarse:0,fine:0}, vco2:{type:'sine',oct:2,coarse:0,detune:4},
+    lfo:{type:'sine',rate:0.12,depth:340}, lfo2:{type:'triangle',rate:0.05,depth:160},
+    adsr:{A:0.45,D:0.5,S:0.84,R:3.8}, vcf:{cutoff:1200,res:1.4,ftype:'lowpass'}, vca:{gain:0.8},
+    reverb:{size:5,decay:0.78,mix:0.52}, delay:{time:0.42,fb:0.28,mix:0.18},
+    chorus:{rate:0.22,depth:0.18,width:0.78,mix:0.32},
+    tape:{drive:2.4,wow:0.18,mix:0.62}, phaser:{rate:0.07,depth:0.12,mix:0.12},
+    noise:{type:'pink',level:0.015}, mixer:{a:0.6,b:0,c:0},
+    seq:{bpm:76,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<8,pitch:[0,3,7,10,7,3,0,-2,0,3,7,10,7,3,0,-2][i],prob:[1,0.94,0.88,1,0.9,0.86,1,0.82,1,0.92,0.88,1,0.9,0.86,1,0.8][i]}))},
+    att:{att:1,offset:0}, wavefolder:{fold:1.2,symm:0}, panner:{rate:0.07,depth:0.3},
+    microcosm:{blend:0.25,grainSz:0.1,scatter:0.12,pitch:1,density:6,mode:'granular'},
+    chord:{name:'min7',spread:6,level:0.32,wave:'triangle'}, quant:{active:false,randMode:false,scale:'minor',root:2},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:1,octaves:1,root:0},
+    cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'noise-out',toId:'vcf-in',color:'#888888'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'tape-out',toId:'chorus-in',color:'#ff4488'},{fromId:'chorus-out',toId:'reverb-in',color:'#00ffff'}]
   }},
   { name:'Pentatonic Generative', desc:'Scale quantizer + S&H = endless in-key random melody, never repeats exactly', cfg:{v:1,
     vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:0},
@@ -5285,21 +5444,6 @@ const FACTORY_PRESETS = [
     chord:{name:'min',spread:4,level:0.4,wave:'sawtooth'}, quant:{active:true,randMode:true,scale:'penta',root:9},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min',dir:'up',rateMul:1,octaves:1,root:0},
     cables:[{fromId:'lfo-out',toId:'sandh-in',color:'#ff00ff'},{fromId:'sandh-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'lfo2-out',toId:'vcf-cv',color:'#88aaff'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'chorus-in',color:'#ff4488'}]
-  }},
-  { name:'Full Ambient Track', desc:'Everything at once — the complete ambient toolkit in one patch', cfg:{v:1,
-    vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:2,coarse:0,detune:10},
-    lfo:{type:'sine',rate:0.08,depth:1200}, lfo2:{type:'triangle',rate:0.17,depth:650},
-    adsr:{A:3,D:0.5,S:0.85,R:6}, vcf:{cutoff:800,res:2.5,ftype:'lowpass'}, vca:{gain:0.78},
-    reverb:{size:8,decay:0.95,mix:0.85}, delay:{time:0.5,fb:0.65,mix:0.48},
-    chorus:{rate:0.4,depth:0.5,width:0.95,mix:0.7},
-    tape:{drive:3,wow:0.3,mix:0.5}, phaser:{rate:0.08,depth:0.4,mix:0.45},
-    noise:{type:'white',level:0}, mixer:{a:0.55,b:0.6,c:0.5},
-    seq:{bpm:72,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<8,pitch:[0,7,12,7,3,0,-5,5,0,3,7,12,7,0,-5,3][i],prob:1}))},
-    att:{att:1.2,offset:0}, wavefolder:{fold:2.5,symm:0.1}, panner:{rate:0.07,depth:0.5},
-    microcosm:{blend:0.75,grainSz:0.15,scatter:0.35,pitch:1.5,density:18,mode:'shimmer'},
-    chord:{name:'min7',spread:6,level:0.55,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:9},
-    sidechain:{attack:0.01,release:0.5,amount:1.2}, arp:{chord:'min7',dir:'up',rateMul:1,octaves:2,root:0},
-    cables:[{fromId:'vco2-out',toId:'mix-b-in',color:'#88aaff'},{fromId:'chord-out',toId:'mix-c-in',color:'#ff00ff'},{fromId:'mix-out',toId:'vcf-in',color:'#ff4488'},{fromId:'vca-out',toId:'chorus-in',color:'#ff4488'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'delay-in',color:'#88aaff'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'lfo2-out',toId:'vcf-cv',color:'#00ff88'}]
   }},
   { name:'House/EDM Drive', desc:'Progressive filter sweep + sidechain pump. Square lead, LFO sweeping cutoff over 8 bars, punching 128bpm. Turn it up.', cfg:{v:1,
     vco:{type:'square',oct:2,coarse:0,fine:0}, vco2:{type:'square',oct:2,coarse:0,detune:8},
@@ -5472,6 +5616,7 @@ const FACTORY_PRESETS = [
     crush:{bits:8,rate:1,mix:1}, euclid:{hits:3,steps:8,offset:0},
     cables:[{fromId:'clk-div4',toId:'sc-in',color:'#00ffff'},{fromId:'sc-out',toId:'vca-env',color:'#00aaff'},{fromId:'vca-out',toId:'tape-in',color:'#cc00ff'},{fromId:'tape-out',toId:'phaser-in',color:'#cc00ff'},{fromId:'phaser-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'reverb-in',color:'#cc00ff'}]
   }},
+  { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
 ];
 
 function openFactoryPicker() {
@@ -5496,7 +5641,7 @@ function openFactoryPicker() {
     card.innerHTML = `<div style="color:var(--accent);font-size:13px;letter-spacing:3px;margin-bottom:6px;">${String(i+1).padStart(2,'0')} ${p.name}</div><div style="color:var(--text-dim);font-size:11px;line-height:1.6;">${p.desc}</div>`;
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
-      _sessionSuppress=true; applyConfig(p.cfg); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
+      _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript, true); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
       // Auto-fetch and load sample if preset specifies one
       if (p.cfg.sampler?.sampleUrl) {
         setStatus(`Loading sample…`);
@@ -5515,7 +5660,7 @@ function openFactoryPicker() {
           })
           .catch(e => { console.warn('Sample auto-load failed:', e); setStatus(`Patch loaded: ${p.name} — load sample manually`); });
       } else {
-        setStatus(`Patch loaded: ${p.name}`);
+        setStatus(`Patch loaded: ${p.name}${p.scenes ? ' + scenes' : ''}`);
       }
       overlay.remove();
     });
@@ -6206,6 +6351,7 @@ document.getElementById('scene-save-mode').addEventListener('click',()=>{
 [0,1,2,3].forEach(i=>{
   document.getElementById(`scene-${i}`).addEventListener('click',()=>{
     if(!ctx){ setStatus('Power on first.'); return; }
+    if (trackPlaying) stopTrackPlayback('Track stopped');
     const lbl='ABCD'[i];
     if(sceneSaveMode){
       scenes[i]=getConfig();
@@ -6364,6 +6510,7 @@ function stopMorph() {
 }
 
 document.getElementById('morph-btn').addEventListener('click', () => {
+  if (trackPlaying) { stopTrackPlayback('Track stopped'); return; }
   if (morphing) { stopMorph(); return; }
   morphMode = !morphMode;
   document.getElementById('morph-btn').classList.toggle('on', morphMode);
@@ -6382,6 +6529,16 @@ document.querySelectorAll('.morph-bar-btn').forEach(btn => {
     morphBarsN = Number(btn.dataset.bars);
     document.querySelectorAll('.morph-bar-btn').forEach(b => b.classList.toggle('on', b === btn));
   });
+});
+document.getElementById('track-edit-btn').addEventListener('click', () => {
+  const next = prompt('Track script. Use scene letters and bars, e.g. A8 > B8 > C16 > D16', currentTrackScript || 'A8 > B8 > C16 > D16');
+  if (next === null) return;
+  try { setTrackScript(next); }
+  catch (e) { setStatus(e.message || 'Invalid track script'); }
+});
+document.getElementById('track-play-btn').addEventListener('click', () => {
+  if (trackPlaying) { stopTrackPlayback('Track stopped'); return; }
+  playCurrentTrack();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
