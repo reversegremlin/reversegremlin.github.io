@@ -6554,7 +6554,7 @@ PATCH IDEAS (NEW MODULES):
     btn.textContent = large ? 'A−' : 'A+';
     btn.title = large ? 'Switch to normal text size' : 'Toggle large text';
   }
-  apply(localStorage.getItem(KEY) === '1');
+  apply(localStorage.getItem(KEY) !== '0');
   btn.addEventListener('click', () => {
     const large = !document.body.classList.contains('a11y-large');
     apply(large);
