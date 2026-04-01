@@ -984,7 +984,7 @@ const TIPS = {
   'mod-affect': 'AFFECT — emotion-driven parameter mapping. A 2D pad (Valence × Arousal) controls 15 synth parameters simultaneously via bilinear interpolation across four emotional poles: MELANCHOLY (dark, slow), CALM (bright, slow), TENSE (dark, fast), EUPHORIC (bright, fast). Type a mood into the text box to move the puck. WANDER engages Brownian drift for autonomous emotional evolution.',
 
   // ── Sequencer additions ───────────────────────────────────────────────────
-  'seq-prob':   'Probability — the chance this step will fire each time the sequencer reaches it. 100% = always fires. 50% = fires half the time, randomly. 0% = never fires (same as turning the step off). Best technique: set most steps to 100%, then drop a few key steps to 60–80%. The pattern becomes generative — it sounds different every loop but stays musical because the rhythm skeleton is preserved. This is the core of generative sequencer technique in ambient music.',
+  'seq-prob':   'Probability — the chance this step will fire each time the sequencer reaches it. 100% = always fires. 50% = fires half the time, randomly. 0% = never fires (same as turning the step off). Floor 0% means the step is effectively muted by probability; ceiling 100% means no randomness at all, the step triggers every pass. You can type whole percentages directly: 70 means 70%. Best technique: set most steps to 100%, then drop a few key steps to 60–80%. The pattern becomes generative — it sounds different every loop but stays musical because the rhythm skeleton is preserved. This is the core of generative sequencer technique in ambient music.',
   'seq-dir':    'Direction — how the sequencer moves through its steps each tick. FWD (→): left to right, loops back to step 1. REV (←): right to left, loops back to the last step — your melody plays backwards. P-P: ping-pong, bounces between step 1 and the last step; with 8 steps this gives a 14-step (not 16) pattern before repeating because the endpoints don\'t double. RND: jumps to a completely random step each tick — non-repeating, generative. Try switching direction while playing to hear the phrase mutate live. Ctrl+Z undoes a direction change.',
   // ── Chaos oscillator ──────────────────────────────────────────────────────
   'mod-chaos':   'CHAOS — modulation-only oscillator combining organic beating with brownian drift. CHAOS=0: pure sine LFO. CHAOS=0.5: two detuned oscillators beating against each other. CHAOS=1: filtered noise brownian walk — a CV signal that wanders slowly and unpredictably. Patch to VCF CV for Strega-style organic filter drift, or VCO CV for microtonal pitch wandering.',
@@ -2521,19 +2521,22 @@ function fmtKnobVal(v) {
   return v.toFixed(3);
 }
 
-function fmtKnobInputVal(v) {
+function fmtKnobInputVal(v, opts={}) {
   if (!Number.isFinite(v)) return '';
+  if (opts.percent) return String(Math.round(v * 100));
   return String(Number(v.toFixed(6)));
 }
 
-function parseKnobInput(raw) {
+function parseKnobInput(raw, opts={}) {
   const txt = String(raw ?? '').trim();
   if (!txt || txt === '-' || txt === '.' || txt === '-.') return null;
-  const n = Number(txt);
+  const cleaned = opts.percent ? txt.replace(/%/g, '') : txt;
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
 
-function getKnobInputStep(min, max, log=false) {
+function getKnobInputStep(min, max, log=false, opts={}) {
+  if (opts.percent) return '1';
   const span = Math.abs(max - min);
   if (log) return span >= 10 ? '0.01' : '0.001';
   if (span >= 1000) return '1';
@@ -2541,6 +2544,10 @@ function getKnobInputStep(min, max, log=false) {
   if (span >= 10) return '0.01';
   if (span >= 1) return '0.001';
   return '0.0001';
+}
+
+function fmtKnobReadout(v, opts={}) {
+  return opts.percent ? `${Math.round(v * 100)}%` : fmtKnobVal(v);
 }
 
 function isTouchKnobMode() {
@@ -2619,14 +2626,14 @@ function ensureKnobTouchEditor() {
       if (!this.active) return;
       const v = this.active.getVal();
       this.titleEl.textContent = this.active.knobLabel;
-      this.valueEl.textContent = fmtKnobVal(v);
-      this.inputEl.value = fmtKnobInputVal(v);
-      this.inputEl.min = String(this.active.minVal);
-      this.inputEl.max = String(this.active.maxVal);
+      this.valueEl.textContent = this.active.displayValue ? this.active.displayValue(v) : fmtKnobVal(v);
+      this.inputEl.value = this.active.inputValue ? this.active.inputValue(v) : fmtKnobInputVal(v);
+      this.inputEl.min = String(this.active.displayMin ?? this.active.minVal);
+      this.inputEl.max = String(this.active.displayMax ?? this.active.maxVal);
       this.inputEl.step = this.active.inputStep;
       this.sliderEl.value = String(Math.round(this.active.toNorm(v) * 1000));
-      this.minEl.textContent = fmtKnobVal(this.active.minVal);
-      this.maxEl.textContent = fmtKnobVal(this.active.maxVal);
+      this.minEl.textContent = this.active.displayValue ? this.active.displayValue(this.active.minVal) : fmtKnobVal(this.active.minVal);
+      this.maxEl.textContent = this.active.displayValue ? this.active.displayValue(this.active.maxVal) : fmtKnobVal(this.active.maxVal);
     }
   };
   overlay.addEventListener('pointerdown', e => {
@@ -2638,7 +2645,7 @@ function ensureKnobTouchEditor() {
   });
   editor.inputEl.addEventListener('input', () => {
     if (!editor.active) return;
-    const parsed = parseKnobInput(editor.inputEl.value);
+    const parsed = editor.active.parseInputValue ? editor.active.parseInputValue(editor.inputEl.value) : parseKnobInput(editor.inputEl.value);
     if (parsed === null) return;
     editor.active.applyInput(parsed);
   });
@@ -2796,6 +2803,7 @@ function ensurePatchDestSheet() {
 function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   const wrap = document.createElement('div');
   wrap.className = 'knob-wrap';
+  const inputModeCfg = { percent: label.includes('%') && min === 0 && max === 1 };
   const k = document.createElement('div');
   k.className = `knob ${sz}`;
   if (id) k.dataset.knobId = id;
@@ -2814,9 +2822,9 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   inputEl.className = 'knob-input';
   inputEl.type = 'number';
   inputEl.inputMode = 'decimal';
-  inputEl.step = getKnobInputStep(min, max, log);
-  inputEl.min = String(min);
-  inputEl.max = String(max);
+  inputEl.step = getKnobInputStep(min, max, log, inputModeCfg);
+  inputEl.min = String(inputModeCfg.percent ? 0 : min);
+  inputEl.max = String(inputModeCfg.percent ? 100 : max);
   wrap.appendChild(k); wrap.appendChild(lbl); wrap.appendChild(valEl); wrap.appendChild(inputEl);
 
   let cur = val, dragging=false, sy=0, sx=0, sv=0, valTimer=null, startVal=val, pointerId=null, pointerType='mouse', touchMoved=false, inlineEditing=false, inlineStartVal=val;
@@ -2824,8 +2832,8 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   const fromNorm = n => log ? min*Math.pow(max/min,n) : min+n*(max-min);
   const setRot = v => { const deg=-145+toNorm(v)*290; dot.style.transform=`rotate(${deg}deg)`; };
   const renderReadout = v => {
-    valEl.textContent = fmtKnobVal(v);
-    if (!inlineEditing) inputEl.value = fmtKnobInputVal(v);
+    valEl.textContent = fmtKnobReadout(v, inputModeCfg);
+    if (!inlineEditing) inputEl.value = fmtKnobInputVal(v, inputModeCfg);
   };
   const showVal = v => {
     clearTimeout(valTimer);
@@ -2869,8 +2877,8 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
     inlineEditing = false;
     wrap.classList.remove('editing');
     if (commit) {
-      const parsed = parseKnobInput(inputEl.value);
-      if (parsed !== null) applyInput(parsed);
+      const parsed = parseKnobInput(inputEl.value, inputModeCfg);
+      if (parsed !== null) applyInput(inputModeCfg.percent ? parsed / 100 : parsed);
       commitUndo(inlineStartVal);
     } else {
       cur = inlineStartVal;
@@ -2941,9 +2949,9 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
     beginInlineEdit();
   });
   inputEl.addEventListener('input', () => {
-    const parsed = parseKnobInput(inputEl.value);
+    const parsed = parseKnobInput(inputEl.value, inputModeCfg);
     if (parsed === null) return;
-    applyInput(parsed);
+    applyInput(inputModeCfg.percent ? parsed / 100 : parsed);
   });
   inputEl.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -2971,7 +2979,15 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   wrap.knobLabel = label;
   wrap.minVal = min;
   wrap.maxVal = max;
-  wrap.inputStep = getKnobInputStep(min, max, log);
+  wrap.inputStep = getKnobInputStep(min, max, log, inputModeCfg);
+  wrap.displayMin = inputModeCfg.percent ? 0 : min;
+  wrap.displayMax = inputModeCfg.percent ? 100 : max;
+  wrap.displayValue = v => fmtKnobReadout(v, inputModeCfg);
+  wrap.inputValue = v => fmtKnobInputVal(v, inputModeCfg);
+  wrap.parseInputValue = raw => {
+    const parsed = parseKnobInput(raw, inputModeCfg);
+    return parsed === null ? null : (inputModeCfg.percent ? parsed / 100 : parsed);
+  };
   if(id) knobRefs[id] = wrap;
   return wrap;
 }
