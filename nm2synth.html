@@ -2803,17 +2803,18 @@ function ensurePatchDestSheet() {
 function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   const wrap = document.createElement('div');
   wrap.className = 'knob-wrap';
-  const inputModeCfg = { percent: label.includes('%') && min === 0 && max === 1 };
+  const labelText = String(label ?? '');
+  const inputModeCfg = { percent: labelText.includes('%') && min === 0 && max === 1 };
   const k = document.createElement('div');
   k.className = `knob ${sz}`;
   if (id) k.dataset.knobId = id;
-  k.dataset.knobLabel = label;
+  k.dataset.knobLabel = labelText;
   const dot = document.createElement('div');
   dot.className = 'knob-dot';
   k.appendChild(dot);
   const lbl = document.createElement('div');
   lbl.className = 'knob-lbl';
-  lbl.textContent = label;
+  lbl.textContent = labelText;
   const valEl = document.createElement('button');
   valEl.type = 'button';
   valEl.className = 'knob-val';
@@ -2854,8 +2855,8 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   const commitUndo = fromVal => {
     if (id && cur !== fromVal) {
       const sv2 = fromVal, ev2 = cur, cb = onChange, kid = id;
-      logEvent('knob', { id, label, from: sv2, v: ev2 });
-      pushUndo({ label: `${label}`, undo: () => { cb(sv2); if(knobRefs[kid]) knobRefs[kid].setVal(sv2); } });
+      logEvent('knob', { id, label: labelText, from: sv2, v: ev2 });
+      pushUndo({ label: `${labelText}`, undo: () => { cb(sv2); if(knobRefs[kid]) knobRefs[kid].setVal(sv2); } });
     }
   };
   const beginInlineEdit = () => {
@@ -2976,7 +2977,7 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
   wrap.toNorm = toNorm;
   wrap.fromNorm = fromNorm;
   wrap.defaultVal = val;
-  wrap.knobLabel = label;
+  wrap.knobLabel = labelText;
   wrap.minVal = min;
   wrap.maxVal = max;
   wrap.inputStep = getKnobInputStep(min, max, log, inputModeCfg);
