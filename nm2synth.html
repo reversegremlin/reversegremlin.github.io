@@ -1265,10 +1265,11 @@ function makeSeq() {
     clearTimeout(m.timer); m.timer = null; // always clear first — prevents double-start
     const tick = () => {
       if (!m.playing) return;
+      if (!m.bpm) { m.timer = setTimeout(tick, 200); return; }
       m.fireTick();
       m.timer = setTimeout(tick, (60 / m.bpm / 2) * 1000);
     };
-    m.timer = setTimeout(tick, (60 / m.bpm / 2) * 1000);
+    m.timer = setTimeout(tick, m.bpm ? (60 / m.bpm / 2) * 1000 : 200);
   };
   m.stop = () => {
     clearTimeout(m.timer); m.timer = null;
@@ -3981,7 +3982,7 @@ function buildSeqPanel() {
     if(mods.seq.playing){mods.seq.start();playBtn.textContent='■ STOP';playBtn.classList.add('on');}
     else{mods.seq.stop();playBtn.textContent='▶ PLAY';playBtn.classList.remove('on');}
   });
-  const bpmK=mkKnob({id:'seq-bpm',label:'BPM',min:40,max:220,val:72,tip:TIPS.bpm,onChange:v=>mods.seq.setBPM(v)});
+  const bpmK=mkKnob({id:'seq-bpm',label:'BPM',min:0,max:240,val:72,tip:TIPS.bpm,onChange:v=>mods.seq.setBPM(v)});
   tr.appendChild(playBtn); tr.appendChild(bpmK);
   d.appendChild(tr);
   d.appendChild(document.createElement('hr'));
