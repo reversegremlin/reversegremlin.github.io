@@ -584,6 +584,7 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
   <button class="btn" id="save-btn">▼ SAVE PATCH</button>
   <button class="btn" id="load-btn">▲ LOAD PATCH</button>
   <input type="file" id="load-file" accept=".json" style="display:none">
+  <button class="btn" id="share-btn">⬡ SHARE</button>
   <button class="btn" id="rand-btn">✦ RANDOM</button>
   <button class="btn" id="factory-btn">⊹ PATCHES</button>
   <button class="btn" id="midi-btn">⎷ MIDI</button>
@@ -6358,6 +6359,26 @@ document.getElementById('rec-btn').addEventListener('click',()=>{
   else{startRec();btn.textContent='⏹ STOP REC';btn.classList.add('rec-live');}
 });
 
+function encodePatch(cfg) {
+  const bytes = new TextEncoder().encode(JSON.stringify(cfg));
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+function decodePatch(str) {
+  const bytes = Uint8Array.from(atob(str), c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+document.getElementById('share-btn').addEventListener('click', () => {
+  if (!ctx) { setStatus('Power on first.'); return; }
+  const encoded = encodePatch(getConfig());
+  history.replaceState(null, '', '#patch=' + encoded);
+  navigator.clipboard.writeText(window.location.href)
+    .then(() => setStatus('Share link copied to clipboard ✓'))
+    .catch(() => setStatus('Link: ' + window.location.href));
+});
+
 document.getElementById('save-btn').addEventListener('click',()=>{
   if(!ctx){setStatus('Power on first.');return;}
   const blob=new Blob([JSON.stringify(getConfig(),null,2)],{type:'application/json'});
@@ -8022,6 +8043,17 @@ async function init() {
     localStorage.setItem('nm2-tut-seen', '1');
     tutShowPicker();
     document.getElementById('tut-panel').classList.add('open');
+  }
+
+  // Load patch from URL hash if present: nm2synth.html#patch=<base64>
+  const hashMatch = window.location.hash.match(/^#patch=(.+)$/);
+  if (hashMatch) {
+    try {
+      applyConfig(decodePatch(hashMatch[1]));
+      setStatus('Patch loaded from share link ✓');
+    } catch {
+      setStatus('Could not load patch from link — invalid or corrupted.');
+    }
   }
 }
 
