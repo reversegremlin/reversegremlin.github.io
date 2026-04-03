@@ -297,10 +297,13 @@ body.edit-mode .module-drag-handle{display:inline;}
 .pds-filter:focus{border-color:color-mix(in srgb,var(--accent-cyan) 42%, transparent);}
 .pds-filter::placeholder{color:var(--text-faint);}
 .pds-list{max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:4px;}
-.pds-row{border:none;background:var(--bg-input);color:var(--text-main);padding:8px 12px;text-align:left;font-size:12px;letter-spacing:.3px;border-radius:6px;cursor:pointer;font-family:var(--font-ui);transition:background .1s;}
+.pds-row{border:none;background:var(--bg-input);color:var(--text-main);padding:8px 12px;text-align:left;font-size:12px;letter-spacing:.3px;border-radius:6px;cursor:pointer;font-family:var(--font-ui);transition:background .1s;display:flex;align-items:center;gap:8px;}
 .pds-row.compatible{background:color-mix(in srgb,var(--accent-cyan) 10%, var(--bg-input));color:color-mix(in srgb,var(--accent-cyan) 82%, var(--text-strong));}
 .pds-row:hover{background:var(--bg-panel-hover);}
 .pds-row.hidden{display:none;}
+.pds-row-name{flex:1;}
+.pds-signal{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:pds-sig 1.1s ease-in-out infinite alternate;}
+@keyframes pds-sig{from{opacity:.5;box-shadow:0 0 3px currentColor;}to{opacity:1;box-shadow:0 0 8px currentColor,0 0 14px currentColor;}}
 @media (pointer: fine) {
   .pds-panel{position:fixed;}
 }
@@ -2999,19 +3002,33 @@ function ensurePatchDestSheet() {
       if (!srcCls) return;
       const compat      = reversed ? getCompatSourceClasses(srcCls) : getCompatClasses(srcCls);
       const targetRole  = reversed ? 'out' : 'in';
+      const isLivePP = id => cables.some(c => c.fromId === id || c.toId === id);
       const entries = Object.values(ppMap)
         .filter(pp => pp.role === targetRole)
         .sort((a,b) => {
           const ac = compat.includes(a.cls) ? 0 : 1;
           const bc = compat.includes(b.cls) ? 0 : 1;
           if (ac !== bc) return ac - bc;
+          // Within each compat group: live entries first
+          const al = isLivePP(a.id) ? 0 : 1;
+          const bl = isLivePP(b.id) ? 0 : 1;
+          if (al !== bl) return al - bl;
           return getPatchDisplayName(a.id).localeCompare(getPatchDisplayName(b.id));
         });
       entries.forEach(pp => {
         const row = document.createElement('button');
         row.className = 'pds-row';
-        row.textContent = getPatchDisplayName(pp.id) || pp.label;
         if (compat.includes(pp.cls)) row.classList.add('compatible');
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'pds-row-name';
+        nameSpan.textContent = getPatchDisplayName(pp.id) || pp.label;
+        row.appendChild(nameSpan);
+        if (isLivePP(pp.id)) {
+          const sig = document.createElement('span');
+          sig.className = 'pds-signal';
+          sig.style.color = PP_COLOR[pp.cls] || '#888';
+          row.appendChild(sig);
+        }
         row.addEventListener('click', () => {
           if (reversed) {
             addCable(pp.id, srcId); // pp is an OUT, srcId is the IN we started from
