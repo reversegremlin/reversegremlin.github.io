@@ -5585,6 +5585,12 @@ function playCurrentTrack() {
   const btn = document.getElementById('track-play-btn');
   if (btn) { btn.textContent = '■ STOP TRACK'; btn.classList.add('on'); }
   applyConfig(scenes[first.sceneIdx]);
+  if (!mods.seq.playing) {
+    mods.seq.playing = true;
+    mods.seq.start();
+    const pb = document.getElementById('seq-play-btn');
+    if (pb) { pb.textContent = '■ STOP'; pb.classList.add('on'); }
+  }
   setStatus(`Track start: ${'ABCD'[first.sceneIdx]} for ${first.bars} bar${first.bars===1?'':'s'}`);
   const scheduleNext = (idx) => {
     if (trackRunId !== runId || !trackPlaying) return;
@@ -6163,12 +6169,12 @@ const FACTORY_PRESETS = [
     chord:{name:'min7',spread:7,level:0.5,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:0},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
     chaos:{rate:0.025,chaos:0.4,amount:180},
-    morph:{pos:0,paramIds:['vcf-cutoff','vcf-res','reverb-mix','adsr-attack','lfo-depth'],
+    morph:{pos:0,paramIds:['vcf-cutoff','vcf-res','reverb-mix','adsr-A','lfo-depth'],
       waypoints:[
-        {slot:0,vals:{'vcf-cutoff':0.12,'vcf-res':0.25,'reverb-mix':0.38,'adsr-attack':0.08,'lfo-depth':0.2}},
-        {slot:1,vals:{'vcf-cutoff':0.52,'vcf-res':0.4,'reverb-mix':0.72,'adsr-attack':0.45,'lfo-depth':0.55}},
-        {slot:2,vals:{'vcf-cutoff':0.38,'vcf-res':0.72,'reverb-mix':0.65,'adsr-attack':0.58,'lfo-depth':0.38}},
-        {slot:3,vals:{'vcf-cutoff':0.88,'vcf-res':0.15,'reverb-mix':0.92,'adsr-attack':0.78,'lfo-depth':0.82}}
+        {slot:0,vals:{'vcf-cutoff':46,'vcf-res':7,'reverb-mix':0.38,'adsr-A':0.002,'lfo-depth':400}},
+        {slot:1,vals:{'vcf-cutoff':726,'vcf-res':11,'reverb-mix':0.72,'adsr-A':0.042,'lfo-depth':1100}},
+        {slot:2,vals:{'vcf-cutoff':276,'vcf-res':20,'reverb-mix':0.65,'adsr-A':0.123,'lfo-depth':760}},
+        {slot:3,vals:{'vcf-cutoff':8720,'vcf-res':4,'reverb-mix':0.92,'adsr-A':0.65,'lfo-depth':1640}}
       ]},
     cables:[{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'},{fromId:'chaos-out',toId:'morph-ci',color:'#ff00ff'}]
   }},
@@ -6198,6 +6204,12 @@ function openFactoryPicker() {
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
       _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript, true); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
+      // Auto-start the sequencer so the preset is immediately audible
+      if (!mods.seq.playing) {
+        mods.seq.playing = true; mods.seq.start();
+        const pb = document.getElementById('seq-play-btn');
+        if (pb) { pb.textContent = '■ STOP'; pb.classList.add('on'); }
+      }
       // Auto-fetch and load sample if preset specifies one
       if (p.cfg.sampler?.sampleUrl) {
         setStatus(`Loading sample…`);
