@@ -288,9 +288,9 @@ body.edit-mode .module-drag-handle{display:inline;}
   .kte-actions .btn,.kte-input-row .btn,.kte-close{min-height:48px;}
 }
 
-#patch-dest-sheet{position:fixed;inset:0;background:color-mix(in srgb,var(--bg-page) 72%, transparent);display:none;align-items:center;justify-content:center;padding:12px;z-index:830;}
-#patch-dest-sheet.open{display:flex;}
-.pds-panel{width:min(420px,100%);background:var(--bg-panel-6);border:1px solid var(--border-cyan-soft);border-radius:10px;box-shadow:0 16px 32px color-mix(in srgb,var(--shadow-panel) 100%, transparent),0 0 40px color-mix(in srgb,var(--accent-cyan) 4%, transparent);padding:12px;display:flex;flex-direction:column;gap:10px;}
+#patch-dest-sheet{position:fixed;inset:0;background:color-mix(in srgb,var(--bg-page) 72%, transparent);display:none;z-index:830;}
+#patch-dest-sheet.open{display:block;}
+.pds-panel{width:min(380px,calc(100vw - 24px));background:var(--bg-panel-6);border:1px solid var(--border-cyan-soft);border-radius:10px;box-shadow:0 16px 32px color-mix(in srgb,var(--shadow-panel) 100%, transparent),0 0 40px color-mix(in srgb,var(--accent-cyan) 4%, transparent);padding:12px;display:flex;flex-direction:column;gap:10px;}
 .pds-head{display:flex;justify-content:space-between;align-items:center;}
 .pds-title{color:var(--accent-cyan);font-size:14px;letter-spacing:2px;}
 .pds-filter{width:100%;background:var(--bg-input);border:1px solid color-mix(in srgb,var(--accent-cyan) 14%, transparent);color:var(--text-main);padding:8px 10px;font-size:12px;letter-spacing:.3px;border-radius:6px;font-family:var(--font-ui);outline:none;}
@@ -301,9 +301,12 @@ body.edit-mode .module-drag-handle{display:inline;}
 .pds-row.compatible{background:color-mix(in srgb,var(--accent-cyan) 10%, var(--bg-input));color:color-mix(in srgb,var(--accent-cyan) 82%, var(--text-strong));}
 .pds-row:hover{background:var(--bg-panel-hover);}
 .pds-row.hidden{display:none;}
+@media (pointer: fine) {
+  .pds-panel{position:fixed;}
+}
 @media (pointer: coarse) {
-  #patch-dest-sheet{align-items:flex-end;}
-  .pds-panel{border-radius:16px 16px 6px 6px;}
+  #patch-dest-sheet.open{display:flex;align-items:flex-end;padding:0 12px 12px;}
+  .pds-panel{border-radius:16px 16px 6px 6px;width:min(420px,100%);}
 }
 
 /* ── Wave / type buttons ── */
@@ -1639,7 +1642,7 @@ class SpectralProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       {name:'mix',   defaultValue:1,   minValue:0, maxValue:1,   automationRate:'k-rate'},
-      {name:'smear', defaultValue:0,   minValue:0, maxValue:1,   automationRate:'k-rate'},
+      {name:'smear', defaultValue:0.5, minValue:0, maxValue:1,   automationRate:'k-rate'},
       {name:'pitch', defaultValue:1,   minValue:0.25, maxValue:4, automationRate:'k-rate'},
     ];
   }
@@ -1657,6 +1660,7 @@ class SpectralProcessor extends AudioWorkletProcessor {
     this._hann = new Float32Array(N);
     for (let i=0;i<N;i++) this._hann[i] = 0.5*(1-Math.cos(2*Math.PI*i/N));
     this._doFreeze = false;
+    this._hasFrozen = false;
     this.port.onmessage = e => {
       if (e.data.mode    !== undefined) this._mode      = e.data.mode;
       if (e.data.doFreeze)              this._doFreeze  = true;
@@ -1668,6 +1672,7 @@ class SpectralProcessor extends AudioWorkletProcessor {
     for (let i=0;i<N;i++) { re[i]=this._inBuf[(this._inPos-N+i+N)%N]*this._hann[i]; im[i]=0; }
     fft(re, im, false);
     if (doFreeze) {
+      this._hasFrozen = true;
       for (let k=0;k<N;k++) {
         this._frozenMag[k]   = Math.sqrt(re[k]*re[k]+im[k]*im[k]);
         this._frozenPhase[k] = Math.atan2(im[k],re[k]);
@@ -1723,7 +1728,8 @@ class SpectralProcessor extends AudioWorkletProcessor {
       }
       const wet = this._outBuf[this._outPos++ % N];
       this._outBuf[(this._outPos-1+N)%N] = 0; // clear after read
-      out[i] = this._mode === 0 ? inp[i] : inp[i]*(1-mix) + wet*mix;
+      const passThru = this._mode === 0 || (this._mode === 1 && !this._hasFrozen);
+      out[i] = passThru ? inp[i] : inp[i]*(1-mix) + wet*mix;
     }
     return true;
   }
@@ -2932,6 +2938,9 @@ let patchDestSheet = null;
 function getCompatClasses(srcCls) {
   return srcCls === 'ao' ? ['ai'] : srcCls === 'co' ? ['ci','gi','ai'] : [];
 }
+function getCompatSourceClasses(dstCls) {
+  return dstCls === 'ai' ? ['ao'] : (dstCls === 'ci' || dstCls === 'gi') ? ['co'] : [];
+}
 function ensurePatchDestSheet() {
   if (patchDestSheet) return patchDestSheet;
   const sheet = document.createElement('div');
@@ -2947,6 +2956,8 @@ function ensurePatchDestSheet() {
     </div>
   `;
   document.body.appendChild(sheet);
+  const panel   = sheet.querySelector('.pds-panel');
+  const titleEl = sheet.querySelector('.pds-title');
   const filterInput = sheet.querySelector('.pds-filter');
   filterInput.addEventListener('input', () => {
     const q = filterInput.value.toLowerCase();
@@ -2959,30 +2970,42 @@ function ensurePatchDestSheet() {
     list: sheet.querySelector('.pds-list'),
     filterInput,
     closeBtn: sheet.querySelector('.pds-close'),
-    show(srcId) {
-      this.populate(srcId);
+    show(srcId, opts = {}) {
+      const reversed = !!opts.reversed;
+      titleEl.textContent = reversed ? 'Choose source' : 'Choose destination';
+      this.populate(srcId, reversed);
       this.filterInput.value = '';
+      // On desktop (pointer:fine), position the panel near the source patch point
+      if (!isTouchPatchMode()) {
+        const ppEl = ppMap[srcId]?.el;
+        const rect = ppEl?.getBoundingClientRect();
+        const PW = 396, PH = 420;
+        let x = rect ? rect.right + 14 : (ghostMouse.x + 14);
+        let y = rect ? rect.top  - 20  : (ghostMouse.y - PH / 2);
+        x = Math.max(8, Math.min(x, window.innerWidth  - PW - 8));
+        y = Math.max(8, Math.min(y, window.innerHeight - PH - 8));
+        panel.style.left = x + 'px';
+        panel.style.top  = y + 'px';
+      }
       sheet.classList.add('open');
       setTimeout(() => this.filterInput.focus(), 60);
     },
     hide() {
       sheet.classList.remove('open');
     },
-    populate(srcId) {
+    populate(srcId, reversed = false) {
       this.list.textContent = '';
       const srcCls = ppMap[srcId]?.cls;
       if (!srcCls) return;
-      const compat = getCompatClasses(srcCls);
+      const compat      = reversed ? getCompatSourceClasses(srcCls) : getCompatClasses(srcCls);
+      const targetRole  = reversed ? 'out' : 'in';
       const entries = Object.values(ppMap)
-        .filter(pp => pp.role === 'in')
+        .filter(pp => pp.role === targetRole)
         .sort((a,b) => {
-          // compatible destinations first, then alphabetical
           const ac = compat.includes(a.cls) ? 0 : 1;
           const bc = compat.includes(b.cls) ? 0 : 1;
           if (ac !== bc) return ac - bc;
-          const da = getPatchDisplayName(a.id);
-          const db = getPatchDisplayName(b.id);
-          return da.localeCompare(db);
+          return getPatchDisplayName(a.id).localeCompare(getPatchDisplayName(b.id));
         });
       entries.forEach(pp => {
         const row = document.createElement('button');
@@ -2990,7 +3013,11 @@ function ensurePatchDestSheet() {
         row.textContent = getPatchDisplayName(pp.id) || pp.label;
         if (compat.includes(pp.cls)) row.classList.add('compatible');
         row.addEventListener('click', () => {
-          completePatch(pp.id);
+          if (reversed) {
+            addCable(pp.id, srcId); // pp is an OUT, srcId is the IN we started from
+          } else {
+            completePatch(pp.id);
+          }
           this.hide();
         });
         this.list.appendChild(row);
@@ -3377,7 +3404,11 @@ function patchClick(id) {
   const pp = ppMap[id];
   if(pendingPP===null) {
     if(pp.role==='out'){ beginPatch(id); }
-    else { const c=cables.find(c=>c.toId===id); if(c) delCable(c); }
+    else {
+      const c = cables.find(c=>c.toId===id);
+      if(c) delCable(c);
+      else ensurePatchDestSheet().show(id, {reversed: true});
+    }
   } else {
     if(pendingPP===id){ cancelPatch(); return; }
     if(pp.role==='in'){ completePatch(id); }
@@ -5336,7 +5367,7 @@ function applyConfig(cfg) {
   if(cfg.spectral){
     mods.spectral.setMode(cfg.spectral.mode??0);   sk('spectral-mode',  cfg.spectral.mode??0);
     mods.spectral.setMix(cfg.spectral.mix??1);     sk('spectral-mix',   cfg.spectral.mix??1);
-    mods.spectral.setSmear(cfg.spectral.smear??0); sk('spectral-smear', cfg.spectral.smear??0);
+    mods.spectral.setSmear(cfg.spectral.smear??0.5); sk('spectral-smear', cfg.spectral.smear??0.5);
     mods.spectral.setPitch(cfg.spectral.pitch??1); sk('spectral-pitch', cfg.spectral.pitch??1);
   }
   if(cfg.morph){
@@ -8454,15 +8485,24 @@ function buildSpectralPanel() {
     [['OFF',0],['FRZ',1],['SMR',2],['BLR',3]], 0,
     v => mods.spectral.setMode(Number(v)), null, 'spectral-mode'
   );
+  // Programmatic mode update (used by ❄ auto-switch)
+  mods.spectral._setModeUI = v => {
+    modeRow.querySelectorAll('.wbtn').forEach(b => b.classList.toggle('on', Number(b.dataset.bval) === v));
+    mods.spectral.setMode(v);
+  };
   d.appendChild(modeRow);
   const frzBtn = document.createElement('button'); frzBtn.className='btn';
   frzBtn.textContent = '❄ FREEZE'; frzBtn.style.cssText = 'width:100%;margin:4px 0;';
-  frzBtn.addEventListener('click', () => { mods.spectral.doFreeze(); frzBtn.classList.add('on'); setTimeout(()=>frzBtn.classList.remove('on'),200); });
+  frzBtn.addEventListener('click', () => {
+    if (mods.spectral.mode !== 1) mods.spectral._setModeUI(1); // auto-switch to FRZ
+    mods.spectral.doFreeze();
+    frzBtn.classList.add('on'); setTimeout(()=>frzBtn.classList.remove('on'),200);
+  });
   d.appendChild(frzBtn);
   d.appendChild(mkKnob({ id:'spectral-pitch', label:'PITCH', min:0.25, max:4, val:1, log:true,
     tip: 'Pitch ratio in FREEZE mode. 1.0 = original pitch. 2.0 = one octave up. 0.5 = one octave down. Twist while frozen to hear the entire harmonic structure shift without losing the crystalline sustain.',
     onChange: v => mods.spectral.setPitch(v) }));
-  d.appendChild(mkKnob({ id:'spectral-smear', label:'SMEAR', min:0, max:1, val:0,
+  d.appendChild(mkKnob({ id:'spectral-smear', label:'SMEAR', min:0, max:1, val:0.5,
     tip: 'Temporal smearing depth in SMEAR mode. 0: each frame sounds independently. 1: maximum cross-fade across 8 frames — the spectrum becomes a slowly evolving, continuous wash. Also controls blur intensity in BLUR mode.',
     onChange: v => mods.spectral.setSmear(v) }));
   d.appendChild(mkKnob({ id:'spectral-mix', label:'MIX', min:0, max:1, val:1,
