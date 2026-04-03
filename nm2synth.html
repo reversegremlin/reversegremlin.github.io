@@ -998,7 +998,7 @@ const TIPS = {
   'mod-formant':  'FORMANT — vowel filter. Two parallel bandpass filters tuned to human vocal formants F1 and F2. The VOWEL knob sweeps A→E→I→O→U, each with characteristically different resonant peaks. The result: a drone that speaks. Patch a pad through FORMANT with a slow LFO on VOWEL CV and the synth murmurs and shifts like a voice. Classic ambient technique: high reverb + slow vowel sweep = haunted choir.',
   'formant-ai':   'Formant Audio In — patch any audio source: VCO, VCA out, pad, or sample. The denser and harmonically richer the source, the more pronounced the vowel coloring.',
   'formant-ao':   'Formant Audio Out — the vowel-filtered signal. Patch to reverb, delay, or the loop station input to capture a take.',
-  'formant-cv':   'Vowel CV In — incoming CV (0–1) maps to vowel position 0–4 (A→U). Patch LFO2 here for slow vowel cycling; patch a fast LFO for vibrato-like formant warble; patch SEQ CV for stepped vowel sequencing.',
+  'formant-cv':   'Vowel CV In — incoming CV (0–1) maps to vowel position 0–4 (A→U). Bipolar LFOs should usually pass through ATTENUVERTER first so you can add OFFSET around 0.5 and keep the sweep in range. Then patch to FORMANT CV for slow vowel cycling or stepped vowel sequencing.',
 
   'mod-res':      'RESONATOR — Karplus-Strong physical modeling voice. A tuned delay line with controlled feedback decays exactly like a plucked string, struck bar, or bowed body. Works two ways: PLUCK/MALLET buttons fire a noise burst to excite the string standalone; or patch audio IN for resonator mode — the comb filter resonates at FREQ, adding pitched overtones to any input. BRIGHT controls damping (dark = muffled cello; bright = metallic kalimba). TRACK locks pitch to the sequencer.',
   'res-ai':       'Resonator Audio In — resonator mode input. Patch noise, a pad, or voice here; the string resonates at FREQ on top of whatever enters. With DECAY near 0.999, even a single noise burst sustains for many seconds.',
@@ -2766,7 +2766,7 @@ function fmtKnobReadout(v, opts={}) {
 }
 
 function isTouchKnobMode() {
-  return (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
+  return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 }
 
 function isTouchPatchMode() {
@@ -6091,18 +6091,18 @@ const FACTORY_PRESETS = [
   }},
   { name:'Vowel Choir', desc:'CHORD min7 through FORMANT, LFO sweeping vowel over 18s — three voices breathing through one shared mouth', cfg:{v:1,
     vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:5,detune:0},
-    lfo:{type:'triangle',rate:0.055,depth:1.8}, lfo2:{type:'sine',rate:0.08,depth:300},
+    lfo:{type:'triangle',rate:0.055,depth:0.45}, lfo2:{type:'sine',rate:0.08,depth:300},
     adsr:{A:1.2,D:0.4,S:0.8,R:4.5}, vcf:{cutoff:1800,res:3,ftype:'lowpass'}, vca:{gain:0.72},
     reverb:{size:7,decay:0.93,mix:0.78}, delay:{time:0.375,fb:0.3,mix:0.2},
     chorus:{rate:0.5,depth:0.2,width:0.85,mix:0.5}, tape:{drive:1.8,wow:0.08,mix:0.35},
     phaser:{rate:0.12,depth:0.3,mix:0.3}, noise:{type:'white',level:0}, mixer:{a:0.7,b:0.6,c:0},
     seq:{bpm:65,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<6&&[0,2,3,5].includes(i),pitch:[0,4,7,12,9,5,0,4,0,4,7,12,9,5,0,4][i],prob:1}))},
-    att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.05,depth:0.3},
+    att:{att:1,offset:0.5}, wavefolder:{fold:1,symm:0}, panner:{rate:0.05,depth:0.3},
     microcosm:{blend:0.5,grainSz:0.12,scatter:0.2,pitch:1,density:12,mode:'granular'},
     chord:{name:'min7',spread:9,level:0.6,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:9},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
     formant:{vowel:0.15,q:10,mix:0.88},
-    cables:[{fromId:'vca-out',toId:'formant-ai',color:'#ff6600'},{fromId:'formant-ao',toId:'reverb-in',color:'#ffaa00'},{fromId:'lfo-out',toId:'formant-cv',color:'#00ffff'}]
+    cables:[{fromId:'vca-out',toId:'formant-ai',color:'#ff6600'},{fromId:'formant-ao',toId:'reverb-in',color:'#ffaa00'},{fromId:'lfo-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'formant-cv',color:'#00ffff'}]
   }},
   { name:'Glass Bell Garden', desc:'Karplus-Strong bells tracking the sequencer, each note a resonator pluck blooming into cathedral reverb', cfg:{v:1,
     vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:0},
@@ -6114,7 +6114,7 @@ const FACTORY_PRESETS = [
     seq:{bpm:60,direction:'pp',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:[true,false,true,false,true,false,false,true,false,false,false,false,false,false,false,false][i],pitch:[0,5,7,12,9,5,3,12,0,0,0,0,0,0,0,0][i],prob:[1,1,1,1,0.8,1,1,0.7,1,1,1,1,1,1,1,1][i]}))},
     att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.04,depth:0.4},
     microcosm:{blend:0.35,grainSz:0.18,scatter:0.25,pitch:1,density:10,mode:'granular'},
-    chord:{name:'maj7',spread:6,level:0.35,wave:'sine'}, quant:{active:true,randMode:false,scale:'pentatonic',root:0},
+    chord:{name:'maj7',spread:6,level:0.35,wave:'sine'}, quant:{active:true,randMode:false,scale:'penta',root:0},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:2,octaves:1,root:0},
     res:{freq:220,decay:0.97,bright:0.6,excite:'mallet',track:true},
     cables:[{fromId:'res-ao',toId:'reverb-in',color:'#88ffcc'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
@@ -6148,7 +6148,7 @@ const FACTORY_PRESETS = [
     sidechain:{attack:0.005,release:0.12,amount:1.5}, arp:{chord:'min',dir:'up',rateMul:2,octaves:1,root:0},
     euclid:{hits:5,steps:8,offset:0},
     logic:{mode:2,thresh:0.45},
-    cables:[{fromId:'euclid-out',toId:'logic-b',color:'#ff00ff'},{fromId:'clk-div2',toId:'logic-a',color:'#00ffff'},{fromId:'logic-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'logic-inv',toId:'vcf-cv',color:'#ff4488'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
+    cables:[{fromId:'euclid-go',toId:'logic-b',color:'#ff00ff'},{fromId:'clk-div2',toId:'logic-a',color:'#00ffff'},{fromId:'logic-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'logic-inv',toId:'vcf-cv',color:'#ff4488'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
   }},
   { name:'Morphing Journey', desc:'4 waypoints across a dramatic arc — CHAOS CV drives MORPH for autonomous ambient evolution', cfg:{v:1,
     vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:3,detune:0},
@@ -6646,7 +6646,7 @@ const TUTORIALS = [
     { title:'Sweep Through the Vowels', hl:['formant'],
       text:'Turn the FORMANT <b>VOWEL</b> knob slowly from left (A) to right (U). Listen as the sound speaks: <i>A → E → I → O → U</i>. At A (low vowel) the sound is open and warm, shaped like an "ahh". At E the peak rises — "ey". At I it narrows and brightens — "ee". At O the second formant drops back — "oh". At U both formants are very low — a round, dark "oo". Set the Q knob to 10 — this sharpens the resonant peaks so the vowel character becomes more pronounced. This is your main expressive control: the vowel position IS the timbre.' },
     { title:'Automate the Vowel with LFO', hl:['formant','lfo'],
-      text:'Patch LFO OUT → FORMANT CV IN. Set LFO RATE to 0.08 Hz (very slow — one full sweep every 12+ seconds) and DEPTH to 1.5. Now the vowel sweeps automatically, the synthesizer <i>breathing</i> through A→E→I→O→U and back on its own. Adjust DEPTH to control how far the vowel wanders (low depth = slight coloring, high depth = dramatic full-vowel sweep). Try LFO waveform TRIANGLE for the smoothest sweep, or SINE for a slightly more natural "mouth opening". This is the most expressive way to create evolving vocal texture without playing anything.' },
+      text:'Patch LFO OUT → ATT IN, then ATT OUT → FORMANT CV IN. Set ATT OFFSET to 0.5 so the bipolar LFO is shifted into the Formant\'s 0–1 CV range. Set LFO RATE to 0.08 Hz (very slow — one full sweep every 12+ seconds) and DEPTH around 0.4–0.5. Now the vowel sweeps automatically, the synthesizer <i>breathing</i> through A→E→I→O→U and back on its own. Adjust ATT and DEPTH together to control how far the vowel wanders. Try LFO waveform TRIANGLE for the smoothest sweep, or SINE for a slightly more natural "mouth opening". This is the most expressive way to create evolving vocal texture without playing anything.' },
     { title:'Sing It: Sequence the Vowels', hl:['formant','seq'],
       text:'Now let\'s make it feel like the synth is actually singing. Set ADSR ATTACK to 0.3s, RELEASE to 2.5s. Slow the sequencer to 72 BPM. Remove the LFO→FORMANT CV cable (click it) to take back manual control. Slowly turn the VOWEL knob while the sequence plays — each move repositions the mouth shape. Try landing on a new vowel for each bar: "aah" for 4 beats, then creep toward "ee", hold "ee" for 4 beats, then open to "oh". You are now doing real-time vowel performance. This is how electronic vocalists phrase without a voice: the movement IS the expression.' },
     { title:'Add Sequencer Tracking', hl:['formant','seq','chaos'],
@@ -6687,7 +6687,7 @@ const TUTORIALS = [
       text:'In modular synthesis, gates are on/off pulses: a high voltage means "yes" (note on, step fired, threshold crossed), a low voltage means "no". The <b>LOGIC</b> module takes <i>two gate signals</i> and applies a Boolean operation between them. <b>AND</b>: output fires only when BOTH inputs are high simultaneously. <b>OR</b>: output fires when EITHER input is high. <b>XOR</b>: output fires when <i>exactly one</i> input is high (not both, not neither). <b>NOT</b>: inverts input A (fires when A is low). These aren\'t just logic experiments — they create polyrhythmic patterns from two simple clock divisions that would take hours to program by hand.' },
     { title:'Build the Two Clocks', hl:['logic','clkdiv','euclid'],
       text:'We\'re going to feed two rhythmic patterns into LOGIC. For the first clock: patch <b>CLK ÷4 → LOGIC A IN</b>. This fires once every 4 sequencer steps — a steady quarter-note pulse. For the second clock: patch <b>EUCLID OUT → LOGIC B IN</b>. Set the EUCLIDEAN sequencer to <b>3 hits, 8 steps, offset 0</b> — this gives you the classic "3 in 8" Euclidean pattern (often written as E(3,8)), which places hits at steps 1, 4, 7. Now both clocks are flowing into the LOGIC inputs. Nothing sounds different yet — the LOGIC output needs to route somewhere.',
-      patch:[{from:'clk-div4', to:'logic-a'}, {from:'euclid-out', to:'logic-b'}] },
+      patch:[{from:'clk-div4', to:'logic-a'}, {from:'euclid-go', to:'logic-b'}] },
     { title:'Route Logic Output to VCF', hl:['logic','vcf'],
       text:'Patch <b>LOGIC OUT → VCF CV</b>. Set VCF CUTOFF to 400 Hz, RES to 6. Now when the LOGIC gate fires, it slams the VCF open — a percussive filter punch. Set LOGIC mode to <b>AND</b>. The filter only opens when BOTH the ÷4 pulse AND the Euclidean pattern fire at the same step — a much sparser rhythm. Switch to <b>OR</b> — every time either pattern fires. XOR — only when they don\'t coincide (gaps in OR become gates, AND becomes silence). Listen carefully: each mode produces a completely different groove from the same two clocks. This is <i>Boolean composition</i>.',
       patch:[{from:'logic-out', to:'vcf-cv'}] },
