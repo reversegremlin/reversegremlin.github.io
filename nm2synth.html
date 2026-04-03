@@ -585,6 +585,7 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
   <button class="btn" id="load-btn">▲ LOAD PATCH</button>
   <input type="file" id="load-file" accept=".json" style="display:none">
   <button class="btn" id="share-btn">⬡ SHARE</button>
+  <button class="btn" id="graph-btn">◈ GRAPH</button>
   <button class="btn" id="rand-btn">✦ RANDOM</button>
   <button class="btn" id="factory-btn">⊹ PATCHES</button>
   <button class="btn" id="midi-btn">⎷ MIDI</button>
@@ -981,6 +982,30 @@ const TIPS = {
   'lissaj-xi': 'Lissajous X Input — horizontal axis signal. Patch any audio source here. The amplitude drives left-right position on the display.',
   'lissaj-yi': 'Lissajous Y Input — vertical axis signal. Patch a second audio source here. Try harmonically related oscillators for stable figures, or unrelated signals for chaotic motion.',
 
+  // ── Phase 14: THE BODY ────────────────────────────────────────────────────
+  'mod-logic':    'LOGIC — boolean gate combinator. AND fires only when both A and B are high simultaneously; OR fires when either is high; XOR fires when exactly one is high (the spaces between rhythms); NOT inverts A. OUT emits the result; INV emits the complement. Patch two Euclidean patterns into A and B — AND gives you the overlap hits, XOR gives you the gaps. One cable gives you the rhythm, the other its mirror.',
+  'logic-a':      'Gate A — first gate input. Patch from EUCLID, SEQ GATE, or CLK÷n. The THRESH knob sets the signal level that counts as "high".',
+  'logic-b':      'Gate B — second gate input. Used by AND, OR, and XOR modes. In NOT mode this input is ignored.',
+  'logic-out':    'Logic Out — primary boolean result. Feeds like any gate signal: patch to ADSR GATE IN, EUCLID trigger, VCA ENV, or another LOGIC module to chain operations.',
+  'logic-inv':    'Logic Inv — always the complement of OUT. If OUT is high, INV is low — and vice versa. Free counterpoint from a single module: OUT triggers a hi-hat, INV triggers a kick on every beat that the hi-hat skips.',
+
+  'mod-formant':  'FORMANT — vowel filter. Two parallel bandpass filters tuned to human vocal formants F1 and F2. The VOWEL knob sweeps A→E→I→O→U, each with characteristically different resonant peaks. The result: a drone that speaks. Patch a pad through FORMANT with a slow LFO on VOWEL CV and the synth murmurs and shifts like a voice. Classic ambient technique: high reverb + slow vowel sweep = haunted choir.',
+  'formant-ai':   'Formant Audio In — patch any audio source: VCO, VCA out, pad, or sample. The denser and harmonically richer the source, the more pronounced the vowel coloring.',
+  'formant-ao':   'Formant Audio Out — the vowel-filtered signal. Patch to reverb, delay, or the loop station input to capture a take.',
+  'formant-cv':   'Vowel CV In — incoming CV (0–1) maps to vowel position 0–4 (A→U). Patch LFO2 here for slow vowel cycling; patch a fast LFO for vibrato-like formant warble; patch SEQ CV for stepped vowel sequencing.',
+
+  'mod-res':      'RESONATOR — Karplus-Strong physical modeling voice. A tuned delay line with controlled feedback decays exactly like a plucked string, struck bar, or bowed body. Works two ways: PLUCK/MALLET buttons fire a noise burst to excite the string standalone; or patch audio IN for resonator mode — the comb filter resonates at FREQ, adding pitched overtones to any input. BRIGHT controls damping (dark = muffled cello; bright = metallic kalimba). TRACK locks pitch to the sequencer.',
+  'res-ai':       'Resonator Audio In — resonator mode input. Patch noise, a pad, or voice here; the string resonates at FREQ on top of whatever enters. With DECAY near 0.999, even a single noise burst sustains for many seconds.',
+  'res-ao':       'Resonator Audio Out — the resonated signal. Patch to reverb for bell-like tails, or directly into the loop station to capture a plucked phrase.',
+  'res-ci':       'Pitch CV In — 1V/oct pitch input. Patch SEQ CV OUT here (with TRACK on) for sequenced string notes that follow the melodic line.',
+
+  'mod-spectral': 'SPECTRAL — FFT freeze / smear / blur processor. Three modes that work in the frequency domain, producing sounds impossible with any other module. FREEZE: hit the FREEZE button to crystallize the spectrum indefinitely — every partial sustained forever, a pure infinite chord. SMEAR: blur consecutive spectral frames over time, like an extreme reverb that retains the harmonic character of the input. BLUR: average adjacent frequency bins into smooth tonal clouds. PITCH shifts the frozen spectrum up or down without changing tempo.',
+  'spectral-ai':  'Spectral Audio In — patch any audio source. Rich, harmonically complex signals (VCO, pad, sample) produce the most interesting frozen spectra. Voice through FREEZE = an endless ethereal chord from a single sung note.',
+  'spectral-ao':  'Spectral Audio Out — the processed signal. Patch to reverb and delay for maximum depth. In FREEZE mode the output sustains indefinitely after the input stops.',
+
+  'mod-morph':    'MORPH — multi-waypoint macro knob. Assign any set of knobs to MORPH via LEARN mode, save up to 8 waypoints (W1–W8), then sweep through the entire textural arc of your performance with a single knob. At the midpoint between W3 and W4, every tracked parameter is exactly halfway between those two snapshots. Patch LFO or CHAOS into MORPH CV for fully autonomous texture evolution — no hands required.',
+  'morph-ci':     'Morph CV In — incoming CV (0–1) drives the MORPH position knob. Patch a slow LFO for gentle autonomous drifting through your waypoints, or CHAOS for unpredictable textural wandering. The fastest path to a living, self-evolving patch.',
+
   // ── AFFECT ────────────────────────────────────────────────────────────────
   'mod-affect': 'AFFECT — emotion-driven parameter mapping. A 2D pad (Valence × Arousal) controls 15 synth parameters simultaneously via bilinear interpolation across four emotional poles: MELANCHOLY (dark, slow), CALM (bright, slow), TENSE (dark, fast), EUPHORIC (bright, fast). Type a mood into the text box to move the puck. WANDER engages Brownian drift for autonomous emotional evolution.',
 
@@ -1250,6 +1275,7 @@ function makeSeq() {
       mods.chord?.trigger(pitch);
       mods.vcf?.trackNote(pitch);
       mods.ladder?.trackNote(pitch);
+      mods.res?.trackNote(pitch);
       if (mods.quant?.active) {
         const lbl = document.getElementById('quant-note-lbl');
         if (lbl) lbl.textContent = ROOT_NAMES[((pitch % 12) + 12) % 12] || '—';
@@ -1542,6 +1568,169 @@ class BitCrusherProcessor extends AudioWorkletProcessor {
 registerProcessor('bitcrusher', BitCrusherProcessor);`;
   const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
   await ctx.audioWorklet.addModule(url);
+}
+
+async function loadLogicWorklet() {
+  if (!ctx.audioWorklet) return;
+  const code = `
+class GateLogicProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._mode = 0; this._thresh = 0.5;
+    this.port.onmessage = e => {
+      if (e.data.mode  !== undefined) this._mode   = e.data.mode;
+      if (e.data.thresh !== undefined) this._thresh = e.data.thresh;
+    };
+  }
+  process(inputs, outputs) {
+    const a  = inputs[0]?.[0], b  = inputs[1]?.[0];
+    const o1 = outputs[0][0],  o2 = outputs[1][0];
+    const t  = this._thresh;
+    for (let i = 0; i < o1.length; i++) {
+      const ga = a ? (Math.abs(a[i]) > t ? 1 : 0) : 0;
+      const gb = b ? (Math.abs(b[i]) > t ? 1 : 0) : 0;
+      let r;
+      switch (this._mode) {
+        case 0: r = ga & gb;   break; // AND
+        case 1: r = ga | gb;   break; // OR
+        case 2: r = ga ^ gb;   break; // XOR
+        default: r = 1 - ga;   break; // NOT
+      }
+      o1[i] = r; o2[i] = 1 - r;
+    }
+    return true;
+  }
+}
+registerProcessor('gate-logic', GateLogicProcessor);`;
+  const url2 = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url2);
+}
+
+async function loadSpectralWorklet() {
+  if (!ctx.audioWorklet) return;
+  const code = `
+// Cooley-Tukey in-place FFT (power-of-2 length)
+function fft(re, im, inv) {
+  const n = re.length;
+  for (let i=1,j=0; i<n; i++) {
+    let bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit;
+    if(i<j){let t=re[i];re[i]=re[j];re[j]=t; t=im[i];im[i]=im[j];im[j]=t;}
+  }
+  for (let len=2; len<=n; len<<=1) {
+    const ang = (inv ? 1 : -1) * 2 * Math.PI / len;
+    const wR = Math.cos(ang), wI = Math.sin(ang);
+    for (let i=0; i<n; i+=len) {
+      let uR=1, uI=0;
+      for (let j=0; j<len/2; j++) {
+        const aR=re[i+j], aI=im[i+j];
+        const bR=re[i+j+len/2]*uR - im[i+j+len/2]*uI;
+        const bI=re[i+j+len/2]*uI + im[i+j+len/2]*uR;
+        re[i+j]=aR+bR; im[i+j]=aI+bI;
+        re[i+j+len/2]=aR-bR; im[i+j+len/2]=aI-bI;
+        const nR=uR*wR-uI*wI; uI=uR*wI+uI*wR; uR=nR;
+      }
+    }
+  }
+  if (inv) { for(let i=0;i<n;i++){re[i]/=n; im[i]/=n;} }
+}
+
+const N = 1024, HOP = 512;
+class SpectralProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      {name:'mix',   defaultValue:1,   minValue:0, maxValue:1,   automationRate:'k-rate'},
+      {name:'smear', defaultValue:0,   minValue:0, maxValue:1,   automationRate:'k-rate'},
+      {name:'pitch', defaultValue:1,   minValue:0.25, maxValue:4, automationRate:'k-rate'},
+    ];
+  }
+  constructor() {
+    super();
+    this._mode = 0; // 0=pass 1=freeze 2=smear 3=blur
+    this._inBuf   = new Float32Array(N);
+    this._outBuf  = new Float32Array(N);
+    this._inPos   = 0; this._outPos  = 0;
+    this._re = new Float32Array(N); this._im = new Float32Array(N);
+    this._frozenMag   = new Float32Array(N); this._frozenPhase = new Float32Array(N);
+    this._phaseAcc    = new Float32Array(N);
+    this._smearFrames = [];   // ring of {re,im} frames for SMEAR
+    this._smearLen    = 8;
+    this._hann = new Float32Array(N);
+    for (let i=0;i<N;i++) this._hann[i] = 0.5*(1-Math.cos(2*Math.PI*i/N));
+    this._doFreeze = false;
+    this.port.onmessage = e => {
+      if (e.data.mode    !== undefined) this._mode      = e.data.mode;
+      if (e.data.doFreeze)              this._doFreeze  = true;
+    };
+  }
+  _processFrame(pitch, smear, doBlur, doSmear, doFreeze) {
+    const re = this._re, im = this._im;
+    // Apply Hann window + copy input
+    for (let i=0;i<N;i++) { re[i]=this._inBuf[(this._inPos-N+i+N)%N]*this._hann[i]; im[i]=0; }
+    fft(re, im, false);
+    if (doFreeze) {
+      for (let k=0;k<N;k++) {
+        this._frozenMag[k]   = Math.sqrt(re[k]*re[k]+im[k]*im[k]);
+        this._frozenPhase[k] = Math.atan2(im[k],re[k]);
+        this._phaseAcc[k]    = this._frozenPhase[k];
+      }
+    }
+    if (this._mode === 1) {
+      // FREEZE: synthesise from frozen spectrum with phase advance
+      const dPhi = 2*Math.PI/N;
+      for (let k=0;k<N;k++) {
+        this._phaseAcc[k] += dPhi * k * pitch;
+        re[k] = this._frozenMag[k] * Math.cos(this._phaseAcc[k]);
+        im[k] = this._frozenMag[k] * Math.sin(this._phaseAcc[k]);
+      }
+    } else if (this._mode === 2) {
+      // SMEAR: push this frame, cross-fade last smearLen frames
+      const nFrames = Math.max(2, Math.round(smear * this._smearLen + 1));
+      this._smearFrames.push({re:re.slice(),im:im.slice()});
+      if (this._smearFrames.length > this._smearLen) this._smearFrames.shift();
+      const use = this._smearFrames.slice(-nFrames);
+      const w   = 1 / use.length;
+      for (let k=0;k<N;k++) { re[k]=0; im[k]=0; }
+      for (const fr of use) { for(let k=0;k<N;k++){re[k]+=fr.re[k]*w; im[k]+=fr.im[k]*w;} }
+    } else if (this._mode === 3) {
+      // BLUR: convolve adjacent bins
+      const amt = smear;
+      for (let k=1;k<N-1;k++) {
+        re[k] = re[k]*(1-amt) + (re[k-1]+re[k+1])*0.5*amt;
+        im[k] = im[k]*(1-amt) + (im[k-1]+im[k+1])*0.5*amt;
+      }
+    }
+    fft(re, im, true);
+    // Overlap-add to output buffer
+    for (let i=0;i<N;i++) {
+      this._outBuf[(this._outPos+i)%N] += re[i] * this._hann[i] * (4/3);
+    }
+  }
+  process(inputs, outputs, params) {
+    const inp = inputs[0]?.[0];
+    const out = outputs[0][0];
+    if (!inp) return true;
+    const mix   = params.mix[0];
+    const smear = params.smear[0];
+    const pitch = params.pitch[0];
+    const doFreeze = this._doFreeze; this._doFreeze = false;
+    const doBlur  = this._mode === 3;
+    const doSmear = this._mode === 2;
+    for (let i=0; i<out.length; i++) {
+      this._inBuf[this._inPos++ % N] = inp[i];
+      if (this._inPos % HOP === 0) {
+        this._processFrame(pitch, smear, doBlur, doSmear, doFreeze);
+        this._outPos = (this._inPos - N + N) % N;
+      }
+      const wet = this._outBuf[this._outPos++ % N];
+      this._outBuf[(this._outPos-1+N)%N] = 0; // clear after read
+      out[i] = this._mode === 0 ? inp[i] : inp[i]*(1-mix) + wet*mix;
+    }
+    return true;
+  }
+}
+registerProcessor('spectral', SpectralProcessor);`;
+  const url3 = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url3);
 }
 
 async function loadPinkNoiseWorklet() {
@@ -1985,7 +2174,7 @@ function makeArp() {
     const idx = ((m.step % n) + n) % n;
     let pitch = notes[idx];
     if (mods.quant?.active) pitch = mods.quant.quantizeSemi(pitch);
-    mods.vco?.setPitchCV(pitch); mods.vco2?.setPitchCV(pitch); mods.chord?.trigger(pitch); mods.vcf?.trackNote(pitch); mods.ladder?.trackNote(pitch);
+    mods.vco?.setPitchCV(pitch); mods.vco2?.setPitchCV(pitch); mods.chord?.trigger(pitch); mods.vcf?.trackNote(pitch); mods.ladder?.trackNote(pitch); mods.res?.trackNote(pitch);
     const ms = (60 / (mods.seq?.bpm||120)) * 1000 / m.rateMul;
     mods.adsr?.on(); setTimeout(()=>mods.adsr?.off(), ms*0.42);
     // Advance step
@@ -2415,6 +2604,20 @@ function buildPPRegistry() {
   regPP('euclid-go',  ()=>mods.euclid.gate);
   regPP('lissaj-xi',  ()=>mods.lissajous?.xNode);
   regPP('lissaj-yi',  ()=>mods.lissajous?.yNode);
+  // ── Phase 14 ──
+  regPP('logic-a',      ()=>mods.logic.inA);
+  regPP('logic-b',      ()=>mods.logic.inB);
+  regPP('logic-out',    ()=>mods.logic.out1);
+  regPP('logic-inv',    ()=>mods.logic.out2);
+  regPP('formant-ai',   ()=>mods.formant.inlet);
+  regPP('formant-ao',   ()=>mods.formant.outlet);
+  regPP('formant-cv',   ()=>mods.formant.cvIn);
+  regPP('res-ai',       ()=>mods.res.inlet);
+  regPP('res-ao',       ()=>mods.res.outlet);
+  regPP('res-ci',       ()=>mods.res.cvIn);
+  regPP('spectral-ai',  ()=>mods.spectral.inlet);
+  regPP('spectral-ao',  ()=>mods.spectral.outlet);
+  regPP('morph-ci',     ()=>mods.morph.cvIn);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2853,6 +3056,11 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
     showVal(cur);
     onChange(cur);
     syncTouchEditor();
+    // MORPH LEARN: register this knob as a tracked parameter
+    if (id && mods.morph?.learnMode) {
+      mods.morph.paramIds.add(id);
+      mods.morph._updateInfoLabel?.();
+    }
   };
   const commitUndo = fromVal => {
     if (id && cur !== fromVal) {
@@ -2991,7 +3199,7 @@ function mkKnob({id, label, min, max, val, log=false, sz='', tip, onChange}) {
     const parsed = parseKnobInput(raw, inputModeCfg);
     return parsed === null ? null : (inputModeCfg.percent ? parsed / 100 : parsed);
   };
-  if(id) knobRefs[id] = wrap;
+  if(id) { knobRefs[id] = wrap; wrap._onChange = onChange; }
   return wrap;
 }
 
@@ -4962,6 +5170,11 @@ function getConfig() {
     euclid: {hits:mods.euclid.hits, steps:mods.euclid.steps, offset:mods.euclid.offset},
     affect: {x:mods.affect.targetX, y:mods.affect.targetY, strength:mods.affect.strength,
              active:mods.affect.active, wanderMode:mods.affect.wanderMode, driftSpeed:mods.affect.driftSpeed},
+    logic:    { mode: mods.logic.mode, thresh: mods.logic.threshVal },
+    formant:  { vowel: mods.formant.vowelVal, q: mods.formant.qVal, mix: mods.formant.mixVal },
+    res:      { freq: mods.res.freqVal, decay: mods.res.decayVal, bright: mods.res.brightVal, excite: mods.res.excite, track: mods.res.track },
+    spectral: { mode: mods.spectral.mode, mix: mods.spectral.mixVal, smear: mods.spectral.smearVal, pitch: mods.spectral.pitchVal },
+    morph:    { pos: mods.morph.pos, paramIds: [...mods.morph.paramIds], waypoints: mods.morph.waypoints.map(w=>({slot:w.slot,vals:{...w.vals}})) },
     cables:cables.map(c=>({fromId:c.fromId,toId:c.toId,color:c.color})),
     rackOrder: rackOrder.slice(),
     extraModules: DUPLICATABLE_TYPES.flatMap(type => (moduleInstances[type] || []).filter(id => id > 1).map(id => {
@@ -5101,6 +5314,38 @@ function applyConfig(cfg) {
     sk('crush-mix', mix);
   }
   if(cfg.euclid){ mods.euclid.setHits(cfg.euclid.hits||3); sk('euclid-hits',cfg.euclid.hits||3); mods.euclid.setSteps(cfg.euclid.steps||8); sk('euclid-steps',cfg.euclid.steps||8); mods.euclid.setOffset(cfg.euclid.offset||0); sk('euclid-offset',cfg.euclid.offset||0); }
+  if(cfg.logic){
+    mods.logic.setMode(cfg.logic.mode??0); sk('logic-mode', cfg.logic.mode??0);
+    mods.logic.setThresh(cfg.logic.thresh??0.5); sk('logic-thresh', cfg.logic.thresh??0.5);
+  }
+  if(cfg.formant){
+    mods.formant.setVowel(cfg.formant.vowel??1); sk('formant-vowel', cfg.formant.vowel??1);
+    mods.formant.setQ(cfg.formant.q??8);         sk('formant-q',     cfg.formant.q??8);
+    mods.formant.setMix(cfg.formant.mix??1);     sk('formant-mix',   cfg.formant.mix??1);
+  }
+  if(cfg.res){
+    mods.res.setFreq(cfg.res.freq??220);     sk('res-freq',   cfg.res.freq??220);
+    mods.res.setDecay(cfg.res.decay??0.95);  sk('res-decay',  cfg.res.decay??0.95);
+    mods.res.setBright(cfg.res.bright??0.5); sk('res-bright', cfg.res.bright??0.5);
+    mods.res.excite = cfg.res.excite ?? 'pluck'; sk('res-excite', mods.res.excite);
+    mods.res.track  = !!cfg.res.track;
+    const trackBtn = document.querySelector('#mod-res .btn[data-track]') ??
+      [...document.querySelectorAll('#mod-res .btn')].find(b=>b.textContent==='TRACK');
+    if(trackBtn) trackBtn.classList.toggle('on', mods.res.track);
+  }
+  if(cfg.spectral){
+    mods.spectral.setMode(cfg.spectral.mode??0);   sk('spectral-mode',  cfg.spectral.mode??0);
+    mods.spectral.setMix(cfg.spectral.mix??1);     sk('spectral-mix',   cfg.spectral.mix??1);
+    mods.spectral.setSmear(cfg.spectral.smear??0); sk('spectral-smear', cfg.spectral.smear??0);
+    mods.spectral.setPitch(cfg.spectral.pitch??1); sk('spectral-pitch', cfg.spectral.pitch??1);
+  }
+  if(cfg.morph){
+    mods.morph.paramIds = new Set(cfg.morph.paramIds ?? []);
+    mods.morph.waypoints = (cfg.morph.waypoints ?? []).map(w=>({slot:w.slot,vals:{...w.vals}}));
+    mods.morph._updateSlotButtons?.();
+    mods.morph._updateInfoLabel?.();
+    if(cfg.morph.pos != null){ sk('morph-pos', cfg.morph.pos); mods.morph.applyMorph(cfg.morph.pos); }
+  }
   if(cfg.affect){
     mods.affect.targetX=cfg.affect.x??0.5; mods.affect.targetY=cfg.affect.y??0.5;
     mods.affect.strength=cfg.affect.strength??0.5; sk('affect-strength',mods.affect.strength);
@@ -5220,6 +5465,7 @@ function handleMIDI(ev) {
     mods.vco2?.setPitchCV(pitch);
     mods.vcf?.trackNote(pitch);
     mods.ladder?.trackNote(pitch);
+    mods.res?.trackNote(pitch);
     mods.chord?.trigger(pitch);
     mods.adsr?.on(d2 / 127);
   } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
@@ -5794,6 +6040,89 @@ const FACTORY_PRESETS = [
     crush:{bits:8,rate:1,mix:1}, euclid:{hits:3,steps:8,offset:0},
     cables:[{fromId:'clk-div4',toId:'sc-in',color:'#00ffff'},{fromId:'sc-out',toId:'vca-env',color:'#00aaff'},{fromId:'vca-out',toId:'tape-in',color:'#cc00ff'},{fromId:'tape-out',toId:'phaser-in',color:'#cc00ff'},{fromId:'phaser-out',toId:'chorus-in',color:'#cc00ff'},{fromId:'chorus-out',toId:'reverb-in',color:'#cc00ff'}]
   }},
+  { name:'Vowel Choir', desc:'CHORD min7 through FORMANT, LFO sweeping vowel over 18s — three voices breathing through one shared mouth', cfg:{v:1,
+    vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:5,detune:0},
+    lfo:{type:'triangle',rate:0.055,depth:1.8}, lfo2:{type:'sine',rate:0.08,depth:300},
+    adsr:{A:1.2,D:0.4,S:0.8,R:4.5}, vcf:{cutoff:1800,res:3,ftype:'lowpass'}, vca:{gain:0.72},
+    reverb:{size:7,decay:0.93,mix:0.78}, delay:{time:0.375,fb:0.3,mix:0.2},
+    chorus:{rate:0.5,depth:0.2,width:0.85,mix:0.5}, tape:{drive:1.8,wow:0.08,mix:0.35},
+    phaser:{rate:0.12,depth:0.3,mix:0.3}, noise:{type:'white',level:0}, mixer:{a:0.7,b:0.6,c:0},
+    seq:{bpm:65,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<6&&[0,2,3,5].includes(i),pitch:[0,4,7,12,9,5,0,4,0,4,7,12,9,5,0,4][i],prob:1}))},
+    att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.05,depth:0.3},
+    microcosm:{blend:0.5,grainSz:0.12,scatter:0.2,pitch:1,density:12,mode:'granular'},
+    chord:{name:'min7',spread:9,level:0.6,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:9},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
+    formant:{vowel:0.15,q:10,mix:0.88},
+    cables:[{fromId:'vca-out',toId:'formant-ai',color:'#ff6600'},{fromId:'formant-ao',toId:'reverb-in',color:'#ffaa00'},{fromId:'lfo-out',toId:'formant-cv',color:'#00ffff'}]
+  }},
+  { name:'Glass Bell Garden', desc:'Karplus-Strong bells tracking the sequencer, each note a resonator pluck blooming into cathedral reverb', cfg:{v:1,
+    vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:0},
+    lfo:{type:'sine',rate:0.12,depth:250}, lfo2:{type:'triangle',rate:0.18,depth:0.4},
+    adsr:{A:0.6,D:0.4,S:0.7,R:3.5}, vcf:{cutoff:3200,res:2,ftype:'lowpass'}, vca:{gain:0.65},
+    reverb:{size:8.5,decay:0.965,mix:0.82}, delay:{time:0.5,fb:0.25,mix:0.15},
+    chorus:{rate:0.3,depth:0.15,width:0.7,mix:0.35}, tape:{drive:1.2,wow:0.06,mix:0.2},
+    phaser:{rate:0.08,depth:0.25,mix:0.2}, noise:{type:'white',level:0}, mixer:{a:0.5,b:0,c:0},
+    seq:{bpm:60,direction:'pp',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:[true,false,true,false,true,false,false,true,false,false,false,false,false,false,false,false][i],pitch:[0,5,7,12,9,5,3,12,0,0,0,0,0,0,0,0][i],prob:[1,1,1,1,0.8,1,1,0.7,1,1,1,1,1,1,1,1][i]}))},
+    att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.04,depth:0.4},
+    microcosm:{blend:0.35,grainSz:0.18,scatter:0.25,pitch:1,density:10,mode:'granular'},
+    chord:{name:'maj7',spread:6,level:0.35,wave:'sine'}, quant:{active:true,randMode:false,scale:'pentatonic',root:0},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:2,octaves:1,root:0},
+    res:{freq:220,decay:0.97,bright:0.6,excite:'mallet',track:true},
+    cables:[{fromId:'res-ao',toId:'reverb-in',color:'#88ffcc'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
+  }},
+  { name:'Frozen Horizon', desc:'SPECTRAL SMEAR dissolves the sequence into continuous texture — press ❄ to crystallize any moment forever', cfg:{v:1,
+    vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:7,detune:6},
+    lfo:{type:'sine',rate:0.07,depth:550}, lfo2:{type:'triangle',rate:0.04,depth:200},
+    adsr:{A:1.8,D:0.5,S:0.85,R:6}, vcf:{cutoff:2200,res:2.5,ftype:'lowpass'}, vca:{gain:0.7},
+    reverb:{size:9,decay:0.975,mix:0.88}, delay:{time:0.5,fb:0.3,mix:0.18},
+    chorus:{rate:0.35,depth:0.2,width:0.8,mix:0.45}, tape:{drive:1.5,wow:0.1,mix:0.28},
+    phaser:{rate:0.09,depth:0.28,mix:0.25}, noise:{type:'white',level:0}, mixer:{a:0.65,b:0.55,c:0},
+    seq:{bpm:58,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:[true,false,true,false,false,true,false,true,false,false,false,false,false,false,false,false][i],pitch:[0,7,12,7,5,0,9,12,0,0,0,0,0,0,0,0][i],prob:1}))},
+    att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.03,depth:0.5},
+    microcosm:{blend:0.4,grainSz:0.15,scatter:0.3,pitch:1,density:12,mode:'granular'},
+    chord:{name:'maj7',spread:7,level:0.5,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'major',root:0},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:2,octaves:1,root:0},
+    spectral:{mode:2,mix:0.9,smear:0.85,pitch:1},
+    cables:[{fromId:'vca-out',toId:'spectral-ai',color:'#ff6600'},{fromId:'spectral-ao',toId:'reverb-in',color:'#aaddff'}]
+  }},
+  { name:'Logic Garden', desc:'EUCLID E(5,8) XOR CLK÷2 — Boolean rhythm feeds VCF CV for filter punches; INV drives resonance swell in the gaps', cfg:{v:1,
+    vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:5,detune:0},
+    lfo:{type:'sine',rate:0.1,depth:350}, lfo2:{type:'sine',rate:0.3,depth:180},
+    adsr:{A:0.04,D:0.2,S:0.65,R:1.5}, vcf:{cutoff:500,res:6,ftype:'lowpass'}, vca:{gain:0.78},
+    reverb:{size:5.5,decay:0.82,mix:0.55}, delay:{time:0.25,fb:0.35,mix:0.3},
+    chorus:{rate:0.6,depth:0.2,width:0.75,mix:0.4}, tape:{drive:2,wow:0.1,mix:0.3},
+    phaser:{rate:0.15,depth:0.35,mix:0.28}, noise:{type:'white',level:0}, mixer:{a:0.75,b:0,c:0},
+    seq:{bpm:98,direction:'fwd',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:i<8,pitch:[0,0,7,0,5,0,3,7,0,0,7,0,5,0,3,7][i],prob:[1,0.8,1,0.7,1,0.9,1,0.6,1,0.8,1,0.7,1,0.9,1,0.6][i]}))},
+    att:{att:0.6,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.1,depth:0.35},
+    microcosm:{blend:0.4,grainSz:0.08,scatter:0.2,pitch:1,density:12,mode:'granular'},
+    chord:{name:'min',spread:5,level:0.45,wave:'square'}, quant:{active:false,randMode:false,scale:'minor',root:0},
+    sidechain:{attack:0.005,release:0.12,amount:1.5}, arp:{chord:'min',dir:'up',rateMul:2,octaves:1,root:0},
+    euclid:{hits:5,steps:8,offset:0},
+    logic:{mode:2,thresh:0.45},
+    cables:[{fromId:'euclid-out',toId:'logic-b',color:'#ff00ff'},{fromId:'clk-div2',toId:'logic-a',color:'#00ffff'},{fromId:'logic-out',toId:'att-in',color:'#00ff88'},{fromId:'att-out',toId:'vcf-cv',color:'#00ff88'},{fromId:'logic-inv',toId:'vcf-cv',color:'#ff4488'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
+  }},
+  { name:'Morphing Journey', desc:'4 waypoints across a dramatic arc — CHAOS CV drives MORPH for autonomous ambient evolution', cfg:{v:1,
+    vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:3,detune:0},
+    lfo:{type:'sine',rate:0.08,depth:600}, lfo2:{type:'triangle',rate:0.025,depth:1},
+    adsr:{A:1.5,D:0.4,S:0.82,R:5}, vcf:{cutoff:800,res:3,ftype:'lowpass'}, vca:{gain:0.72},
+    reverb:{size:8,decay:0.96,mix:0.75}, delay:{time:0.5,fb:0.35,mix:0.22},
+    chorus:{rate:0.4,depth:0.18,width:0.82,mix:0.45}, tape:{drive:1.8,wow:0.09,mix:0.3},
+    phaser:{rate:0.1,depth:0.3,mix:0.28}, noise:{type:'white',level:0}, mixer:{a:0.65,b:0,c:0},
+    seq:{bpm:64,direction:'pp',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:[true,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false][i],pitch:[0,7,5,12,7,3,0,9,0,0,0,0,0,0,0,0][i],prob:[1,1,0.85,1,0.75,1,1,0.6,1,1,1,1,1,1,1,1][i]}))},
+    att:{att:1,offset:0}, wavefolder:{fold:1,symm:0}, panner:{rate:0.06,depth:0.4},
+    microcosm:{blend:0.55,grainSz:0.14,scatter:0.28,pitch:1,density:12,mode:'granular'},
+    chord:{name:'min7',spread:7,level:0.5,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:0},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
+    chaos:{rate:0.025,chaos:0.4,amount:180},
+    morph:{pos:0,paramIds:['vcf-cutoff','vcf-res','reverb-mix','adsr-attack','lfo-depth'],
+      waypoints:[
+        {slot:0,vals:{'vcf-cutoff':0.12,'vcf-res':0.25,'reverb-mix':0.38,'adsr-attack':0.08,'lfo-depth':0.2}},
+        {slot:1,vals:{'vcf-cutoff':0.52,'vcf-res':0.4,'reverb-mix':0.72,'adsr-attack':0.45,'lfo-depth':0.55}},
+        {slot:2,vals:{'vcf-cutoff':0.38,'vcf-res':0.72,'reverb-mix':0.65,'adsr-attack':0.58,'lfo-depth':0.38}},
+        {slot:3,vals:{'vcf-cutoff':0.88,'vcf-res':0.15,'reverb-mix':0.92,'adsr-attack':0.78,'lfo-depth':0.82}}
+      ]},
+    cables:[{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'},{fromId:'chaos-out',toId:'morph-ci',color:'#ff00ff'}]
+  }},
   { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
 ];
 
@@ -6262,6 +6591,78 @@ const TUTORIALS = [
     { title:'Saving Multi-Module Layouts', hl:[],
       text:'Module instances and rack order are saved with every preset and scene. When you save via SAVE AS or ● SAVE → scene slot, the extra modules are captured: which types exist, their instance IDs, and all knob values. When the preset loads, any existing extra modules are cleared first, then the preset\'s extra modules are recreated in order. Cables that reference extra patch points (like vcf-2-out or delay-2-in) are restored too, since those patch points are rebuilt before cables are reconnected. A preset saved with a dual-filter layout will always reload in exactly that state.' },
   ]},
+  { name:'13 — The Speaking Synthesizer', steps:[
+    { title:'What is a Formant?', hl:['formant'],
+      text:'Human vowels — A, E, I, O, U — aren\'t pure tones. They\'re the result of two resonant peaks in the vocal tract called <b>formants</b>. F1 is the low peak (tongue height), F2 is the high peak (tongue position). Move them and the vowel changes. The <b>FORMANT</b> module has two parallel bandpass filters tuned to these exact vowel resonances. Patch VCA OUT → FORMANT IN, FORMANT OUT → REVERB IN (the reverb output already reaches the speakers). Press PLAY on the sequencer. You should hear the synth speaking — every note is shaped through a vowel-colored filter.' },
+    { title:'Sweep Through the Vowels', hl:['formant'],
+      text:'Turn the FORMANT <b>VOWEL</b> knob slowly from left (A) to right (U). Listen as the sound speaks: <i>A → E → I → O → U</i>. At A (low vowel) the sound is open and warm, shaped like an "ahh". At E the peak rises — "ey". At I it narrows and brightens — "ee". At O the second formant drops back — "oh". At U both formants are very low — a round, dark "oo". Set the Q knob to 10 — this sharpens the resonant peaks so the vowel character becomes more pronounced. This is your main expressive control: the vowel position IS the timbre.' },
+    { title:'Automate the Vowel with LFO', hl:['formant','lfo'],
+      text:'Patch LFO OUT → FORMANT CV IN. Set LFO RATE to 0.08 Hz (very slow — one full sweep every 12+ seconds) and DEPTH to 1.5. Now the vowel sweeps automatically, the synthesizer <i>breathing</i> through A→E→I→O→U and back on its own. Adjust DEPTH to control how far the vowel wanders (low depth = slight coloring, high depth = dramatic full-vowel sweep). Try LFO waveform TRIANGLE for the smoothest sweep, or SINE for a slightly more natural "mouth opening". This is the most expressive way to create evolving vocal texture without playing anything.' },
+    { title:'Sing It: Sequence the Vowels', hl:['formant','seq'],
+      text:'Now let\'s make it feel like the synth is actually singing. Set ADSR ATTACK to 0.3s, RELEASE to 2.5s. Slow the sequencer to 72 BPM. Remove the LFO→FORMANT CV cable (click it) to take back manual control. Slowly turn the VOWEL knob while the sequence plays — each move repositions the mouth shape. Try landing on a new vowel for each bar: "aah" for 4 beats, then creep toward "ee", hold "ee" for 4 beats, then open to "oh". You are now doing real-time vowel performance. This is how electronic vocalists phrase without a voice: the movement IS the expression.' },
+    { title:'Add Sequencer Tracking', hl:['formant','seq','chaos'],
+      text:'For more organic motion, patch CHAOS OUT → FORMANT CV IN. Set CHAOS RATE to 0.05, CHAOS AMOUNT to 0.4. The vowel now wanders slowly in unpredictable arcs — never the same loop twice, never snapping. Combine this with a slow LFO on VCF cutoff. You have a speaking texture that breathes AND drifts harmonically. Turn FORMANT MIX to 0.7 to let some of the raw oscillator through alongside the formant color. This blending — part raw, part voiced — is how real vocal synthesis works.' },
+    { title:'The Vowel Choir Patch', hl:['formant','reverb','chord'],
+      text:'Load <b>"Vowel Choir"</b> from ⊹ PATCHES to hear the finished tutorial sound: slow sequencer, CHORD in MIN7 through the FORMANT, LFO sweeping the vowel over 18 seconds, long reverb tail. With three chord voices passing through the vowel filter together, it sounds like a small synthetic choir breathing through one shared mouth. Start with VOWEL at A (fully left) and slowly drift it rightward during a performance — the choir wakes up, finds its voice, and opens. This is the Formant\'s power: it doesn\'t process pitch, only timbre. But that timbral dimension is what makes sound feel <i>alive</i>.' },
+  ]},
+  { name:'14 — The Glass Bell Forest', steps:[
+    { title:'What is a Resonator?', hl:['res'],
+      text:'The <b>RESONATOR</b> module is a Karplus-Strong physical model: a tiny burst of noise feeds into a feedback loop with a delay line tuned to a specific frequency. The loop recirculates, losing high frequencies each pass, and the result sounds exactly like a plucked string or struck bell decaying in natural space. It\'s not a synthesizer in the traditional sense — it\'s a physics simulation. Set RESONATOR <b>FREQ</b> to 220 Hz, <b>DECAY</b> to 0.96 (long sustain), <b>BRIGHT</b> to 0.55. Click the <b>PLUCK</b> button. You should hear a clean, bell-like tone that decays over a few seconds. That is a string vibrating.' },
+    { title:'Tune It and Play It', hl:['res','seq'],
+      text:'Enable <b>TRACK</b> on the RESONATOR. Now every note from the sequencer (or MIDI keyboard) also sets the resonator\'s frequency and triggers a pluck automatically — no cables needed. Press PLAY. You\'ll hear the synthesizer\'s normal sound PLUS the resonator bell tracking each pitch. Set DECAY to 0.98 and let the tones accumulate — each new note plucks a new string while previous notes still ring. At slow BPM with many overlapping decays, you have a <b>forest of glass bells</b>. Turn the sequencer BPM to 62 and ADSR RELEASE to 4s to feel the full harmonic blur.' },
+    { title:'Character: Pluck vs. Mallet', hl:['res'],
+      text:'The <b>EXCITE</b> switch changes how the resonator is struck. <b>PLUCK</b> = a sharp noise impulse, like a guitar pick. The attack is instantaneous and the decay rings clean. <b>MALLET</b> = a softer, slightly longer noise burst, like a xylophone or marimba mallet. It has a rounder attack and blends more smoothly into reverb. Try switching while the sequence plays — notice how the quality of each "ding" changes. BRIGHT controls how quickly the high frequencies damp: low BRIGHT (0.1) = a warm muffled thud; high BRIGHT (0.9) = metallic shimmer that lasts forever. Find the exact decay character of your imaginary instrument.' },
+    { title:'Route into Reverb', hl:['res','reverb'],
+      text:'The RESONATOR OUT is a dry, direct signal. Now patch <b>RES OUT → REVERB IN</b> (reverb output reaches the speakers automatically). Set REVERB SIZE to 8, DECAY to 0.96, MIX to 0.8. The brief bell tones now bloom into an enormous room — each pluck becomes an event in a cathedral. At this decay level, notes from 10 seconds ago still shimmer in the reverb. Lower BPM to 55. The sequencer is barely ticking, each note a rare visitation. This is where Karplus-Strong synthesis becomes <i>spatial ambient music</i> instead of just a bell sound.' },
+    { title:'CV Pitch Control', hl:['res','lfo','sandh'],
+      text:'Disable TRACK for a moment. Patch LFO2 OUT → RES CV IN. Set LFO2 RATE to 0.15 Hz, DEPTH to 1.0, waveform TRIANGLE. The resonator frequency now glides up and down independently of the sequencer — a slow continuous pitch drift, like a wine glass being rubbed. Re-enable TRACK: the pitch snaps to each sequencer note then drifts from there until the next hit. For more drama, patch S&H OUT → RES CV IN instead: the resonator frequency jumps to a random new value every few steps, making each bell a different pitch in the cloud. This is melodic density without a melody.' },
+    { title:'The Glass Bell Garden', hl:['res','reverb','reverb','seq'],
+      text:'Load <b>"Glass Bell Garden"</b> from ⊹ PATCHES to hear the complete picture: slow 60 BPM, RESONATOR TRACK on, DECAY 0.97, BRIGHT 0.6, Mallet excite — each sequencer note plucks a resonator bell tuned to that pitch, simultaneous chord pads swell underneath, long reverb. The entire patch is built around one acoustic idea: physical resonance in a large space. The bells don\'t fade — they accumulate. Play it forward, then sit back and listen for 3 minutes without touching anything. Let the harmonic buildup find its own equilibrium. This is generative ambient composition.' },
+  ]},
+  { name:'15 — Crystalline Freeze', steps:[
+    { title:'What is Spectral Processing?', hl:['spectral'],
+      text:'The <b>SPECTRAL</b> module uses a 1024-point Fast Fourier Transform running continuously on your audio. Instead of processing time-domain samples, it works in the <i>frequency domain</i> — it sees the full harmonic spectrum of the sound moment by moment. This opens up effects that are impossible in normal audio processing: freezing a sound in place, smearing its spectrum across time, or shifting pitch without changing time. Patch VCA OUT → SPECTRAL IN, SPECTRAL OUT → REVERB IN. Set mode to <b>OFF</b> for now (bypass). Press PLAY.' },
+    { title:'SMEAR: Time Dissolves', hl:['spectral'],
+      text:'Switch SPECTRAL mode to <b>SMR</b> (Smear). Turn the <b>SMEAR</b> knob to 0.7. The module is now cross-fading between consecutive FFT frames — instead of the spectrum changing instantly with each new audio frame, it blends over several frames. Notes begin to lose their sharp attacks. The sound smears forward in time, like chalk drawn across paper. Turn SMEAR to 0.95 — the sound becomes a soft continuous cloud, all note boundaries dissolved. This is not reverb (no room simulation) and not delay (no echo) — it\'s pure <i>temporal smearing</i>. A sequence of notes becomes a single evolving texture.' },
+    { title:'BLUR: Spectral Averaging', hl:['spectral'],
+      text:'Switch to <b>BLR</b> (Blur) mode. This averages neighboring frequency bins together — the spectral resolution decreases, sharp resonances broaden, the sound becomes more diffuse. Low SMEAR + BLR = a gentle haze over the signal. High SMEAR + BLR = the harmonic content melts into a smooth plateau. Try BLR with the sequencer\'s distinct pitches playing: the pitch information fades, harmonic partials merge, and the signal becomes tonal noise — recognizable as "music" but no longer as "notes". This is how to blur a melody into texture.' },
+    { title:'FREEZE: The Perfect Moment', hl:['spectral'],
+      text:'Switch mode to <b>FRZ</b>. The module is now in Freeze standby — it will capture the current spectrum when you press ❄. While a full, sustained chord is ringing (or while the sequencer is playing), press <b>❄ FREEZE</b>. The sound crystallizes: the exact harmonic snapshot at that moment loops in the overlap-add synthesizer indefinitely. Stop the sequencer — the frozen spectrum sustains perfectly. It\'s not a sample loop; it\'s a reconstruction of the spectral frame. Try adjusting the <b>PITCH</b> knob: the frozen spectrum shifts up or down in pitch while its duration stays constant. This is phase vocoder pitch shifting.' },
+    { title:'Layer Frozen + Live', hl:['spectral','reverb'],
+      text:'Here\'s the live performance technique: start with a beautiful chord, freeze it with ❄, then continue playing over the frozen layer. The frozen spectrum acts as a drone — always harmonically correct because it captured YOUR chord. Add REVERB SIZE 9, DECAY 0.97, MIX 0.85. The frozen cloud expands inside the reverb into something enormous. Now slowly turn SMEAR up from 0 to 0.6 while frozen: the static spectrum gains motion, blurring across its own frame, becoming shimmer rather than stillness. MIX controls how much of the processed signal you hear — at 0.5 you hear the dry signal alongside the freeze, useful for keeping rhythmic articulation.' },
+    { title:'Frozen Horizon', hl:['spectral','reverb'],
+      text:'Load <b>"Frozen Horizon"</b> from ⊹ PATCHES. It loads in SMEAR mode with high smear (0.85) — the sequence\'s notes are already dissolving before you hear them as discrete pitches. Freeze a moment with ❄, add the PITCH shift to +0.08 (a subtle upward drift), and let the reverb fill the space. Nothing moves. Nothing attacks. The sound simply <i>exists</i>, permanently mid-bloom. This is the spectral aesthetic: where granular synthesis fragments time, spectral processing <i>suspends</i> it. Play with the PITCH knob while frozen — sweeping slowly is like watching ice melt at one frame per second.' },
+  ]},
+  { name:'16 — Rhythm Logic: Boolean Beats', steps:[
+    { title:'What is Gate Logic?', hl:['logic'],
+      text:'In modular synthesis, gates are on/off pulses: a high voltage means "yes" (note on, step fired, threshold crossed), a low voltage means "no". The <b>LOGIC</b> module takes <i>two gate signals</i> and applies a Boolean operation between them. <b>AND</b>: output fires only when BOTH inputs are high simultaneously. <b>OR</b>: output fires when EITHER input is high. <b>XOR</b>: output fires when <i>exactly one</i> input is high (not both, not neither). <b>NOT</b>: inverts input A (fires when A is low). These aren\'t just logic experiments — they create polyrhythmic patterns from two simple clock divisions that would take hours to program by hand.' },
+    { title:'Build the Two Clocks', hl:['logic','clkdiv','euclid'],
+      text:'We\'re going to feed two rhythmic patterns into LOGIC. For the first clock: patch <b>CLK ÷4 → LOGIC A IN</b>. This fires once every 4 sequencer steps — a steady quarter-note pulse. For the second clock: patch <b>EUCLID OUT → LOGIC B IN</b>. Set the EUCLIDEAN sequencer to <b>3 hits, 8 steps, offset 0</b> — this gives you the classic "3 in 8" Euclidean pattern (often written as E(3,8)), which places hits at steps 1, 4, 7. Now both clocks are flowing into the LOGIC inputs. Nothing sounds different yet — the LOGIC output needs to route somewhere.',
+      patch:[{from:'clk-div4', to:'logic-a'}, {from:'euclid-out', to:'logic-b'}] },
+    { title:'Route Logic Output to VCF', hl:['logic','vcf'],
+      text:'Patch <b>LOGIC OUT → VCF CV</b>. Set VCF CUTOFF to 400 Hz, RES to 6. Now when the LOGIC gate fires, it slams the VCF open — a percussive filter punch. Set LOGIC mode to <b>AND</b>. The filter only opens when BOTH the ÷4 pulse AND the Euclidean pattern fire at the same step — a much sparser rhythm. Switch to <b>OR</b> — every time either pattern fires. XOR — only when they don\'t coincide (gaps in OR become gates, AND becomes silence). Listen carefully: each mode produces a completely different groove from the same two clocks. This is <i>Boolean composition</i>.',
+      patch:[{from:'logic-out', to:'vcf-cv'}] },
+    { title:'The Inverted Output', hl:['logic'],
+      text:'The LOGIC INV output is the Boolean complement of OUT — whenever OUT fires, INV is silent, and vice versa. Patch <b>LOGIC INV → VCF RES CV</b>. Now: when the logic condition triggers (OUT fires → filter opens), the resonance simultaneously drops. When the condition is false (OUT silent → INV fires → RES CV rises), the filter stays at base frequency but with a high resonant peak. The filter is snarling and whining in the gaps between the punches. This is <b>complementary modulation</b>: one CV source controlling two parameters in opposite phase — an advanced technique that usually requires a dedicated inverter module.' },
+    { title:'THRESH: From Gates to CV', hl:['logic'],
+      text:'The <b>THRESH</b> knob changes what the LOGIC module considers "high". At 0.5, any signal above 50% of its peak fires the logic gate. But audio signals are not clean on/off pulses — they\'re continuous waveforms. Try patching an LFO directly into LOGIC A IN (not a clock) and turning THRESH to 0.3. The LFO now produces gates every time it crosses 30% — the gate fires twice per cycle (once rising, once falling). With a TRIANGLE LFO at 0.15 Hz and THRESH at 0.7, you get one very slow gate per full period. THRESH turns any audio or CV source into a gate stream with adjustable sensitivity.' },
+    { title:'Logic Garden', hl:['logic','euclid','vcf','att'],
+      text:'Load <b>"Logic Garden"</b> from ⊹ PATCHES. It shows EUCLID E(5,8) and CLK ÷2 feeding LOGIC in XOR mode. The result is a 5-note polyrhythm interlocked with a 4-note pulse, sharing neither downbeat: a 40-step non-repeating groove from two simple patterns. LOGIC OUT goes through an ATT (attenuverter at 0.6) into VCF CV so the filter punch is controlled but punchy. INV drives a slow sidechain-style envelope on VCF RES — the quiet moments breathe with resonance while the loud moments stay clean. This is how one Boolean gate creates a living rhythmic texture.' },
+  ]},
+  { name:'17 — The Infinite Arc: MORPH', steps:[
+    { title:'What is MORPH?', hl:['morph'],
+      text:'The <b>MORPH</b> module is a 3D knob matrix: it tracks any set of knobs you choose, saves up to 8 <i>waypoints</i> (snapshots of all tracked values), and interpolates smoothly between them as you move the large MORPH knob. Turn it to 0 → waypoint 1. Turn it to the middle → halfway between waypoints 1 and 2. Turn it to max → the last saved waypoint. Unlike Scenes (which morph the entire synthesizer), MORPH can be scoped to only the parameters you care about, and you can automate it via a CV cable or LFO. This is the performance controller for <i>macro-scale sonic evolution</i>.' },
+    { title:'Enable LEARN and Touch Your Knobs', hl:['morph'],
+      text:'Click <b>LEARN</b> on the MORPH module. It lights up orange. Now touch (turn) any knob — try VCF CUTOFF, then REVERB MIX, then ADSR RELEASE. The MORPH panel shows "N params tracked" counting up. Every knob you move while LEARN is on gets added to the MORPH tracking list. Touch 4–6 knobs that shape the overall texture: VCF CUTOFF, VCF RES, REVERB MIX, ADSR ATTACK, LFO DEPTH. Click LEARN again to exit learn mode. These parameters are now MORPH\'s vocabulary — it can blend between any state of these specific knobs.' },
+    { title:'Save Waypoints', hl:['morph'],
+      text:'Set the synth to a <b>starting state</b>: VCF CUTOFF very low (dark), REVERB MIX 0.4 (dry), ADSR ATTACK 0.05 (sharp), LFO DEPTH low. Click <b>W1</b> to save this as waypoint 1. Now change to a <b>second state</b>: VCF CUTOFF 3500 Hz (open), REVERB MIX 0.8 (wet), ADSR ATTACK 1.5s (slow), LFO DEPTH high. Click <b>W2</b>. Make one more state — something unexpected: VCF CUTOFF 900 Hz, high RES, REVERB MIX 0.65, very long ATTACK. Click <b>W3</b>. You now have 3 waypoints: dark/sharp → open/slow → resonant/washy. The MORPH knob spans all three continuously.' },
+    { title:'Perform with MORPH', hl:['morph','seq'],
+      text:'Press PLAY. Slowly turn the <b>MORPH knob</b> from fully left to fully right. You\'re moving through your entire composition arc with one hand. The filter opens, the reverb blooms, the attack softens — all simultaneously, continuously. Unlike a scene morph (which runs on a timer), you control the exact rate of transition. Turn it fast for an abrupt sweep. Turn it infinitesimally slowly for a 5-minute evolution. This is hands-on macro performance: one knob maps to an entire dimension of your sound. Pull it back left — you return to exactly where you started. This repeatability is the key: the arc is consistent, but the timing is always live.' },
+    { title:'Automate MORPH with CV', hl:['morph','lfo','chaos'],
+      text:'Patch <b>LFO2 OUT → MORPH CV IN</b>. Set LFO2 to TRIANGLE, RATE 0.02 Hz (one full cycle per minute), DEPTH 1.0. Now the MORPH knob moves on its own — the synthesizer automatically traverses your waypoints over a 50-second arc, then reverses, endlessly. For less predictable motion, patch <b>CHAOS OUT → MORPH CV IN</b>. Set CHAOS RATE 0.03, CHAOS AMOUNT 0.5. The morph position now wanders in unpredictable drifts — sometimes rushing toward the bright end, sometimes stalling in the dark, sometimes reversing mid-arc. Remove the CV cable at any time to take manual control back. The MORPH knob shows the current position.' },
+    { title:'Morphing Journey', hl:['morph','lfo','chaos','reverb'],
+      text:'Load <b>"Morphing Journey"</b> from ⊹ PATCHES. It comes pre-loaded with 4 waypoints spanning a dramatic arc: sparse drone → open filter bloom → resonant mid-peak → reverb-soaked dissolution. CHAOS is patched to MORPH CV, RATE 0.025. The synthesizer breathes through its own evolution — dark to bright to resonant to washed out and back — without a single cable move or human intervention. This is <b>autonomous ambient composition</b>: you set the vocabulary (waypoints + tracked params), the MORPH system traverses it, and the music writes itself. Change one waypoint, and the entire journey shifts. This is what modular synthesis feels like when the machine becomes a collaborator.' },
+  ]},
 ];
 
 let tutIdx = -1, tutStepIdx = 0;
@@ -6369,6 +6770,62 @@ function decodePatch(str) {
   const bytes = Uint8Array.from(atob(str), c => c.charCodeAt(0));
   return JSON.parse(new TextDecoder().decode(bytes));
 }
+
+function exportGraph() {
+  if (!ctx) { setStatus('Power on first.'); return; }
+  const rack = document.getElementById('rack');
+  const rRect = rack.getBoundingClientRect();
+  const cw = Math.round(rRect.width), ch = Math.round(rRect.height);
+  const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#04040e'; c.fillRect(0, 0, cw, ch);
+  // Draw module panels
+  rack.querySelectorAll('.module').forEach(el => {
+    const r = el.getBoundingClientRect();
+    const x = r.left - rRect.left, y = r.top - rRect.top, w = r.width, h = r.height;
+    c.fillStyle = '#0c0c1a'; c.fillRect(x, y, w, h);
+    c.strokeStyle = '#00ffff33'; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    const lbl = el.querySelector('.mod-title');
+    if (lbl) {
+      c.fillStyle = '#00ffff99'; c.font = 'bold 9px monospace';
+      c.textAlign = 'center';
+      c.fillText(lbl.textContent.trim(), x + w / 2, y + 14);
+    }
+  });
+  // Draw cables
+  if (typeof cables !== 'undefined') {
+    cables.forEach(cable => {
+      const el = cable.el;
+      if (!el) return;
+      const path = el.getAttribute('d');
+      if (!path) return;
+      c.strokeStyle = cable.color || '#00ffff';
+      c.lineWidth = 2; c.globalAlpha = 0.8;
+      c.beginPath();
+      // Parse the SVG path M x1 y1 C cx1 cy1 cx2 cy2 x2 y2
+      const nums = path.replace(/[MmCc]/g,' ').trim().split(/[\s,]+/).map(Number);
+      if (nums.length >= 8) {
+        c.moveTo(nums[0] - rRect.left, nums[1] - rRect.top);
+        c.bezierCurveTo(nums[2]-rRect.left, nums[3]-rRect.top, nums[4]-rRect.left, nums[5]-rRect.top, nums[6]-rRect.left, nums[7]-rRect.top);
+      }
+      c.stroke(); c.globalAlpha = 1;
+    });
+  }
+  // Watermark
+  const cfg = getConfig();
+  const patchName = document.getElementById('preset-sel')?.options[document.getElementById('preset-sel')?.selectedIndex]?.text || 'nm²';
+  const date = new Date().toISOString().slice(0, 10);
+  c.fillStyle = '#00ffff55'; c.font = '8px monospace'; c.textAlign = 'right';
+  c.fillText(`nm² · ${patchName} · ${date}`, cw - 8, ch - 6);
+  cv.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nm2-${patchName.replace(/\s+/g,'-').toLowerCase()}-${date}.png`;
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+  setStatus('Graph exported ✓');
+}
+document.getElementById('graph-btn').addEventListener('click', exportGraph);
 
 document.getElementById('share-btn').addEventListener('click', () => {
   if (!ctx) { setStatus('Power on first.'); return; }
@@ -7472,6 +7929,237 @@ function makeEuclid() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 14 — THE BODY: LOGIC · FORMANT · RESONATOR · MORPH · SPECTRAL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── LOGIC ──────────────────────────────────────────────────────────────────
+function makeLogic() {
+  const node = new AudioWorkletNode(ctx, 'gate-logic', {
+    numberOfInputs: 2, numberOfOutputs: 2, outputChannelCount: [1, 1]
+  });
+  const inA = ctx.createGain(); inA.connect(node, 0, 0);
+  const inB = ctx.createGain(); inB.connect(node, 0, 1);
+  const out1 = ctx.createGain(); node.connect(out1, 0);
+  const out2 = ctx.createGain(); node.connect(out2, 1);
+  const m = mods.logic = { node, inA, inB, out1, out2, mode: 0, threshVal: 0.5 };
+  m.setMode   = v => { m.mode = v;       node.port.postMessage({ mode: v }); };
+  m.setThresh = v => { m.threshVal = v;  node.port.postMessage({ thresh: v }); };
+}
+
+// ── FORMANT VOWEL DATA ──────────────────────────────────────────────────────
+const FORMANT_VOWELS = [
+  { f1: 850, f2: 1610 }, // A
+  { f1: 610, f2: 1900 }, // E
+  { f1: 270, f2: 2290 }, // I
+  { f1: 450, f2: 800  }, // O
+  { f1: 250, f2: 595  }, // U
+];
+
+function makeFormant() {
+  const inlet    = ctx.createGain();
+  const f1       = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 8;
+  const f2       = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 10;
+  const wetMix   = ctx.createGain();
+  const wetGain  = ctx.createGain(); wetGain.gain.value = 1;
+  const dryGain  = ctx.createGain(); dryGain.gain.value = 0;
+  const outlet   = ctx.createGain();
+  inlet.connect(f1); inlet.connect(f2);
+  f1.connect(wetMix); f2.connect(wetMix);
+  wetMix.connect(wetGain); wetGain.connect(outlet);
+  inlet.connect(dryGain); dryGain.connect(outlet);
+
+  // CV polling via AnalyserNode + RAF
+  const cvIn       = ctx.createGain();
+  const cvAnalyser = ctx.createAnalyser(); cvAnalyser.fftSize = 256;
+  cvIn.connect(cvAnalyser);
+  const _cvBuf = new Float32Array(cvAnalyser.fftSize);
+
+  const m = mods.formant = { inlet, f1, f2, wetGain, dryGain, outlet, cvIn, vowelVal: 1, qVal: 8, mixVal: 1 };
+
+  m.setVowel = (v, instant) => {
+    m.vowelVal = Math.max(0, Math.min(4, v));
+    const lo = Math.floor(m.vowelVal), hi = Math.min(4, lo + 1), t = m.vowelVal - lo;
+    const vA = FORMANT_VOWELS[lo], vB = FORMANT_VOWELS[hi];
+    const nf1 = vA.f1 + (vB.f1 - vA.f1) * t;
+    const nf2 = vA.f2 + (vB.f2 - vA.f2) * t;
+    if (instant) { f1.frequency.value = nf1; f2.frequency.value = nf2; }
+    else { f1.frequency.setTargetAtTime(nf1, ctx.currentTime, 0.015); f2.frequency.setTargetAtTime(nf2, ctx.currentTime, 0.015); }
+  };
+  m.setQ = v => {
+    m.qVal = v;
+    f1.Q.setTargetAtTime(v * 0.8, ctx.currentTime, 0.05);
+    f2.Q.setTargetAtTime(v,       ctx.currentTime, 0.05);
+  };
+  m.setMix = v => {
+    m.mixVal = v;
+    wetGain.gain.setTargetAtTime(v,     ctx.currentTime, 0.05);
+    dryGain.gain.setTargetAtTime(1 - v, ctx.currentTime, 0.05);
+  };
+
+  (function pollCV() {
+    cvAnalyser.getFloatTimeDomainData(_cvBuf);
+    let sum = 0; for (const x of _cvBuf) sum += x;
+    const avg = sum / _cvBuf.length;
+    if (Math.abs(avg) > 0.005) m.setVowel(Math.max(0, Math.min(4, avg * 4)));
+    requestAnimationFrame(pollCV);
+  })();
+
+  m.setVowel(1, true); // instant init — no audio context needed
+}
+
+// ── RESONATOR (Karplus-Strong) ──────────────────────────────────────────────
+function makeResonator() {
+  const sumGain    = ctx.createGain();
+  const dampFilter = ctx.createBiquadFilter();
+  dampFilter.type = 'lowpass'; dampFilter.frequency.value = 6000; dampFilter.Q.value = 0.7;
+  const delay      = ctx.createDelay(0.1);
+  delay.delayTime.value = 1 / 220; // direct assignment — no audio context needed at init
+  const feedback   = ctx.createGain(); feedback.gain.value = 0.95;
+  const inlet      = ctx.createGain(); // resonator audio in
+  const outlet     = ctx.createGain();
+
+  // sumGain → dampFilter → delay → outlet
+  //                          ↓
+  //                     feedback → sumGain  (feedback loop)
+  sumGain.connect(dampFilter); dampFilter.connect(delay);
+  delay.connect(feedback); feedback.connect(sumGain);
+  delay.connect(outlet);
+  inlet.connect(sumGain); // resonator mode: audio in adds to excitation
+
+  const m = mods.res = {
+    sumGain, dampFilter, delay, feedback, inlet, outlet,
+    freqVal: 220, decayVal: 0.95, brightVal: 0.5, excite: 'pluck', track: false
+  };
+
+  m.setFreq = v => {
+    m.freqVal = Math.max(30, Math.min(2000, v));
+    delay.delayTime.setTargetAtTime(1 / m.freqVal, ctx.currentTime, 0.001);
+  };
+  m.setDecay = v => {
+    m.decayVal = v;
+    feedback.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
+  };
+  m.setBright = v => {
+    m.brightVal = v;
+    dampFilter.frequency.setTargetAtTime(500 * Math.pow(40, v), ctx.currentTime, 0.05);
+  };
+  m.pluck = () => {
+    const dur = m.excite === 'mallet' ? 0.014 : 0.008;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    if (m.excite === 'mallet') {
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+      src.connect(lp); lp.connect(sumGain);
+    } else {
+      src.connect(sumGain);
+    }
+    src.start(); src.stop(ctx.currentTime + dur + 0.002);
+  };
+  // Pitch CV polling (res-ci): 0–1 CV → 30–2kHz log range
+  const cvIn       = ctx.createGain();
+  const cvAnalyser = ctx.createAnalyser(); cvAnalyser.fftSize = 256;
+  cvIn.connect(cvAnalyser);
+  const _resCVBuf = new Float32Array(cvAnalyser.fftSize);
+  m.cvIn = cvIn;
+  (function pollResCV() {
+    cvAnalyser.getFloatTimeDomainData(_resCVBuf);
+    let sum = 0; for (const x of _resCVBuf) sum += x;
+    const avg = sum / _resCVBuf.length;
+    if (Math.abs(avg) > 0.005 && !m.track) {
+      m.setFreq(Math.max(30, Math.min(2000, 30 * Math.pow(2000 / 30, avg))));
+    }
+    requestAnimationFrame(pollResCV);
+  })();
+
+  m.trackNote = semi => {
+    if (!m.track) return;
+    const hz = 440 * Math.pow(2, semi / 12);
+    m.setFreq(hz);
+    sk('res-freq', Math.max(30, Math.min(2000, hz)));
+    m.pluck(); // auto-excite on each sequenced/MIDI note
+  };
+}
+
+// ── MORPH — multi-waypoint macro knob ──────────────────────────────────────
+
+// Apply an audio-side parameter change by knob ID (no undo, no visual flicker)
+function applyKnobAudio(id, v) {
+  if (knobRefs[id]?._onChange) knobRefs[id]._onChange(v);
+}
+
+function makeMorph() {
+  const cvIn       = ctx.createGain();
+  const cvAnalyser = ctx.createAnalyser(); cvAnalyser.fftSize = 256;
+  cvIn.connect(cvAnalyser);
+  const _cvBuf = new Float32Array(cvAnalyser.fftSize);
+
+  const m = mods.morph = {
+    cvIn, pos: 0, paramIds: new Set(), waypoints: [], learnMode: false
+  };
+
+  m.applyMorph = pos => {
+    const pts = m.waypoints;
+    if (pts.length < 2) return;
+    m.pos = Math.max(0, Math.min(1, pos));
+    const t  = m.pos * (pts.length - 1);
+    const lo = Math.floor(t), hi = Math.min(pts.length - 1, lo + 1);
+    const f  = t - lo;
+    for (const id of m.paramIds) {
+      const vA = pts[lo].vals[id] ?? 0;
+      const vB = pts[hi].vals[id] ?? 0;
+      const v  = vA + (vB - vA) * f;
+      sk(id, v);
+      applyKnobAudio(id, v);
+    }
+  };
+
+  m.saveWaypoint = slot => {
+    const vals = {};
+    for (const id of m.paramIds) {
+      const ref = knobRefs[id];
+      if (ref?.getVal) vals[id] = ref.getVal();
+    }
+    const existing = m.waypoints.findIndex(w => w.slot === slot);
+    if (existing >= 0) m.waypoints[existing].vals = vals;
+    else { m.waypoints.push({ slot, vals }); m.waypoints.sort((a, b) => a.slot - b.slot); }
+    m._updateSlotButtons?.();
+  };
+
+  (function pollCV() {
+    cvAnalyser.getFloatTimeDomainData(_cvBuf);
+    let sum = 0; for (const x of _cvBuf) sum += x;
+    const avg = sum / _cvBuf.length;
+    if (Math.abs(avg) > 0.005) {
+      m.applyMorph(Math.max(0, Math.min(1, avg)));
+      sk('morph-pos', m.pos);
+    }
+    requestAnimationFrame(pollCV);
+  })();
+}
+
+// ── SPECTRAL — FFT freeze / smear / blur ───────────────────────────────────
+function makeSpectral() {
+  const inlet  = ctx.createGain();
+  const node   = new AudioWorkletNode(ctx, 'spectral', {
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1]
+  });
+  const outlet = ctx.createGain();
+  inlet.connect(node); node.connect(outlet);
+  const p = node.parameters;
+  const m = mods.spectral = {
+    inlet, node, outlet,
+    mode: 0, mixVal: 1, smearVal: 0, pitchVal: 1
+  };
+  m.setMode  = v => { m.mode = v;      node.port.postMessage({ mode: v }); };
+  m.doFreeze = () =>                    node.port.postMessage({ doFreeze: true });
+  m.setMix   = v => { m.mixVal = v;   p.get('mix').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setSmear = v => { m.smearVal = v; p.get('smear').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setPitch = v => { m.pitchVal = v; p.get('pitch').setTargetAtTime(v, ctx.currentTime, 0.05); };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // AFFECT — XY Pad emotion-driven parameter mapping
 // ═══════════════════════════════════════════════════════════════════════════════
 function makeAffect() {
@@ -7683,6 +8371,161 @@ function buildEuclidPanel() {
     onChange: v => mods.euclid.setOffset(v)}));
   drawEuclidPattern();
   return panel('euclid', 'EUCLID', d);
+}
+
+// ── LOGIC panel ────────────────────────────────────────────────────────────
+function buildLogicPanel() {
+  const d = document.createElement('div');
+  d.appendChild(waveSelector(
+    [['AND',0],['OR',1],['XOR',2],['NOT',3]], 0,
+    v => mods.logic.setMode(Number(v)), null, 'logic-mode'
+  ));
+  d.appendChild(mkKnob({ id:'logic-thresh', label:'THRESH', min:0.1, max:0.9, val:0.5, sz:'sm',
+    tip: 'Gate detection threshold — signals above this level count as "high". Default 0.5 works for most gate sources. Raise if noise sources trigger false gates; lower for weak CV gate signals.',
+    onChange: v => mods.logic.setThresh(v) }));
+  d.appendChild(mkPP('logic-a',   'gi', 'A',   'in'));
+  d.appendChild(mkPP('logic-b',   'gi', 'B',   'in'));
+  d.appendChild(mkPP('logic-out', 'co', 'OUT', 'out'));
+  d.appendChild(mkPP('logic-inv', 'co', 'INV', 'out'));
+  return panel('logic', 'LOGIC', d);
+}
+
+// ── FORMANT panel ───────────────────────────────────────────────────────────
+function buildFormantPanel() {
+  const d = document.createElement('div');
+  const lblRow = document.createElement('div');
+  lblRow.style.cssText = 'display:flex;justify-content:space-between;padding:0 6px;font-size:7px;color:#555;letter-spacing:1px;margin-bottom:2px;';
+  ['A','E','I','O','U'].forEach(v => { const s=document.createElement('span'); s.textContent=v; lblRow.appendChild(s); });
+  d.appendChild(lblRow);
+  d.appendChild(mkKnob({ id:'formant-vowel', label:'VOWEL', min:0, max:4, val:1,
+    tip: 'Vowel position — sweeps A→E→I→O→U via interpolated formant frequencies. Drag slowly to hear the resonant peaks shift. At A (0): open, dark. At I (2): bright, nasal. At U (4): deep, round.',
+    onChange: v => mods.formant.setVowel(v) }));
+  d.appendChild(mkKnob({ id:'formant-q', label:'Q', min:2, max:20, val:8,
+    tip: 'Filter resonance / bandwidth of both formant peaks. Low Q (2–5): diffuse, open. High Q (12–20): tight, nasal, more artificial-sounding vocal quality.',
+    onChange: v => mods.formant.setQ(v) }));
+  d.appendChild(mkKnob({ id:'formant-mix', label:'MIX', min:0, max:1, val:1,
+    tip: 'Dry/wet blend. At 1.0: only the vowel-filtered signal. At 0.5: the original tone with vowel coloring on top. At 0: bypass (dry only).',
+    onChange: v => mods.formant.setMix(v) }));
+  d.appendChild(mkPP('formant-ai', 'ai', 'IN',  'in'));
+  d.appendChild(mkPP('formant-ao', 'ao', 'OUT', 'out'));
+  d.appendChild(mkPP('formant-cv', 'ci', 'VOWEL CV', 'in'));
+  return panel('formant', 'FORMANT', d);
+}
+
+// ── RESONATOR panel ─────────────────────────────────────────────────────────
+function buildResonatorPanel() {
+  const d = document.createElement('div');
+  d.appendChild(waveSelector(
+    [['PLUK','pluck'],['MALT','mallet']], 'pluck',
+    v => { mods.res.excite = v; }, null, 'res-excite'
+  ));
+  d.appendChild(mkKnob({ id:'res-freq', label:'FREQ', min:30, max:2000, val:220, log:true,
+    tip: 'String frequency (Hz). This sets the delay line length and therefore the pitch of the resonance. At 220 Hz: A3. At 440 Hz: A4. Use TRACK to follow the sequencer instead.',
+    onChange: v => mods.res.setFreq(v) }));
+  d.appendChild(mkKnob({ id:'res-decay', label:'DECAY', min:0.80, max:0.999, val:0.95,
+    tip: 'Feedback gain — how long the string sustains. 0.80: short, pizzicato snap. 0.95: medium bell-like decay. 0.999: nearly infinite sustain, the string sings forever. The difference between 0.98 and 0.999 is enormous.',
+    onChange: v => mods.res.setDecay(v) }));
+  d.appendChild(mkKnob({ id:'res-bright', label:'BRIGHT', min:0, max:1, val:0.5,
+    tip: 'Damping — controls how fast high frequencies decay. Low BRIGHT: warm, woody, cello-like. High BRIGHT: metallic, bell-like, piano string. Classic kalimba sound: BRIGHT 0.7, DECAY 0.97.',
+    onChange: v => mods.res.setBright(v) }));
+  // PLUCK trigger + TRACK toggle
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:4px;margin:4px 0;';
+  const pluckBtn = document.createElement('button'); pluckBtn.className='btn'; pluckBtn.textContent='PLUCK';
+  pluckBtn.style.flex='1';
+  pluckBtn.addEventListener('click', () => mods.res.pluck());
+  const trackBtn = document.createElement('button'); trackBtn.className='btn'; trackBtn.textContent='TRACK';
+  trackBtn.style.flex='1';
+  trackBtn.addEventListener('click', () => {
+    mods.res.track = !mods.res.track;
+    trackBtn.classList.toggle('on', mods.res.track);
+  });
+  row.appendChild(pluckBtn); row.appendChild(trackBtn);
+  d.appendChild(row);
+  d.appendChild(mkPP('res-ai', 'ai', 'IN',  'in'));
+  d.appendChild(mkPP('res-ao', 'ao', 'OUT', 'out'));
+  d.appendChild(mkPP('res-ci', 'ci', 'PITCH CV', 'in'));
+  return panel('res', 'RESONATOR', d);
+}
+
+// ── SPECTRAL panel ──────────────────────────────────────────────────────────
+function buildSpectralPanel() {
+  const d = document.createElement('div');
+  const modeRow = waveSelector(
+    [['OFF',0],['FRZ',1],['SMR',2],['BLR',3]], 0,
+    v => mods.spectral.setMode(Number(v)), null, 'spectral-mode'
+  );
+  d.appendChild(modeRow);
+  const frzBtn = document.createElement('button'); frzBtn.className='btn';
+  frzBtn.textContent = '❄ FREEZE'; frzBtn.style.cssText = 'width:100%;margin:4px 0;';
+  frzBtn.addEventListener('click', () => { mods.spectral.doFreeze(); frzBtn.classList.add('on'); setTimeout(()=>frzBtn.classList.remove('on'),200); });
+  d.appendChild(frzBtn);
+  d.appendChild(mkKnob({ id:'spectral-pitch', label:'PITCH', min:0.25, max:4, val:1, log:true,
+    tip: 'Pitch ratio in FREEZE mode. 1.0 = original pitch. 2.0 = one octave up. 0.5 = one octave down. Twist while frozen to hear the entire harmonic structure shift without losing the crystalline sustain.',
+    onChange: v => mods.spectral.setPitch(v) }));
+  d.appendChild(mkKnob({ id:'spectral-smear', label:'SMEAR', min:0, max:1, val:0,
+    tip: 'Temporal smearing depth in SMEAR mode. 0: each frame sounds independently. 1: maximum cross-fade across 8 frames — the spectrum becomes a slowly evolving, continuous wash. Also controls blur intensity in BLUR mode.',
+    onChange: v => mods.spectral.setSmear(v) }));
+  d.appendChild(mkKnob({ id:'spectral-mix', label:'MIX', min:0, max:1, val:1,
+    tip: 'Dry/wet blend. Freeze at 1.0 = only the frozen spectrum, no dry signal. At 0.5 = frozen spectrum blended with live audio — the classic "cloud behind the melody" technique.',
+    onChange: v => mods.spectral.setMix(v) }));
+  d.appendChild(mkPP('spectral-ai', 'ai', 'IN',  'in'));
+  d.appendChild(mkPP('spectral-ao', 'ao', 'OUT', 'out'));
+  return panel('spectral', 'SPECTRAL', d);
+}
+
+// ── MORPH panel ─────────────────────────────────────────────────────────────
+function buildMorphPanel() {
+  const d = document.createElement('div'); d.style.minWidth = '160px';
+  d.appendChild(mkKnob({ id:'morph-pos', label:'MORPH', min:0, max:1, val:0, sz:'lg',
+    tip: 'Position along the waypoint arc (0–1). Sweeps through all saved waypoints, interpolating every tracked parameter. Patch a slow LFO or CHAOS into MORPH CV for autonomous textural evolution.',
+    onChange: v => { mods.morph.applyMorph(v); } }));
+
+  // Waypoint slot buttons W1–W8
+  const slotRow = document.createElement('div');
+  slotRow.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:4px 0;';
+  const slotBtns = [];
+  for (let i = 0; i < 8; i++) {
+    const b = document.createElement('button'); b.className = 'btn';
+    b.textContent = `W${i+1}`; b.dataset.slot = i;
+    b.style.padding = '3px 2px'; b.style.fontSize = '8px';
+    b.addEventListener('click', () => { mods.morph.saveWaypoint(i); });
+    slotBtns.push(b); slotRow.appendChild(b);
+  }
+  d.appendChild(slotRow);
+
+  // Callback to light up saved slots
+  mods.morph._updateSlotButtons = () => {
+    const saved = new Set(mods.morph.waypoints.map(w => w.slot));
+    slotBtns.forEach((b, i) => b.classList.toggle('on', saved.has(i)));
+  };
+
+  // LEARN + CLEAR
+  const ctrlRow = document.createElement('div'); ctrlRow.style.cssText = 'display:flex;gap:4px;margin:4px 0;';
+  const learnBtn = document.createElement('button'); learnBtn.className='btn'; learnBtn.textContent='LEARN'; learnBtn.style.flex='1';
+  learnBtn.addEventListener('click', () => {
+    mods.morph.learnMode = !mods.morph.learnMode;
+    learnBtn.classList.toggle('on', mods.morph.learnMode);
+    setStatus(mods.morph.learnMode ? 'MORPH: touch any knob to track it…' : 'MORPH learn off');
+  });
+  const clearBtn = document.createElement('button'); clearBtn.className='btn'; clearBtn.textContent='CLEAR'; clearBtn.style.flex='1';
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all MORPH waypoints and tracked parameters?')) return;
+    mods.morph.waypoints = []; mods.morph.paramIds.clear();
+    mods.morph._updateSlotButtons?.();
+    setStatus('MORPH cleared');
+  });
+  ctrlRow.appendChild(learnBtn); ctrlRow.appendChild(clearBtn);
+  d.appendChild(ctrlRow);
+
+  // Tracked param count label
+  const infoLbl = document.createElement('div');
+  infoLbl.style.cssText = 'font-size:7px;color:#444;text-align:center;letter-spacing:1px;margin-top:2px;';
+  infoLbl.textContent = '0 params tracked';
+  d.appendChild(infoLbl);
+  mods.morph._updateInfoLabel = () => { infoLbl.textContent = `${mods.morph.paramIds.size} params tracked`; };
+
+  d.appendChild(mkPP('morph-ci', 'ci', 'MORPH CV', 'in'));
+  return panel('morph', 'MORPH', d);
 }
 
 function buildSpectrumPanel() {
@@ -7929,7 +8772,7 @@ async function init() {
   analyserNode.connect(ctx.destination);
 
   // Load AudioWorklets (both use data URLs — safe on file:// and http://)
-  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet()]);
+  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet(), loadLogicWorklet(), loadSpectralWorklet()]);
 
   makeVCO(); makeVCO2(); makeNoise(); makeMixer();
   makeLFO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
@@ -7938,7 +8781,9 @@ async function init() {
   makeChorus(); makePanner(); makeTape(); makePhaser(); makeWavefolder();
   makeChord(); makeQuantizer(); makeMicrocosm();
   makeArp(); makeSidechain(); makeSampler(); makePadSampler(); makeStutter(); makeMicInput(); makeMicLooper();
-  makeCrusher(); makeEuclid(); makeAffect();
+  makeCrusher(); makeEuclid();
+  makeLogic(); makeFormant(); makeResonator(); makeMorph(); makeSpectral();
+  makeAffect();
   wireDefault();
 
   // Build UI
@@ -7961,6 +8806,8 @@ async function init() {
   rack.appendChild(buildChaosPanel());
   rack.appendChild(buildClkDivPanel());
   rack.appendChild(buildEuclidPanel());
+  rack.appendChild(buildLogicPanel());
+  rack.appendChild(buildMorphPanel());
   rack.appendChild(buildSidechainPanel());
 
   // ── SOURCES ── alternate and additive sound generators
@@ -7972,6 +8819,8 @@ async function init() {
   rack.appendChild(buildChordPanel());
   rack.appendChild(buildArpPanel());
   rack.appendChild(buildQuantizerPanel());
+  rack.appendChild(buildResonatorPanel());
+  rack.appendChild(buildFormantPanel());
 
   // ── CHARACTER ── saturation, distortion, and rhythmic destruction
   rack.appendChild(mkRackGroup('CHARACTER'));
@@ -7979,6 +8828,7 @@ async function init() {
   rack.appendChild(buildWavefolderPanel());
   rack.appendChild(buildCrusherPanel());
   rack.appendChild(buildStutterPanel());
+  rack.appendChild(buildSpectralPanel());
 
   // ── SPACE ── time-based and modulation effects
   rack.appendChild(mkRackGroup('SPACE'));
