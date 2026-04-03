@@ -1665,8 +1665,9 @@ class SpectralProcessor extends AudioWorkletProcessor {
     this._doFreeze = false;
     this._hasFrozen = false;
     this.port.onmessage = e => {
-      if (e.data.mode    !== undefined) this._mode      = e.data.mode;
-      if (e.data.doFreeze)              this._doFreeze  = true;
+      if (e.data.mode     !== undefined) this._mode     = e.data.mode;
+      if (e.data.doFreeze)               this._doFreeze = true;
+      if (e.data.unfreeze)               this._hasFrozen = false;
     };
   }
   _processFrame(pitch, smear, doBlur, doSmear, doFreeze) {
@@ -8200,8 +8201,10 @@ function makeSpectral() {
     inlet, node, outlet,
     mode: 0, mixVal: 1, smearVal: 0, pitchVal: 1
   };
+  m.frozen   = false;
   m.setMode  = v => { m.mode = v;      node.port.postMessage({ mode: v }); };
-  m.doFreeze = () =>                    node.port.postMessage({ doFreeze: true });
+  m.doFreeze = () => { m.frozen = true;  node.port.postMessage({ doFreeze: true }); };
+  m.unfreeze = () => { m.frozen = false; node.port.postMessage({ unfreeze: true }); };
   m.setMix   = v => { m.mixVal = v;   p.get('mix').setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setSmear = v => { m.smearVal = v; p.get('smear').setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setPitch = v => { m.pitchVal = v; p.get('pitch').setTargetAtTime(v, ctx.currentTime, 0.05); };
@@ -8502,18 +8505,31 @@ function buildSpectralPanel() {
     [['OFF',0],['FRZ',1],['SMR',2],['BLR',3]], 0,
     v => mods.spectral.setMode(Number(v)), null, 'spectral-mode'
   );
-  // Programmatic mode update (used by ❄ auto-switch)
+  // Programmatic mode update — also resets frozen button if leaving FRZ
   mods.spectral._setModeUI = v => {
     modeRow.querySelectorAll('.wbtn').forEach(b => b.classList.toggle('on', Number(b.dataset.bval) === v));
     mods.spectral.setMode(v);
+    if (v !== 1 && mods.spectral.frozen) {
+      mods.spectral.unfreeze();
+      frzBtn.classList.remove('on');
+      frzBtn.textContent = '❄ FREEZE';
+    }
   };
   d.appendChild(modeRow);
   const frzBtn = document.createElement('button'); frzBtn.className='btn';
   frzBtn.textContent = '❄ FREEZE'; frzBtn.style.cssText = 'width:100%;margin:4px 0;';
   frzBtn.addEventListener('click', () => {
-    if (mods.spectral.mode !== 1) mods.spectral._setModeUI(1); // auto-switch to FRZ
-    mods.spectral.doFreeze();
-    frzBtn.classList.add('on'); setTimeout(()=>frzBtn.classList.remove('on'),200);
+    if (!mods.spectral.frozen) {
+      if (mods.spectral.mode !== 1) mods.spectral._setModeUI(1);
+      mods.spectral.doFreeze();
+      frzBtn.classList.add('on');
+      frzBtn.textContent = '❄ FROZEN';
+    } else {
+      mods.spectral.unfreeze();
+      mods.spectral._setModeUI(0);
+      frzBtn.classList.remove('on');
+      frzBtn.textContent = '❄ FREEZE';
+    }
   });
   d.appendChild(frzBtn);
   d.appendChild(mkKnob({ id:'spectral-pitch', label:'PITCH', min:0.25, max:4, val:1, log:true,
