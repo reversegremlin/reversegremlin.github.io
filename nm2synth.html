@@ -11231,6 +11231,7 @@ async function init() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const nm2Tutorial = {
   _step: 0,
+  _firstStep: 0,   // index of first step actually shown (pre-satisfied steps are skipped)
   _enteredAt: 0,   // timestamp when current step was entered (guards against instant advances)
   _steps: [
     {
@@ -11299,8 +11300,16 @@ const nm2Tutorial = {
     this._clearStep();
     if (this._overlay) this._destroyOverlay();
     this._buildOverlay();
-    // Skip A1 if AudioContext is already running (re-launch scenario)
-    const startStep = (typeof ctx !== 'undefined' && ctx?.state === 'running') ? 1 : 0;
+    // Fast-forward past any lead-in steps whose condition is already satisfied.
+    // init() auto-starts ctx AND the sequencer, so A1 and A2 are always pre-done
+    // on a normal launch. We skip them so the user sees "STEP 1" not "STEP 3".
+    let startStep = 0;
+    while (
+      startStep < this._steps.length &&
+      this._steps[startStep].advanceOn &&
+      this._steps[startStep].advanceOn()
+    ) { startStep++; }
+    this._firstStep = startStep;
     this.goTo(startStep);
   },
 
@@ -11318,7 +11327,11 @@ const nm2Tutorial = {
 
     // Step label e.g. "STEP 2 OF 5 — PRESS PLAY"
     const stepEl = this._overlay?.querySelector('.nm2-tut-step');
-    if (stepEl) stepEl.textContent = `STEP ${n + 1} OF ${this._steps.length} — ${step.task.toUpperCase()}`;
+    if (stepEl) {
+      const rel = n - (this._firstStep || 0) + 1;
+      const tot = this._steps.length - (this._firstStep || 0);
+      stepEl.textContent = `STEP ${rel} OF ${tot} — ${step.task.toUpperCase()}`;
+    }
 
     // Tooltip text (animate in)
     const tipEl = this._overlay?.querySelector('.nm2-tut-tip-text');
@@ -11332,7 +11345,7 @@ const nm2Tutorial = {
 
     // NEXT/SKIP label
     const nextBtn = this._overlay?.querySelector('.nm2-tut-next');
-    if (nextBtn) nextBtn.textContent = n === this._steps.length - 1 ? 'DONE' : 'SKIP →';
+    if (nextBtn) nextBtn.textContent = n === this._steps.length - 1 ? 'DONE' : 'SKIP STEP →';
 
     // Poll-based advance
     if (step.advanceOn) {
