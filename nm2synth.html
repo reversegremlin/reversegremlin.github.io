@@ -314,6 +314,271 @@ body.edit-mode .module-drag-handle{display:inline;}
   .pds-panel{border-radius:16px 16px 6px 6px;width:min(420px,100%);}
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE SHELL  (max-width: 640px)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width:640px){
+  /* Hide desktop-only elements */
+  #rack-wrap,#toolbar,#loopstation,#site-footer,#cables{display:none!important;}
+  body{padding-bottom:0;overflow-x:hidden;}
+
+  /* Shell layout: full viewport, no scroll at body level */
+  #m-shell{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background:var(--bg-page);}
+
+  /* Top bar */
+  #m-topbar{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;background:var(--bg-toolbar);border-bottom:1px solid var(--border-soft);flex-shrink:0;z-index:10;}
+  .m-brand{font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent-soft);letter-spacing:2px;flex-shrink:0;}
+  #m-patch-name{flex:1;font-size:11px;color:var(--text-soft);letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;text-align:center;}
+  #m-bpm{font-family:var(--font-mono);font-size:10px;color:var(--accent-cyan);letter-spacing:1px;flex-shrink:0;}
+  #m-meter-canvas{flex-shrink:0;opacity:.8;}
+  #m-overflow-btn{background:none;border:1px solid var(--border-main);color:var(--text-muted);padding:3px 9px;border-radius:3px;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0;}
+
+  /* Scrollable workspace */
+  #m-workspace{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+
+  /* Tab contents */
+  .m-tab-content{display:none;padding:12px;}
+  .m-tab-content.active{display:block;}
+
+  /* Tab bar */
+  #m-tabbar{display:flex;flex-shrink:0;background:var(--bg-toolbar);border-top:1px solid var(--border-soft);}
+  .m-tab{flex:1;background:none;border:none;border-top:2px solid transparent;color:var(--text-dim);font-family:var(--font-ui);font-size:10px;letter-spacing:.8px;padding:10px 2px 8px;cursor:pointer;transition:color .15s,border-color .15s;}
+  .m-tab.on{color:var(--accent-cyan);border-top-color:var(--accent-cyan);}
+  .m-tab:active{background:color-mix(in srgb,var(--accent-cyan) 8%,transparent);}
+
+  /* Performance strip */
+  #m-perfstrip{display:flex;align-items:center;gap:5px;padding:8px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg-panel-4);border-top:1px solid var(--border-bright);flex-shrink:0;}
+  #m-perfstrip .btn{min-height:42px;font-size:14px;padding:0 12px;}
+  #m-play-btn{min-width:52px;}
+  #m-stop-btn{min-width:46px;}
+  #m-hold-btn{min-width:52px;}
+  .m-scene-btn{min-width:36px;min-height:42px;font-size:13px;letter-spacing:1px;}
+  .m-scene-btn.filled{border-color:var(--accent)!important;color:var(--accent)!important;}
+  .m-scene-btn.active-scene{background:color-mix(in srgb,var(--accent) 22%,transparent)!important;}
+
+  /* Overflow menu */
+  #m-overflow-menu{position:fixed;inset:0;z-index:860;display:none;align-items:flex-end;}
+  #m-overflow-menu.open{display:flex;}
+  #m-overflow-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 60%,transparent);}
+  #m-overflow-panel{position:relative;width:100%;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:16px 12px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  #m-overflow-panel .btn{padding:10px 6px;font-size:11px;text-align:center;min-height:44px;}
+
+  /* ── Play tab ── */
+  #m-play-hero{margin-bottom:12px;}
+  #m-play-hero .module{width:100%;box-sizing:border-box;min-width:unset!important;}
+  #m-play-hero canvas{width:100%!important;height:auto!important;aspect-ratio:1;}
+  #m-quick-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  #m-quick-row::-webkit-scrollbar{display:none;}
+  .m-quick-card{flex-shrink:0;width:120px;background:var(--bg-panel-3);border:1px solid var(--border-main);border-radius:6px;padding:10px;cursor:pointer;transition:border-color .15s;}
+  .m-quick-card:active{border-color:var(--accent-cyan);}
+  .m-quick-card-name{font-size:10px;letter-spacing:1.5px;color:var(--accent-soft);margin-bottom:6px;}
+  .m-quick-card-vals{font-size:11px;color:var(--text-soft);line-height:1.6;}
+  .m-quick-card-val-row{display:flex;justify-content:space-between;}
+  .m-quick-card-val-lbl{color:var(--text-dim);font-size:10px;}
+  .m-quick-card-val-num{color:var(--text-main);font-family:var(--font-mono);font-size:10px;}
+  #m-activity{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:4px;padding:8px 12px;font-size:10px;color:var(--text-dim);letter-spacing:.8px;display:flex;gap:12px;flex-wrap:wrap;}
+  .m-act-item{display:flex;align-items:center;gap:4px;}
+  .m-act-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-cyan);opacity:.5;}
+  .m-act-dot.live{opacity:1;box-shadow:0 0 4px var(--accent-cyan);}
+
+  /* ── Sound tab ── */
+  .m-snd-group{margin-bottom:8px;}
+  .m-snd-hdr{width:100%;background:var(--bg-panel-3);border:1px solid var(--border-main);color:var(--text-soft);font-family:var(--font-ui);font-size:11px;letter-spacing:2px;padding:10px 14px;text-align:left;cursor:pointer;border-radius:4px;display:flex;justify-content:space-between;align-items:center;}
+  .m-snd-hdr.open{border-color:color-mix(in srgb,var(--accent-cyan) 35%,transparent);color:var(--accent-cyan);}
+  .m-snd-hdr-arrow{font-size:10px;transition:transform .2s;}
+  .m-snd-hdr.open .m-snd-hdr-arrow{transform:rotate(180deg);}
+  .m-snd-body{display:none;flex-direction:column;gap:10px;padding:10px 0 4px;}
+  .m-snd-body.open{display:flex;}
+  /* Full-width modules inside Sound tab */
+  .m-snd-body .module{min-width:unset!important;width:100%;box-sizing:border-box;}
+  .m-snd-body .module .screw{display:none;}
+
+  /* ── Patch tab ── */
+  #m-patch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  #m-patch-header h3{font-size:11px;letter-spacing:2px;color:var(--accent-cyan);margin:0;}
+  #m-conn-list{display:flex;flex-direction:column;gap:6px;}
+  .m-conn-row{background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:4px;padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:11px;}
+  .m-conn-src{color:var(--accent);flex-shrink:0;}
+  .m-conn-arrow{color:var(--text-dim);}
+  .m-conn-dst{color:var(--text-main);flex:1;}
+  .m-conn-del{background:none;border:1px solid var(--border-main);color:var(--text-dim);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .m-conn-del:active{border-color:var(--accent);color:var(--accent);}
+  #m-patch-empty{color:var(--text-dim);font-size:11px;letter-spacing:.5px;padding:20px 0;text-align:center;}
+
+  /* ── Library tab ── */
+  .m-lib-section{margin-bottom:20px;}
+  .m-lib-title{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border-soft);}
+  .m-lib-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .m-lib-actions .btn{font-size:11px;padding:8px 14px;min-height:40px;}
+  #m-preset-list{display:flex;flex-direction:column;gap:4px;}
+  .m-preset-row{background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:4px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:12px;color:var(--text-main);letter-spacing:.4px;}
+  .m-preset-row:active{border-color:var(--accent-cyan);}
+  .m-preset-row.active{border-color:var(--accent);color:var(--accent);}
+  .m-preset-del{background:none;border:none;color:var(--text-dim);font-size:14px;padding:0 4px;cursor:pointer;}
+  #m-scene-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .m-scene-card{background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:6px;padding:14px;text-align:center;cursor:pointer;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .m-scene-card:active{border-color:var(--accent-cyan);}
+  .m-scene-card.filled{border-color:color-mix(in srgb,var(--accent) 50%,transparent);}
+  .m-scene-card-letter{font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--text-muted);}
+  .m-scene-card.filled .m-scene-card-letter{color:var(--accent-soft);}
+  .m-scene-card-label{font-size:9px;letter-spacing:1.5px;color:var(--text-dim);}
+  #m-notes-area{width:100%;box-sizing:border-box;min-height:100px;background:var(--bg-input);border:1px solid var(--border-soft);color:var(--text-main);padding:10px;font-family:var(--font-ui);font-size:12px;border-radius:4px;resize:vertical;}
+
+  /* Module pool — hidden storage when mobile is active */
+  #m-module-pool{display:none;}
+
+  /* ── Module cards (Phase 2) ── */
+  .m-card{background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:8px;}
+  .m-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .m-card-name{flex:1;font-size:11px;letter-spacing:2px;color:var(--accent-soft);}
+  .m-card-status{width:7px;height:7px;border-radius:50%;background:var(--border-main);flex-shrink:0;transition:background .3s,box-shadow .3s;}
+  .m-card-status.live{background:var(--accent-cyan);box-shadow:0 0 5px var(--accent-cyan);}
+  .m-card-edit{background:none;border:1px solid var(--border-main);color:var(--text-dim);font-family:var(--font-ui);font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:3px;cursor:pointer;flex-shrink:0;}
+  .m-card-edit:active{border-color:var(--accent-cyan);color:var(--accent-cyan);}
+  .m-card-ctrls{display:flex;gap:8px;flex-wrap:wrap;}
+  .m-ctrl{display:flex;flex-direction:column;gap:3px;}
+  .m-ctrl-lbl{font-size:9px;letter-spacing:1px;color:var(--text-dim);text-align:center;}
+  .m-ctrl-btn{background:var(--bg-input);border:1px solid var(--border-soft);color:var(--text-main);font-size:11px;font-family:var(--font-mono);padding:6px 10px;border-radius:3px;cursor:pointer;text-align:center;min-height:34px;min-width:54px;letter-spacing:.3px;}
+  .m-ctrl-btn:active{border-color:var(--accent-cyan);background:color-mix(in srgb,var(--accent-cyan) 10%,var(--bg-input));}
+  .m-card-empty{font-size:10px;color:var(--text-dim);letter-spacing:.5px;padding:2px 0;}
+
+  /* ── Full-editor bottom sheet ── */
+  #m-editor-sheet{position:fixed;inset:0;z-index:840;display:none;align-items:flex-end;}
+  #m-editor-sheet.open{display:flex;}
+  #m-editor-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 55%,transparent);}
+  #m-editor-panel{position:relative;width:100%;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:0 0 calc(16px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);}
+  #m-editor-sheet.open #m-editor-panel{transform:translateY(0);}
+  #m-editor-header{display:flex;align-items:center;padding:10px 16px 10px;border-bottom:1px solid var(--border-soft);position:sticky;top:0;background:var(--bg-panel-6);z-index:1;gap:10px;}
+  #m-editor-handle{width:36px;height:4px;border-radius:2px;background:var(--border-main);flex-shrink:0;margin-right:4px;}
+  #m-editor-title{flex:1;font-size:12px;letter-spacing:2px;color:var(--accent-soft);}
+  #m-editor-close{background:none;border:1px solid var(--border-main);color:var(--text-dim);padding:5px 12px;border-radius:3px;cursor:pointer;font-size:13px;min-height:34px;}
+  #m-editor-close:active{border-color:var(--accent);color:var(--accent);}
+  #m-editor-body{padding:8px 8px 12px;}
+  #m-editor-body .module{min-width:unset!important;width:100%;box-sizing:border-box;border:none!important;background:transparent!important;box-shadow:none!important;padding:8px 0!important;}
+  #m-editor-body .module .screw{display:none;}
+  #m-editor-body .module .module-label{display:none;}
+
+  /* ── Patch tab Phase 3 ── */
+  #m-patch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;}
+  #m-patch-title{font-size:11px;letter-spacing:2px;color:var(--accent-cyan);margin:0;}
+  #m-patch-add{font-size:12px;padding:7px 14px;min-height:36px;}
+  #m-patch-filter{display:flex;gap:4px;margin-bottom:12px;}
+  .m-pf-btn{flex:1;background:none;border:1px solid var(--border-soft);color:var(--text-dim);font-family:var(--font-ui);font-size:10px;letter-spacing:1px;padding:6px 4px;border-radius:3px;cursor:pointer;}
+  .m-pf-btn.on{background:color-mix(in srgb,var(--accent-cyan) 12%,transparent);border-color:var(--accent-cyan);color:var(--accent-cyan);}
+  .m-conn-sig{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .m-conn-sig.ao{background:#cc00ff;box-shadow:0 0 4px #cc00ff;}
+  .m-conn-sig.co{background:#00aaff;box-shadow:0 0 4px #00aaff;}
+  .m-conn-sig.ai{background:#00ff66;box-shadow:0 0 4px #00ff66;}
+  .m-conn-sig.ci,.m-conn-sig.gi{background:#ffee00;box-shadow:0 0 4px #ffee00;}
+  .m-conn-row{background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:4px;padding:10px 12px;display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:5px;}
+  .m-conn-labels{flex:1;display:flex;align-items:center;gap:6px;min-width:0;}
+  .m-conn-src{color:var(--accent);font-size:10px;letter-spacing:.4px;flex-shrink:0;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .m-conn-arrow{color:var(--text-dim);flex-shrink:0;font-size:10px;}
+  .m-conn-dst{color:var(--text-main);font-size:10px;letter-spacing:.4px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .m-conn-del{background:none;border:1px solid var(--border-main);color:var(--text-dim);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .m-conn-del:active{border-color:var(--accent);color:var(--accent);}
+  #m-patch-empty{color:var(--text-dim);font-size:11px;letter-spacing:.5px;padding:20px 0;text-align:center;}
+  #m-patch-count{font-size:10px;color:var(--text-dim);letter-spacing:.5px;margin-left:auto;}
+
+  /* ── Source picker sheet ── */
+  #m-src-sheet{position:fixed;inset:0;z-index:845;display:none;align-items:flex-end;}
+  #m-src-sheet.open{display:flex;}
+  #m-src-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 55%,transparent);}
+  #m-src-panel{position:relative;width:100%;max-height:78vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);}
+  #m-src-sheet.open #m-src-panel{transform:translateY(0);}
+  #m-src-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  #m-src-title{flex:1;font-size:12px;letter-spacing:2px;color:var(--accent-soft);}
+  #m-src-close{background:none;border:1px solid var(--border-main);color:var(--text-dim);padding:5px 12px;border-radius:3px;cursor:pointer;font-size:13px;min-height:34px;}
+  #m-src-filter{display:flex;gap:4px;margin-bottom:10px;}
+  .m-sf-btn{flex:1;background:none;border:1px solid var(--border-soft);color:var(--text-dim);font-family:var(--font-ui);font-size:10px;letter-spacing:1px;padding:6px 4px;border-radius:3px;cursor:pointer;}
+  .m-sf-btn.on{border-color:var(--accent-soft);color:var(--accent-soft);background:color-mix(in srgb,var(--accent-soft) 10%,transparent);}
+  #m-src-list{display:flex;flex-direction:column;gap:4px;}
+  .m-src-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-soft);border-radius:4px;cursor:pointer;}
+  .m-src-row:active{border-color:var(--accent-soft);background:color-mix(in srgb,var(--accent-soft) 8%,transparent);}
+  .m-src-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .m-src-dot.ao{background:#cc00ff;box-shadow:0 0 5px #cc00ff;}
+  .m-src-dot.co{background:#00aaff;box-shadow:0 0 5px #00aaff;}
+  .m-src-name{flex:1;font-size:11px;letter-spacing:.5px;color:var(--text-main);}
+  .m-src-linked{font-size:9px;color:var(--text-dim);letter-spacing:.3px;}
+  .m-src-row.hidden{display:none;}
+
+  /* ── Preset browser sheet ── */
+  #m-preset-sheet{position:fixed;inset:0;z-index:840;display:none;align-items:flex-end;}
+  #m-preset-sheet.open{display:flex;}
+  #m-preset-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 55%,transparent);}
+  #m-preset-panel{position:relative;width:100%;max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);}
+  #m-preset-sheet.open #m-preset-panel{transform:translateY(0);}
+  #m-preset-panel-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  #m-preset-panel-title{flex:1;font-size:12px;letter-spacing:2px;color:var(--accent-cyan);}
+  #m-preset-panel-close{background:none;border:1px solid var(--border-main);color:var(--text-dim);padding:5px 12px;border-radius:3px;cursor:pointer;font-size:13px;min-height:34px;}
+  #m-preset-panel-list{display:flex;flex-direction:column;gap:4px;}
+
+  /* ── Perform tab (Phase 4) ── */
+  #m-perf-bpm-wrap{display:flex;align-items:center;justify-content:center;gap:24px;padding:18px 0 14px;}
+  .m-perf-adj{background:var(--bg-input);border:1px solid var(--border-main);color:var(--text-main);font-size:26px;width:54px;height:54px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;}
+  .m-perf-adj:active{border-color:var(--accent-cyan);background:color-mix(in srgb,var(--accent-cyan) 15%,transparent);}
+  #m-perf-bpm-center{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+  #m-perf-bpm-val{font-family:var(--font-mono);font-size:36px;color:var(--text-main);letter-spacing:2px;line-height:1;}
+  #m-perf-bpm-unit{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-top:3px;}
+  #m-perf-transport{display:flex;gap:8px;margin-bottom:16px;}
+  #m-perf-transport .btn{flex:1;min-height:48px;font-size:15px;}
+  .m-perf-sec-lbl{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;}
+  #m-step-count-row{display:flex;gap:6px;margin-bottom:12px;}
+  #m-step-count-row .btn{flex:1;min-height:42px;font-size:12px;letter-spacing:.8px;}
+  #m-perf-dir-row{display:flex;gap:6px;margin-bottom:16px;}
+  #m-perf-dir-row .btn{flex:1;min-height:40px;font-size:11px;letter-spacing:.8px;padding:8px 4px;}
+  #m-step-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:16px;}
+  .m-step-btn{background:var(--bg-panel-3);border:1px solid var(--border-main);border-radius:4px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:background .08s,border-color .08s;-webkit-user-select:none;user-select:none;}
+  .m-step-btn.on{background:color-mix(in srgb,var(--accent) 22%,var(--bg-panel-3));border-color:var(--accent);}
+  .m-step-btn.cur{outline:2px solid var(--accent-cyan);outline-offset:-1px;}
+  .m-step-btn.on.cur{outline-color:var(--accent);}
+  .m-step-num{font-size:8px;color:var(--text-faint);letter-spacing:.3px;}
+  .m-step-pitch{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-height:10px;}
+  .m-step-btn.on .m-step-pitch{color:var(--accent-soft);}
+
+  /* ── Macro button in perf strip ── */
+  #m-macro-btn{min-height:42px;font-size:10px;letter-spacing:.5px;flex:1;max-width:90px;border-color:color-mix(in srgb,var(--accent-cyan) 25%,transparent);color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #m-macro-btn.active{border-color:var(--accent-cyan);color:var(--accent-cyan);background:color-mix(in srgb,var(--accent-cyan) 8%,transparent);}
+
+  /* ── Macro assignment sheet ── */
+  #m-macro-sheet{position:fixed;inset:0;z-index:848;display:none;align-items:flex-end;}
+  #m-macro-sheet.open{display:flex;}
+  #m-macro-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 55%,transparent);}
+  #m-macro-panel{position:relative;width:100%;max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);}
+  #m-macro-sheet.open #m-macro-panel{transform:translateY(0);}
+  #m-macro-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  #m-macro-title{flex:1;font-size:12px;letter-spacing:2px;color:var(--accent-soft);}
+  #m-macro-close{background:none;border:1px solid var(--border-main);color:var(--text-dim);padding:5px 12px;border-radius:3px;cursor:pointer;font-size:13px;min-height:34px;}
+  .m-macro-opt{padding:13px 14px;background:var(--bg-input);border:1px solid var(--border-soft);border-radius:4px;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+  .m-macro-opt:active{border-color:var(--accent-cyan);background:color-mix(in srgb,var(--accent-cyan) 8%,transparent);}
+  .m-macro-opt.sel{border-color:var(--accent-cyan);}
+  .m-macro-check{font-size:12px;width:16px;color:var(--accent-cyan);flex-shrink:0;}
+  .m-macro-lbl{font-size:12px;color:var(--text-main);letter-spacing:.5px;}
+  .m-macro-opt.sel .m-macro-lbl{color:var(--accent-cyan);}
+
+  /* ── Quick card config sheet ── */
+  #m-quick-row-header{display:flex;align-items:center;margin-bottom:6px;}
+  #m-quick-row-label{font-size:9px;letter-spacing:2px;color:var(--text-dim);flex:1;}
+  #m-quick-cfg-btn{background:none;border:none;color:var(--text-dim);font-size:10px;letter-spacing:.5px;padding:4px 6px;cursor:pointer;opacity:.7;}
+  #m-quick-cfg-btn:active{color:var(--accent-cyan);opacity:1;}
+  #m-quick-cfg-sheet{position:fixed;inset:0;z-index:848;display:none;align-items:flex-end;}
+  #m-quick-cfg-sheet.open{display:flex;}
+  #m-quick-cfg-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg-page) 55%,transparent);}
+  #m-quick-cfg-panel{position:relative;width:100%;max-height:68vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-panel-6);border-radius:16px 16px 0 0;border-top:1px solid var(--border-bright);padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);}
+  #m-quick-cfg-sheet.open #m-quick-cfg-panel{transform:translateY(0);}
+  #m-quick-cfg-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  #m-quick-cfg-title{flex:1;font-size:12px;letter-spacing:2px;color:var(--accent-soft);}
+  #m-quick-cfg-close{background:none;border:1px solid var(--border-main);color:var(--text-dim);padding:5px 12px;border-radius:3px;cursor:pointer;font-size:13px;min-height:34px;}
+  .m-cfg-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border-soft);}
+  .m-cfg-row:last-of-type{border-bottom:none;}
+  .m-cfg-slot-num{font-size:11px;color:var(--text-dim);width:20px;text-align:center;flex-shrink:0;}
+  .m-cfg-select{flex:1;background:var(--bg-input);border:1px solid var(--border-main);color:var(--text-main);font-family:var(--font-ui);font-size:12px;padding:10px;border-radius:4px;-webkit-appearance:none;appearance:none;min-height:44px;}
+  .m-cfg-select:focus{outline:1px solid var(--accent-cyan);outline-offset:-1px;}
+}
+@media (min-width:641px){
+  #m-shell{display:none!important;}
+}
+
 /* ── Wave / type buttons ── */
 .wbtns{display:flex;gap:5px;margin:6px 0;}
 .wbtn{background:var(--bg-panel-7);border:1px solid var(--border-main);color:var(--text-dim);font-size:var(--fs-md);padding:4px 8px;cursor:pointer;border-radius:2px;font-family:inherit;}
@@ -3427,6 +3692,8 @@ function completePatch(toId) {
   setStatus('');
   stopGhost();
   updatePatchTouchBanner();
+  // Refresh the mobile patch tab when active
+  if(nm2Mobile?.active && nm2Mobile.currentTab === 'patch') nm2Mobile.refreshPatchTab();
 }
 
 function patchClick(id) {
@@ -3511,6 +3778,7 @@ function delCable(cable) {
 }
 
 function moveCable(cable) {
+  if(nm2Mobile?.active) return;
   const r1=ppMap[cable.fromId].el.getBoundingClientRect();
   const r2=ppMap[cable.toId].el.getBoundingClientRect();
   const x1=r1.left+r1.width/2, y1=r1.top+r1.height/2;
@@ -3523,7 +3791,7 @@ function moveCable(cable) {
   }
 }
 
-function updateCables(){ cables.forEach(moveCable); }
+function updateCables(){ if(nm2Mobile?.active) return; cables.forEach(moveCable); }
 window.addEventListener('resize', updateCables);
 window.addEventListener('scroll', updateCables);
 setInterval(updateCables, 120);
@@ -5457,7 +5725,13 @@ function showTip(t,e,hint){
 function moveTip(e){tipEl.style.left=(e.clientX+14)+'px';tipEl.style.top=(e.clientY-36)+'px';}
 function hideTip(){tipEl.style.display='none';}
 
-function setStatus(msg){document.getElementById('status').textContent=msg||'nm² modsynth v1.0.1';}
+function setStatus(msg){
+  document.getElementById('status').textContent=msg||'nm² modsynth v1.0.1';
+  if(nm2Mobile?.active){
+    const el=document.getElementById('m-patch-name');
+    if(el&&msg){el.textContent=msg;clearTimeout(nm2Mobile._statusTimer);nm2Mobile._statusTimer=setTimeout(()=>{el.textContent=nm2Mobile.patchName;},3000);}
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEB MIDI
@@ -8698,8 +8972,8 @@ function buildAffectPanel() {
   let dragging = false;
   const setPuck = (e) => {
     const r = cv.getBoundingClientRect();
-    m.targetX = Math.max(0, Math.min(1, (e.clientX - r.left) / W));
-    m.targetY = Math.max(0, Math.min(1, 1 - (e.clientY - r.top)  / H));
+    m.targetX = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    m.targetY = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
     m.wanderDX = 0; m.wanderDY = 0;
     if (m.active) applyAffect(m.targetX, m.targetY);
   };
@@ -8855,6 +9129,1638 @@ function startLissajous() {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE SHELL  (nm2Mobile)
+// ═══════════════════════════════════════════════════════════════════════════════
+const nm2Mobile = {
+  query: null,
+  active: false,
+  shell: null,
+  currentTab: 'play',
+  savedRackChildren: [],
+  _statusTimer: null,
+  _activityInterval: null,
+  _meterRAF: null,
+  _performRAF: null,
+  _macroId: 'wander',
+  _quickCardConfig: null, // array of 4 module type strings, persisted to localStorage
+  patchName: 'INIT PATCH',
+
+  // Module → Sound tab group mapping (panel type strings)
+  GROUPS: {
+    voice:      ['seq','vco','vcf','adsr','vca'],
+    modulation: ['lfo','lfo2','sandh','att','slew','chaos','clkdiv','euclid','logic','morph','sidechain'],
+    sources:    ['vco2','noise','mixer','ladder','chord','arp','quant','res','formant'],
+    character:  ['tape','wavefolder','crush','stutter','spectral'],
+    space:      ['delay','reverb','chorus','phaser','panner'],
+    live:       ['sampler','padsampler','micinput','miclooper','microcosm'],
+    analysis:   ['scope','spectrum','lissajous'],
+  },
+  GROUP_LABELS: {
+    voice:'VOICE', modulation:'MODULATION', sources:'SOURCES',
+    character:'CHARACTER', space:'SPACE', live:'LIVE', analysis:'ANALYSIS',
+  },
+  // Groups open by default
+  OPEN_DEFAULT: new Set(['voice']),
+
+  // Macro button options — short-tap triggers, long-press on macro btn to reassign
+  MACRO_OPTIONS: [
+    {id:'wander', label:'◌ WANDER',  action(){const b=document.getElementById('affect-wander-btn');if(b)b.click();}},
+    {id:'hold',   label:'⏸ HOLD',    action(){if(mods.seq){mods.seq.hold=!mods.seq.hold;document.getElementById('m-hold-btn')?.classList.toggle('on',mods.seq.hold);}}},
+    {id:'panic',  label:'× PANIC',   action(){mods.adsr?.off();if(mods.looper?.tracks)mods.looper.tracks.forEach(t=>{t.recording=false;});setStatus('Panic');}},
+    {id:'rec',    label:'⏺ REC',     action(){document.getElementById('rec-btn')?.click();}},
+    {id:'rand',   label:'✦ RANDOM',  action(){document.getElementById('rand-btn')?.click();}},
+    {id:'rev',    label:'⇆ REVERSE', action(){const b=document.querySelector('#mod-seq [data-dir="rev"]');if(b)b.click();else if(mods.seq)mods.seq.direction='rev';}},
+    {id:'fwd',    label:'→ FORWARD', action(){const b=document.querySelector('#mod-seq [data-dir="fwd"]');if(b)b.click();else if(mods.seq)mods.seq.direction='fwd';}},
+  ],
+
+  init() {
+    this.query = window.matchMedia('(max-width:640px)');
+    this.buildShell();
+    if(this.query.matches) this.activate();
+    this.query.addEventListener('change', e => { if(e.matches) this.activate(); else this.deactivate(); });
+  },
+
+  // ── Build the full mobile DOM tree (once, on init) ─────────────────────────
+  buildShell() {
+    const sh = document.createElement('div');
+    sh.id = 'm-shell';
+    sh.style.display = 'none'; // hidden until activate()
+
+    // ── Top bar ───────────────────────────────────────────────────────────────
+    const topbar = document.createElement('div');
+    topbar.id = 'm-topbar';
+    const brand = document.createElement('span');
+    brand.className = 'm-brand';
+    brand.textContent = 'nm²';
+    const pname = document.createElement('span');
+    pname.id = 'm-patch-name';
+    pname.textContent = this.patchName;
+    pname.style.cursor = 'pointer';
+    pname.addEventListener('click', () => this.openPresetSheet());
+    const bpm = document.createElement('span');
+    bpm.id = 'm-bpm';
+    bpm.textContent = '120 BPM';
+    const meterCv = document.createElement('canvas');
+    meterCv.id = 'm-meter-canvas';
+    meterCv.width = 36; meterCv.height = 16;
+    const overflowBtn = document.createElement('button');
+    overflowBtn.id = 'm-overflow-btn';
+    overflowBtn.textContent = '⋯';
+    overflowBtn.addEventListener('click', () => this.openOverflow());
+    topbar.append(brand, pname, bpm, meterCv, overflowBtn);
+
+    // ── Workspace ─────────────────────────────────────────────────────────────
+    const ws = document.createElement('div');
+    ws.id = 'm-workspace';
+
+    // Create all tab content containers
+    const tabIds = ['play','sound','patch','perform','library'];
+    tabIds.forEach(id => {
+      const d = document.createElement('div');
+      d.id = 'm-tab-' + id;
+      d.className = 'm-tab-content' + (id === 'play' ? ' active' : '');
+      ws.appendChild(d);
+    });
+
+    // ── Tab bar ───────────────────────────────────────────────────────────────
+    const tabbar = document.createElement('div');
+    tabbar.id = 'm-tabbar';
+    const tabLabels = {play:'PLAY', sound:'SOUND', patch:'PATCH', perform:'PERFORM', library:'LIB'};
+    tabIds.forEach(id => {
+      const b = document.createElement('button');
+      b.className = 'm-tab' + (id === 'play' ? ' on' : '');
+      b.dataset.tab = id;
+      b.textContent = tabLabels[id];
+      b.addEventListener('click', () => this.switchTab(id));
+      tabbar.appendChild(b);
+    });
+
+    // ── Performance strip ─────────────────────────────────────────────────────
+    const perf = document.createElement('div');
+    perf.id = 'm-perfstrip';
+
+    const playBtn = document.createElement('button');
+    playBtn.id = 'm-play-btn'; playBtn.className = 'btn'; playBtn.textContent = '▶';
+    playBtn.addEventListener('click', () => {
+      this._haptic('light');
+      const pb = document.getElementById('seq-play-btn');
+      if(pb) pb.click();
+      setTimeout(() => this.syncPerfState(), 80);
+    });
+
+    const stopBtn = document.createElement('button');
+    stopBtn.id = 'm-stop-btn'; stopBtn.className = 'btn'; stopBtn.textContent = '■';
+    stopBtn.addEventListener('click', () => {
+      this._haptic('light');
+      if(mods.seq?.playing) {
+        const pb = document.getElementById('seq-play-btn');
+        if(pb) pb.click();
+      }
+      mods.adsr?.off();
+      setTimeout(() => this.syncPerfState(), 80);
+    });
+
+    const holdBtn = document.createElement('button');
+    holdBtn.id = 'm-hold-btn'; holdBtn.className = 'btn'; holdBtn.textContent = 'HOLD';
+    holdBtn.addEventListener('click', () => {
+      const hb = document.getElementById('hold-btn');
+      if(hb) hb.click();
+      else {
+        // toggle hold via mods directly if button not present
+        if(mods.seq) { mods.seq.hold = !mods.seq.hold; holdBtn.classList.toggle('on', mods.seq.hold); }
+      }
+    });
+
+    perf.append(playBtn, stopBtn, holdBtn);
+
+    // Scene A-D buttons
+    const sceneLetters = ['A','B','C','D'];
+    sceneLetters.forEach((ltr, i) => {
+      const sb = document.createElement('button');
+      sb.className = 'btn m-scene-btn';
+      sb.dataset.sceneIdx = i;
+      sb.textContent = ltr;
+      // Tap: recall scene
+      sb.addEventListener('click', () => {
+        document.getElementById('scene-' + i)?.click();
+        this.syncSceneBtns();
+      });
+      // Long-press: save scene
+      let pt;
+      sb.addEventListener('pointerdown', () => {
+        pt = setTimeout(() => {
+          if(typeof getConfig === 'function' && typeof scenes !== 'undefined') {
+            scenes[i] = getConfig();
+            saveScenesToStorage();
+            updateSceneButtons();
+            this._haptic('heavy');
+            setStatus('Scene ' + ltr + ' saved');
+            this.syncSceneBtns();
+          }
+        }, 650);
+      });
+      sb.addEventListener('pointerup',    () => clearTimeout(pt));
+      sb.addEventListener('pointerleave', () => clearTimeout(pt));
+      perf.appendChild(sb);
+    });
+
+    // Macro button — tap to trigger, long-press to assign
+    const macroBtn = document.createElement('button');
+    macroBtn.id = 'm-macro-btn'; macroBtn.className = 'btn';
+    const defaultMacro = this.MACRO_OPTIONS.find(o => o.id === this._macroId);
+    macroBtn.textContent = defaultMacro ? defaultMacro.label : '◌';
+    if(defaultMacro) macroBtn.classList.add('active');
+    macroBtn.addEventListener('click', () => this._macroTrigger());
+    let mpt;
+    macroBtn.addEventListener('pointerdown', () => { mpt = setTimeout(() => this.openMacroSheet(), 650); });
+    macroBtn.addEventListener('pointerup',    () => clearTimeout(mpt));
+    macroBtn.addEventListener('pointerleave', () => clearTimeout(mpt));
+    perf.appendChild(macroBtn);
+
+    sh.append(topbar, ws, tabbar, perf);
+
+    // ── Overflow menu ─────────────────────────────────────────────────────────
+    const ovMenu = document.createElement('div');
+    ovMenu.id = 'm-overflow-menu';
+    const ovBack = document.createElement('div');
+    ovBack.id = 'm-overflow-backdrop';
+    ovBack.addEventListener('click', () => this.closeOverflow());
+    const ovPanel = document.createElement('div');
+    ovPanel.id = 'm-overflow-panel';
+
+    const ovItems = [
+      {label:'⏺ REC',     src:'rec-btn'},
+      {label:'⬡ SHARE',   src:'share-btn'},
+      {label:'✦ RANDOM',  src:'rand-btn'},
+      {label:'⎷ MIDI',    src:'midi-btn'},
+      {label:'◈ GRAPH',   src:'graph-btn'},
+      {label:'⊹ FLOW',    src:'flow-btn'},
+      {label:'⊕ MODULE',  src:'add-mod-btn'},
+      {label:'◐ LIGHT',   src:'theme-btn'},
+      {label:'A+ ACCESS', src:'a11y-btn'},
+    ];
+    ovItems.forEach(({label, src}) => {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        document.getElementById(src)?.click();
+        this.closeOverflow();
+      });
+      ovPanel.appendChild(b);
+    });
+    ovMenu.append(ovBack, ovPanel);
+    sh.appendChild(ovMenu);
+
+    document.body.appendChild(sh);
+    this.shell = sh;
+  },
+
+  // ── activate / deactivate ─────────────────────────────────────────────────
+  // Quick-control definitions per module type: knobs shown on the card surface
+  CARD_DEFS: {
+    seq:       {label:'SEQUENCER', knobs:[{l:'BPM',k:'seq-bpm'}]},
+    vco:       {label:'VCO',       knobs:[{l:'COARSE',k:'vco-coarse'},{l:'FINE',k:'vco-fine'}]},
+    vcf:       {label:'FILTER',    knobs:[{l:'CUT',k:'vcf-cutoff'},{l:'RES',k:'vcf-res'}]},
+    adsr:      {label:'ADSR',      knobs:[{l:'ATK',k:'adsr-A'},{l:'REL',k:'adsr-R'}]},
+    vca:       {label:'VCA',       knobs:[{l:'GAIN',k:'vca-gain'}]},
+    lfo:       {label:'LFO',       knobs:[{l:'RATE',k:'lfo-rate'},{l:'DEPTH',k:'lfo-depth'}]},
+    lfo2:      {label:'LFO 2',     knobs:[{l:'RATE',k:'lfo2-rate'},{l:'DEPTH',k:'lfo2-depth'}]},
+    sandh:     {label:'S & H',     knobs:[]},
+    att:       {label:'ATTENUVTR', knobs:[{l:'ATT',k:'att-knob'},{l:'OFFSET',k:'att-offset'}]},
+    slew:      {label:'SLEW',      knobs:[{l:'RISE',k:'slew-rise'},{l:'FALL',k:'slew-fall'}]},
+    chaos:     {label:'CHAOS',     knobs:[{l:'RATE',k:'chaos-rate'},{l:'CHAOS',k:'chaos-chaos'}]},
+    clkdiv:    {label:'CLK DIV',   knobs:[]},
+    euclid:    {label:'EUCLID',    knobs:[{l:'HITS',k:'euclid-hits'},{l:'STEPS',k:'euclid-steps'}]},
+    logic:     {label:'LOGIC',     knobs:[]},
+    morph:     {label:'MORPH',     knobs:[{l:'POS',k:'morph-pos'}]},
+    sidechain: {label:'SIDECHAIN', knobs:[{l:'ATK',k:'sc-attack'},{l:'AMT',k:'sc-amount'}]},
+    vco2:      {label:'VCO 2',     knobs:[{l:'COARSE',k:'vco2-coarse'},{l:'DETUNE',k:'vco2-detune'}]},
+    noise:     {label:'NOISE',     knobs:[{l:'LEVEL',k:'noise-level'}]},
+    mixer:     {label:'MIXER',     knobs:[{l:'A',k:'mix-knob-a'},{l:'B',k:'mix-knob-b'},{l:'C',k:'mix-knob-c'}]},
+    ladder:    {label:'LADDER',    knobs:[{l:'CUT',k:'ladder-cutoff'},{l:'RES',k:'ladder-reso'}]},
+    chord:     {label:'CHORD',     knobs:[{l:'LEVEL',k:'chord-level'},{l:'SPREAD',k:'chord-spread'}]},
+    arp:       {label:'ARPEGGIO',  knobs:[{l:'ROOT',k:'arp-root'}]},
+    quant:     {label:'QUANTZR',   knobs:[]},
+    res:       {label:'RESONATOR', knobs:[{l:'FREQ',k:'res-freq'},{l:'DECAY',k:'res-decay'}]},
+    formant:   {label:'FORMANT',   knobs:[{l:'VOWEL',k:'formant-vowel'},{l:'MIX',k:'formant-mix'}]},
+    tape:      {label:'TAPE SAT',  knobs:[{l:'DRIVE',k:'tape-drive'},{l:'MIX',k:'tape-mix'}]},
+    wavefolder:{label:'WVFLDR',    knobs:[{l:'FOLD',k:'fold-fold'},{l:'SYMM',k:'fold-symm'}]},
+    crush:     {label:'BITCRUSH',  knobs:[{l:'BITS',k:'crush-bits'},{l:'MIX',k:'crush-mix'}]},
+    stutter:   {label:'STUTTER',   knobs:[{l:'SLICE',k:'stut-slice'},{l:'MIX',k:'stut-mix'}]},
+    spectral:  {label:'SPECTRAL',  knobs:[{l:'MIX',k:'spectral-mix'},{l:'PITCH',k:'spectral-pitch'}]},
+    delay:     {label:'DELAY',     knobs:[{l:'TIME',k:'delay-time'},{l:'FB',k:'delay-fb'},{l:'MIX',k:'delay-mix'}]},
+    reverb:    {label:'REVERB',    knobs:[{l:'SIZE',k:'reverb-size'},{l:'MIX',k:'reverb-mix'}]},
+    chorus:    {label:'CHORUS',    knobs:[{l:'RATE',k:'chorus-rate'},{l:'MIX',k:'chorus-mix'}]},
+    phaser:    {label:'PHASER',    knobs:[{l:'RATE',k:'phaser-rate'},{l:'MIX',k:'phaser-mix'}]},
+    panner:    {label:'PANNER',    knobs:[{l:'RATE',k:'pan-rate'},{l:'DEPTH',k:'pan-depth'}]},
+    sampler:   {label:'SAMPLER',   knobs:[{l:'SPEED',k:'smp-speed'},{l:'PITCH',k:'smp-pitch'}]},
+    padsampler:{label:'PAD SMPLR', knobs:[]},
+    micinput:  {label:'MIC IN',    knobs:[{l:'LEVEL',k:'mic-level'}]},
+    miclooper: {label:'MIC LOOP',  knobs:[{l:'IN',k:'micloop-level'}]},
+    microcosm: {label:'MICROCOSM', knobs:[{l:'BLEND',k:'mc-blend'},{l:'SIZE',k:'mc-size'}]},
+    scope:     {label:'SCOPE',     knobs:[]},
+    spectrum:  {label:'SPECTRUM',  knobs:[]},
+    lissajous: {label:'LISSAJOUS', knobs:[]},
+  },
+
+  activate() {
+    this.active = true;
+    const rack = document.getElementById('rack');
+
+    // Save rack children order (including .rack-group dividers) and sync before depopulating
+    this.savedRackChildren = [...rack.children];
+    if(typeof syncRackOrder === 'function') syncRackOrder();
+
+    // Ensure module pool exists
+    if(!document.getElementById('m-module-pool')) {
+      const pool = document.createElement('div');
+      pool.id = 'm-module-pool';
+      document.body.appendChild(pool);
+    }
+    const pool = document.getElementById('m-module-pool');
+
+    // Reparent affect panel to Play hero
+    const affectPanel = document.getElementById('mod-affect');
+    const hero = document.getElementById('m-play-hero');
+    if(affectPanel && hero && !hero.contains(affectPanel)) hero.appendChild(affectPanel);
+
+    // Reparent all other module panels to the hidden pool
+    document.querySelectorAll('#rack .module').forEach(panel => {
+      if(panel.id !== 'mod-affect') pool.appendChild(panel);
+    });
+
+    // Build tab content (idempotent after first call)
+    this.buildPlayTab();
+    this.buildSoundTab();
+    this.buildPatchTab();
+    this.buildLibraryTab();
+    this.buildPerformTab();
+    this.buildEditorSheet();
+    this.buildPresetSheet();
+
+    this.shell.style.display = 'flex';
+    this.syncPerfState();
+    this.syncSceneBtns();
+    this.syncBPM();
+    this.switchTab('play');
+    this.startActivityPoll();
+    this.startMeter();
+  },
+
+  deactivate() {
+    this.active = false;
+    this.stopActivityPoll();
+    this.stopMeter();
+    this.stopPerformStepHighlight();
+
+    // Close editor without animation (instant)
+    const editorSheet = document.getElementById('m-editor-sheet');
+    if(editorSheet) editorSheet.classList.remove('open');
+
+    const rack = document.getElementById('rack');
+    const pool = document.getElementById('m-module-pool');
+
+    // Restore savedRackChildren order (rack-group dividers + module panels)
+    // First, reclaim any module panels from the editor body or pool back to pool
+    document.querySelectorAll('#m-editor-body .module').forEach(p => pool?.appendChild(p));
+
+    // Restore from pool and original order
+    this.savedRackChildren.forEach(child => {
+      if(child.classList?.contains('module')) {
+        // Find in pool by id, restore
+        const inPool = pool?.querySelector('#' + child.id);
+        if(inPool) rack.appendChild(inPool);
+        // mod-affect lives in the play hero
+        const inHero = document.getElementById('m-play-hero')?.querySelector('#' + child.id);
+        if(inHero) rack.appendChild(inHero);
+      } else {
+        rack.appendChild(child);
+      }
+    });
+
+    this.shell.style.display = 'none';
+    requestAnimationFrame(() => { cables.forEach(c => moveCable(c)); });
+  },
+
+  // ── Build tab content ──────────────────────────────────────────────────────
+  buildPlayTab() {
+    const tab = document.getElementById('m-tab-play');
+    if(tab.dataset.built) return;
+    tab.dataset.built = '1';
+
+    // Hero: reparent Affect module
+    const hero = document.createElement('div');
+    hero.id = 'm-play-hero';
+    const affectPanel = document.getElementById('mod-affect');
+    if(affectPanel) hero.appendChild(affectPanel);
+    tab.appendChild(hero);
+
+    // Quick-sound cards header row
+    const quickHdr = document.createElement('div');
+    quickHdr.id = 'm-quick-row-header';
+    const quickLbl = document.createElement('span');
+    quickLbl.id = 'm-quick-row-label'; quickLbl.textContent = 'QUICK SOUND';
+    const quickCfgBtn = document.createElement('button');
+    quickCfgBtn.id = 'm-quick-cfg-btn'; quickCfgBtn.textContent = '⊹ EDIT CARDS';
+    quickCfgBtn.addEventListener('click', () => this.openQuickCfgSheet());
+    quickHdr.append(quickLbl, quickCfgBtn);
+    tab.appendChild(quickHdr);
+
+    // Quick-sound cards (configurable)
+    const quickRow = document.createElement('div');
+    quickRow.id = 'm-quick-row';
+    tab.appendChild(quickRow);
+    this._rebuildQuickCards(quickRow);
+
+    // Activity strip
+    const act = document.createElement('div');
+    act.id = 'm-activity';
+    ['seq','loop','patch'].forEach(key => {
+      const item = document.createElement('div');
+      item.className = 'm-act-item';
+      const dot = document.createElement('div');
+      dot.className = 'm-act-dot';
+      dot.id = 'm-act-dot-' + key;
+      const txt = document.createElement('span');
+      txt.id = 'm-act-' + key;
+      txt.textContent = '...';
+      item.append(dot, txt);
+      act.appendChild(item);
+    });
+    tab.appendChild(act);
+  },
+
+  buildSoundTab() {
+    const tab = document.getElementById('m-tab-sound');
+    if(tab.dataset.built) return;
+    tab.dataset.built = '1';
+
+    Object.entries(this.GROUPS).forEach(([key, types]) => {
+      const group = document.createElement('div');
+      group.className = 'm-snd-group';
+      group.dataset.group = key;
+
+      const hdr = document.createElement('button');
+      hdr.className = 'm-snd-hdr' + (this.OPEN_DEFAULT.has(key) ? ' open' : '');
+      hdr.innerHTML = this.GROUP_LABELS[key] + '<span class="m-snd-hdr-arrow">▾</span>';
+      hdr.addEventListener('click', () => this.toggleGroup(key));
+
+      const body = document.createElement('div');
+      body.className = 'm-snd-body' + (this.OPEN_DEFAULT.has(key) ? ' open' : '');
+      body.id = 'm-snd-body-' + key;
+
+      // Create a module card for each type in this group
+      types.forEach(type => {
+        const def = this.CARD_DEFS[type];
+        const allInstances = [1, ...((typeof moduleInstances !== 'undefined' && moduleInstances[type]) || [1]).filter(i => i > 1)];
+        allInstances.forEach(instanceId => {
+          const panelId = instanceId === 1 ? 'mod-' + type : 'mod-' + type + '-' + instanceId;
+          if(!document.getElementById(panelId) && !document.getElementById('m-module-pool')?.querySelector('#' + panelId)) return;
+          const card = document.createElement('div');
+          card.className = 'm-card';
+          card.dataset.moduleType = type;
+          card.dataset.instanceId = instanceId;
+
+          const hdrRow = document.createElement('div');
+          hdrRow.className = 'm-card-header';
+          const nameEl = document.createElement('span');
+          nameEl.className = 'm-card-name';
+          nameEl.textContent = (def?.label || type.toUpperCase()) + (instanceId > 1 ? ' ' + instanceId : '');
+          const statusDot = document.createElement('div');
+          statusDot.className = 'm-card-status';
+          statusDot.id = 'm-card-status-' + type + (instanceId > 1 ? '-' + instanceId : '');
+          const editBtn = document.createElement('button');
+          editBtn.className = 'm-card-edit';
+          editBtn.textContent = 'EDIT ›';
+          editBtn.addEventListener('click', () => this.openEditor(type, instanceId));
+          hdrRow.append(nameEl, statusDot, editBtn);
+          card.appendChild(hdrRow);
+
+          // Quick control value buttons
+          if(def?.knobs?.length) {
+            const ctrls = document.createElement('div');
+            ctrls.className = 'm-card-ctrls';
+            def.knobs.forEach(({l, k}) => {
+              const knobKey = instanceId === 1 ? k : k.replace(/^([a-z]+)-/, `$1-${instanceId}-`);
+              const ctrl = document.createElement('div');
+              ctrl.className = 'm-ctrl';
+              const lbl = document.createElement('div');
+              lbl.className = 'm-ctrl-lbl';
+              lbl.textContent = l;
+              const btn = document.createElement('button');
+              btn.className = 'm-ctrl-btn';
+              btn.dataset.knob = knobKey;
+              btn.textContent = '—';
+              btn.addEventListener('click', () => {
+                const kref = knobRefs[knobKey];
+                if(kref && typeof ensureKnobTouchEditor === 'function') {
+                  ensureKnobTouchEditor().open(kref);
+                }
+              });
+              ctrl.append(lbl, btn);
+              ctrls.appendChild(ctrl);
+            });
+            card.appendChild(ctrls);
+          } else {
+            const empty = document.createElement('div');
+            empty.className = 'm-card-empty';
+            empty.textContent = 'Tap EDIT to open';
+            card.appendChild(empty);
+          }
+
+          body.appendChild(card);
+        });
+      });
+
+      group.append(hdr, body);
+      tab.appendChild(group);
+    });
+  },
+
+  // ── Full-editor bottom sheet ───────────────────────────────────────────────
+  buildEditorSheet() {
+    if(document.getElementById('m-editor-sheet')) return;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'm-editor-sheet';
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'm-editor-backdrop';
+    backdrop.addEventListener('click', () => this.closeEditor());
+
+    const panel = document.createElement('div');
+    panel.id = 'm-editor-panel';
+
+    const hdr = document.createElement('div');
+    hdr.id = 'm-editor-header';
+    const handle = document.createElement('div');
+    handle.id = 'm-editor-handle';
+    const title = document.createElement('span');
+    title.id = 'm-editor-title';
+    title.textContent = 'MODULE';
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'm-editor-close';
+    closeBtn.textContent = '✕ CLOSE';
+    closeBtn.addEventListener('click', () => this.closeEditor());
+    hdr.append(handle, title, closeBtn);
+
+    const body = document.createElement('div');
+    body.id = 'm-editor-body';
+
+    panel.append(hdr, body);
+    sheet.append(backdrop, panel);
+    document.body.appendChild(sheet);
+  },
+
+  openEditor(type, instanceId = 1) {
+    const sheet = document.getElementById('m-editor-sheet');
+    const body  = document.getElementById('m-editor-body');
+    const title = document.getElementById('m-editor-title');
+    if(!sheet || !body) return;
+
+    // Close any currently-open editor first
+    if(sheet.classList.contains('open')) this.closeEditor(true);
+
+    const panelId = instanceId === 1 ? 'mod-' + type : 'mod-' + type + '-' + instanceId;
+    const pool = document.getElementById('m-module-pool');
+    const modulePanel = pool?.querySelector('#' + panelId) || document.getElementById(panelId);
+    if(!modulePanel) return;
+
+    const def = this.CARD_DEFS[type];
+    title.textContent = (def?.label || type.toUpperCase()) + (instanceId > 1 ? ' ' + instanceId : '');
+    body.appendChild(modulePanel);
+    sheet.classList.add('open');
+    // Scroll editor to top
+    document.getElementById('m-editor-panel').scrollTop = 0;
+    this._editorType = type;
+    this._editorInstanceId = instanceId;
+  },
+
+  closeEditor(instant = false) {
+    const sheet = document.getElementById('m-editor-sheet');
+    const body  = document.getElementById('m-editor-body');
+    const pool  = document.getElementById('m-module-pool');
+    if(!sheet) return;
+
+    // Return module panel to pool
+    if(body && pool) {
+      body.querySelectorAll('.module').forEach(p => pool.appendChild(p));
+    }
+
+    if(instant) {
+      sheet.classList.remove('open');
+    } else {
+      const panel = document.getElementById('m-editor-panel');
+      panel.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        sheet.classList.remove('open');
+        panel.style.transform = '';
+      }, 290);
+    }
+    this._editorType = null;
+    this._editorInstanceId = null;
+  },
+
+  // ── Preset browser sheet ───────────────────────────────────────────────────
+  buildPresetSheet() {
+    if(document.getElementById('m-preset-sheet')) return;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'm-preset-sheet';
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'm-preset-backdrop';
+    backdrop.addEventListener('click', () => this.closePresetSheet());
+
+    const panel = document.createElement('div');
+    panel.id = 'm-preset-panel';
+
+    const hdr = document.createElement('div');
+    hdr.id = 'm-preset-panel-header';
+    const title = document.createElement('span');
+    title.id = 'm-preset-panel-title';
+    title.textContent = 'PATCHES';
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'm-preset-panel-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => this.closePresetSheet());
+    hdr.append(title, closeBtn);
+
+    // Action buttons row
+    const acts = document.createElement('div');
+    acts.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;';
+    [{label:'+ SAVE', fn: () => { document.getElementById('ps-save')?.click(); setTimeout(()=>this.refreshPresetSheet(), 400); }},
+     {label:'⊹ FACTORY', fn: () => { document.getElementById('factory-btn')?.click(); this.closePresetSheet(); }},
+     {label:'✦ RANDOM', fn: () => { document.getElementById('rand-btn')?.click(); this.closePresetSheet(); }},
+    ].forEach(({label, fn}) => {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = label;
+      b.style.cssText = 'font-size:11px;padding:8px 12px;flex:1;';
+      b.addEventListener('click', fn);
+      acts.appendChild(b);
+    });
+
+    const list = document.createElement('div');
+    list.id = 'm-preset-panel-list';
+
+    panel.append(hdr, acts, list);
+    sheet.append(backdrop, panel);
+    document.body.appendChild(sheet);
+  },
+
+  openPresetSheet() {
+    const sheet = document.getElementById('m-preset-sheet');
+    if(sheet) { this.refreshPresetSheet(); sheet.classList.add('open'); }
+  },
+
+  closePresetSheet() {
+    const sheet = document.getElementById('m-preset-sheet');
+    const panel = document.getElementById('m-preset-panel');
+    if(!sheet) return;
+    if(panel) {
+      panel.style.transform = 'translateY(100%)';
+      setTimeout(() => { sheet.classList.remove('open'); panel.style.transform = ''; }, 290);
+    } else {
+      sheet.classList.remove('open');
+    }
+  },
+
+  refreshPresetSheet() {
+    const list = document.getElementById('m-preset-panel-list');
+    if(!list) return;
+    list.innerHTML = '';
+    let presets = [];
+    try { presets = JSON.parse(localStorage.getItem('nm2synth_presets') || '[]'); } catch(e) {}
+    if(presets.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--text-dim);font-size:11px;padding:12px 0;text-align:center;';
+      empty.textContent = 'No saved presets yet.';
+      list.appendChild(empty); return;
+    }
+    presets.forEach((p, idx) => {
+      const row = document.createElement('div');
+      row.className = 'm-preset-row';
+      const name = document.createElement('span');
+      name.textContent = p.name || 'Untitled';
+      const del = document.createElement('span');
+      del.className = 'm-preset-del';
+      del.textContent = '✕';
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        presets.splice(idx, 1);
+        localStorage.setItem('nm2synth_presets', JSON.stringify(presets));
+        this.refreshPresetSheet(); this.refreshPresetList();
+      });
+      row.append(name, del);
+      row.addEventListener('click', () => {
+        if(p.config) applyConfig(p.config);
+        this.patchName = p.name || 'INIT PATCH';
+        const pn = document.getElementById('m-patch-name');
+        if(pn) pn.textContent = this.patchName;
+        setStatus('Loaded: ' + this.patchName);
+        this.closePresetSheet();
+        this.refreshCards();
+      });
+      list.appendChild(row);
+    });
+  },
+
+  _patchFilter: 'all', // 'all' | 'audio' | 'cv' | 'gate'
+
+  buildPatchTab() {
+    const tab = document.getElementById('m-tab-patch');
+    if(tab.dataset.built) return;
+    tab.dataset.built = '1';
+
+    // Header: title + cable count + ADD button
+    const header = document.createElement('div');
+    header.id = 'm-patch-header';
+    const title = document.createElement('h3');
+    title.id = 'mpatch-title-h3';
+    title.textContent = 'CONNECTIONS';
+    const countSpan = document.createElement('span');
+    countSpan.id = 'm-patch-count';
+    const addBtn = document.createElement('button');
+    addBtn.id = 'm-patch-add';
+    addBtn.className = 'btn';
+    addBtn.textContent = '+ ADD';
+    addBtn.addEventListener('click', () => this.openSrcSheet());
+    header.append(title, countSpan, addBtn);
+
+    // Signal type filter tabs
+    const filterRow = document.createElement('div');
+    filterRow.id = 'm-patch-filter';
+    [{k:'all',l:'ALL'},{k:'audio',l:'AUDIO'},{k:'cv',l:'CV'},{k:'gate',l:'GATE'}].forEach(({k, l}) => {
+      const btn = document.createElement('button');
+      btn.className = 'm-pf-btn' + (k === 'all' ? ' on' : '');
+      btn.dataset.filter = k;
+      btn.textContent = l;
+      btn.addEventListener('click', () => {
+        this._patchFilter = k;
+        document.querySelectorAll('.m-pf-btn').forEach(b => b.classList.toggle('on', b.dataset.filter === k));
+        this.refreshPatchTab();
+      });
+      filterRow.appendChild(btn);
+    });
+
+    const list = document.createElement('div');
+    list.id = 'm-conn-list';
+
+    tab.append(header, filterRow, list);
+    this.refreshPatchTab();
+    this.buildSrcSheet();
+  },
+
+  buildPerformTab() {
+    const tab = document.getElementById('m-tab-perform');
+    if(tab.dataset.built) return;
+    tab.dataset.built = '1';
+
+    // ── BPM control ──────────────────────────────────────────────────────────
+    const bpmWrap = document.createElement('div');
+    bpmWrap.id = 'm-perf-bpm-wrap';
+
+    const bpmDec = document.createElement('button');
+    bpmDec.className = 'btn m-perf-adj'; bpmDec.textContent = '−';
+    bpmDec.addEventListener('click', () => {
+      if(!mods.seq) return;
+      const v = Math.max(20, Math.round(mods.seq.bpm) - 1);
+      mods.seq.setBPM(v); sk('seq-bpm', v);
+      this._haptic('light'); this.refreshPerformBPM();
+    });
+    // Hold to repeat
+    let bpmHoldTimer, bpmHoldInterval;
+    const startBpmHold = dir => {
+      bpmHoldTimer = setTimeout(() => {
+        bpmHoldInterval = setInterval(() => {
+          if(!mods.seq) return;
+          const v = Math.max(20, Math.min(240, Math.round(mods.seq.bpm) + dir));
+          mods.seq.setBPM(v); sk('seq-bpm', v); this.refreshPerformBPM();
+        }, 80);
+      }, 400);
+    };
+    const stopBpmHold = () => { clearTimeout(bpmHoldTimer); clearInterval(bpmHoldInterval); };
+    bpmDec.addEventListener('pointerdown', () => startBpmHold(-1));
+    bpmDec.addEventListener('pointerup',   stopBpmHold);
+    bpmDec.addEventListener('pointerleave',stopBpmHold);
+
+    const bpmCenter = document.createElement('div');
+    bpmCenter.id = 'm-perf-bpm-center';
+    bpmCenter.title = 'Tap to fine-tune';
+    const bpmVal = document.createElement('div');
+    bpmVal.id = 'm-perf-bpm-val';
+    bpmVal.textContent = mods.seq ? Math.round(mods.seq.bpm) : 120;
+    const bpmUnit = document.createElement('div');
+    bpmUnit.id = 'm-perf-bpm-unit'; bpmUnit.textContent = 'BPM';
+    bpmCenter.append(bpmVal, bpmUnit);
+    // Tap BPM display → open KTE for precise editing
+    bpmCenter.addEventListener('click', () => {
+      if(knobRefs['seq-bpm']) ensureKnobTouchEditor().open(knobRefs['seq-bpm']);
+    });
+
+    const bpmInc = document.createElement('button');
+    bpmInc.className = 'btn m-perf-adj'; bpmInc.textContent = '+';
+    bpmInc.addEventListener('click', () => {
+      if(!mods.seq) return;
+      const v = Math.min(240, Math.round(mods.seq.bpm) + 1);
+      mods.seq.setBPM(v); sk('seq-bpm', v);
+      this._haptic('light'); this.refreshPerformBPM();
+    });
+    bpmInc.addEventListener('pointerdown', () => startBpmHold(1));
+    bpmInc.addEventListener('pointerup',   stopBpmHold);
+    bpmInc.addEventListener('pointerleave',stopBpmHold);
+
+    bpmWrap.append(bpmDec, bpmCenter, bpmInc);
+    tab.appendChild(bpmWrap);
+
+    // ── Transport ────────────────────────────────────────────────────────────
+    const transportRow = document.createElement('div');
+    transportRow.id = 'm-perf-transport';
+    const pPlayBtn = document.createElement('button');
+    pPlayBtn.className = 'btn'; pPlayBtn.textContent = '▶ PLAY'; pPlayBtn.id = 'm-pf-play';
+    pPlayBtn.addEventListener('click', () => {
+      this._haptic('light');
+      document.getElementById('seq-play-btn')?.click();
+      setTimeout(() => { this.syncPerfState(); this._syncPfTransport(); }, 80);
+    });
+    const pStopBtn = document.createElement('button');
+    pStopBtn.className = 'btn'; pStopBtn.textContent = '■ STOP'; pStopBtn.id = 'm-pf-stop';
+    pStopBtn.addEventListener('click', () => {
+      this._haptic('light');
+      if(mods.seq?.playing) document.getElementById('seq-play-btn')?.click();
+      mods.adsr?.off();
+      setTimeout(() => { this.syncPerfState(); this._syncPfTransport(); }, 80);
+    });
+    transportRow.append(pPlayBtn, pStopBtn);
+    tab.appendChild(transportRow);
+
+    // ── Step count ───────────────────────────────────────────────────────────
+    const stepsLbl = document.createElement('div');
+    stepsLbl.className = 'm-perf-sec-lbl'; stepsLbl.textContent = 'STEPS';
+    tab.appendChild(stepsLbl);
+    const countRow = document.createElement('div');
+    countRow.id = 'm-step-count-row';
+    [8, 16].forEach(n => {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = n + ' STEPS'; b.dataset.stepCountMobile = n;
+      b.addEventListener('click', () => {
+        // Trigger the original seq step-count button inside #mod-seq
+        document.querySelectorAll(`#mod-seq [data-stepcount="${n}"]`).forEach(el => el.click());
+        document.querySelectorAll('[data-step-count-mobile]').forEach(el =>
+          el.classList.toggle('on', Number(el.dataset.stepCountMobile) === n));
+        this.refreshPerformStepGrid();
+        this._haptic('light');
+      });
+      countRow.appendChild(b);
+    });
+    tab.appendChild(countRow);
+
+    // ── Direction ────────────────────────────────────────────────────────────
+    const dirLbl = document.createElement('div');
+    dirLbl.className = 'm-perf-sec-lbl'; dirLbl.textContent = 'DIRECTION';
+    tab.appendChild(dirLbl);
+    const dirRow = document.createElement('div');
+    dirRow.id = 'm-perf-dir-row';
+    [['FWD','fwd'],['REV','rev'],['P-P','pp'],['RND','rnd']].forEach(([lbl, dir]) => {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = lbl; b.dataset.dirMobile = dir;
+      b.addEventListener('click', () => {
+        document.querySelector(`#mod-seq [data-dir="${dir}"]`)?.click();
+        document.querySelectorAll('[data-dir-mobile]').forEach(el =>
+          el.classList.toggle('on', el.dataset.dirMobile === dir));
+        this._haptic('light');
+      });
+      dirRow.appendChild(b);
+    });
+    tab.appendChild(dirRow);
+
+    // ── Step pattern grid ─────────────────────────────────────────────────────
+    const patLbl = document.createElement('div');
+    patLbl.className = 'm-perf-sec-lbl'; patLbl.textContent = 'PATTERN';
+    tab.appendChild(patLbl);
+    const grid = document.createElement('div');
+    grid.id = 'm-step-grid';
+    for(let i = 0; i < 16; i++) {
+      const btn = document.createElement('div');
+      btn.className = 'm-step-btn'; btn.id = 'm-step-btn-' + i;
+      if(i >= 8) btn.style.display = 'none';
+      const num = document.createElement('div'); num.className = 'm-step-num'; num.textContent = i + 1;
+      const pitch = document.createElement('div'); pitch.className = 'm-step-pitch';
+      if(mods.seq?.steps[i]) {
+        const s = mods.seq.steps[i];
+        if(s.on) btn.classList.add('on');
+        pitch.textContent = s.pitch ? (s.pitch > 0 ? '+' + s.pitch : s.pitch) : '';
+      }
+      btn.append(num, pitch);
+      btn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        this._haptic('light');
+        if(!mods.seq) return;
+        const step = mods.seq.steps[i];
+        step.on = !step.on;
+        btn.classList.toggle('on', step.on);
+        // Sync original seq button
+        const orig = document.getElementById('step-tog-' + i);
+        if(orig) orig.classList.toggle('on', step.on);
+      });
+      grid.appendChild(btn);
+    }
+    tab.appendChild(grid);
+
+    this.refreshPerformStepGrid();
+  },
+
+  buildLibraryTab() {
+    const tab = document.getElementById('m-tab-library');
+    if(tab.dataset.built) return;
+    tab.dataset.built = '1';
+
+    // Preset section
+    const psec = document.createElement('div');
+    psec.className = 'm-lib-section';
+    const ptitle = document.createElement('p');
+    ptitle.className = 'm-lib-title';
+    ptitle.textContent = 'PRESETS';
+    const pactions = document.createElement('div');
+    pactions.className = 'm-lib-actions';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn'; saveBtn.textContent = '+ SAVE';
+    saveBtn.addEventListener('click', () => { document.getElementById('ps-save')?.click(); setTimeout(()=>this.refreshPresetList(), 400); });
+    const factoryBtn = document.createElement('button');
+    factoryBtn.className = 'btn'; factoryBtn.textContent = '⊹ FACTORY';
+    factoryBtn.addEventListener('click', () => document.getElementById('factory-btn')?.click());
+    pactions.append(saveBtn, factoryBtn);
+    const plist = document.createElement('div');
+    plist.id = 'm-preset-list';
+    psec.append(ptitle, pactions, plist);
+
+    // Scene section
+    const ssec = document.createElement('div');
+    ssec.className = 'm-lib-section';
+    const stitle = document.createElement('p');
+    stitle.className = 'm-lib-title';
+    stitle.textContent = 'SCENES';
+    const sgrid = document.createElement('div');
+    sgrid.id = 'm-scene-grid';
+    ['A','B','C','D'].forEach((ltr, i) => {
+      const card = document.createElement('div');
+      card.className = 'm-scene-card';
+      card.id = 'm-scene-card-' + i;
+      const letter = document.createElement('div');
+      letter.className = 'm-scene-card-letter';
+      letter.textContent = ltr;
+      const lbl = document.createElement('div');
+      lbl.className = 'm-scene-card-label';
+      lbl.textContent = 'TAP RECALL · HOLD SAVE';
+      card.append(letter, lbl);
+      card.addEventListener('click', () => { document.getElementById('scene-' + i)?.click(); this.syncSceneBtns(); this.syncLibraryScenes(); });
+      let pt2;
+      card.addEventListener('pointerdown', () => {
+        pt2 = setTimeout(() => {
+          if(typeof scenes !== 'undefined') { scenes[i] = getConfig(); saveScenesToStorage(); updateSceneButtons(); this._haptic('heavy'); setStatus('Scene ' + ltr + ' saved'); this.syncLibraryScenes(); }
+        }, 650);
+      });
+      card.addEventListener('pointerup',    () => clearTimeout(pt2));
+      card.addEventListener('pointerleave', () => clearTimeout(pt2));
+      sgrid.appendChild(card);
+    });
+    ssec.append(stitle, sgrid);
+
+    // Actions section
+    const asec = document.createElement('div');
+    asec.className = 'm-lib-section';
+    const atitle = document.createElement('p');
+    atitle.className = 'm-lib-title';
+    atitle.textContent = 'TOOLS';
+    const aactions = document.createElement('div');
+    aactions.className = 'm-lib-actions';
+    [{label:'? HELP', src:'help-btn'},{label:'⇥ EXPORT', src:'ps-export'},{label:'✦ RANDOM', src:'rand-btn'}].forEach(({label,src}) => {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = label;
+      b.addEventListener('click', () => document.getElementById(src)?.click());
+      aactions.appendChild(b);
+    });
+    asec.append(atitle, aactions);
+
+    // Notes section
+    const nsec = document.createElement('div');
+    nsec.className = 'm-lib-section';
+    const ntitle = document.createElement('p');
+    ntitle.className = 'm-lib-title';
+    ntitle.textContent = 'NOTES';
+    const ntxt = document.createElement('textarea');
+    ntxt.id = 'm-notes-area';
+    ntxt.placeholder = 'Patch notes...';
+    // Sync with original notes area
+    const origNotes = document.getElementById('notes-area');
+    if(origNotes) {
+      ntxt.value = origNotes.value;
+      ntxt.addEventListener('input', () => { if(origNotes) origNotes.value = ntxt.value; });
+    }
+    nsec.append(ntitle, ntxt);
+
+    tab.append(psec, ssec, asec, nsec);
+    this.refreshPresetList();
+    this.syncLibraryScenes();
+  },
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  switchTab(name) {
+    document.querySelectorAll('.m-tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.m-tab').forEach(el => el.classList.toggle('on', el.dataset.tab === name));
+    const tabEl = document.getElementById('m-tab-' + name);
+    if(tabEl) tabEl.classList.add('active');
+    this.currentTab = name;
+    if(name === 'patch') this.refreshPatchTab();
+    if(name === 'library') { this.refreshPresetList(); this.syncLibraryScenes(); }
+    if(name === 'play') this.refreshQuickCards();
+    if(name === 'perform') { this.refreshPerformStepGrid(); this.refreshPerformBPM(); this.startPerformStepHighlight(); }
+    else this.stopPerformStepHighlight();
+    // Scroll workspace to top on tab switch
+    const ws = document.getElementById('m-workspace');
+    if(ws) ws.scrollTop = 0;
+  },
+
+  toggleGroup(key) {
+    const hdr = document.querySelector(`.m-snd-group[data-group="${key}"] .m-snd-hdr`);
+    const body = document.getElementById('m-snd-body-' + key);
+    if(!hdr || !body) return;
+    const isOpen = hdr.classList.contains('open');
+    hdr.classList.toggle('open', !isOpen);
+    body.classList.toggle('open', !isOpen);
+  },
+
+  openGroup(key) {
+    const hdr = document.querySelector(`.m-snd-group[data-group="${key}"] .m-snd-hdr`);
+    const body = document.getElementById('m-snd-body-' + key);
+    if(hdr) hdr.classList.add('open');
+    if(body) body.classList.add('open');
+  },
+
+  // ── Overflow menu ──────────────────────────────────────────────────────────
+  openOverflow() {
+    document.getElementById('m-overflow-menu')?.classList.add('open');
+  },
+  closeOverflow() {
+    document.getElementById('m-overflow-menu')?.classList.remove('open');
+  },
+
+  // ── Patch tab: live connection list ───────────────────────────────────────
+  // Format a patch point ID into a readable label: 'vcf-cutoff' → 'VCF CUT'
+  _ppLabel(id) {
+    return id.replace(/-/g, ' ').toUpperCase().replace(/\b(\w{1,3})\w+\b/g, (m, p) => {
+      // Keep short words as-is, truncate long ones to 6 chars
+      return m.length > 6 ? m.slice(0, 6) : m;
+    });
+  },
+
+  // Signal class of a cable: uses source patch point cls
+  _cableSigClass(cable) {
+    return ppMap[cable.fromId]?.cls || 'ao';
+  },
+
+  refreshPatchTab() {
+    const list = document.getElementById('m-conn-list');
+    const countEl = document.getElementById('m-patch-count');
+    if(!list) return;
+    list.innerHTML = '';
+
+    const filter = this._patchFilter || 'all';
+    const filterMap = { audio: ['ao','ai'], cv: ['co','ci'], gate: ['co','gi'] };
+    const allowed = filterMap[filter] || null;
+
+    const visible = (cables || []).filter(cable => {
+      if(!allowed) return true;
+      const cls = ppMap[cable.fromId]?.cls || '';
+      return allowed.includes(cls);
+    });
+
+    if(countEl) countEl.textContent = cables ? '(' + cables.length + ')' : '';
+
+    if(visible.length === 0) {
+      const empty = document.createElement('div');
+      empty.id = 'm-patch-empty';
+      empty.textContent = cables?.length ? 'No ' + filter + ' connections.' : 'No connections. Tap + ADD to patch.';
+      list.appendChild(empty);
+      return;
+    }
+
+    visible.forEach(cable => {
+      const fromPP = ppMap[cable.fromId];
+      const toPP   = ppMap[cable.toId];
+      if(!fromPP || !toPP) return;
+
+      const sigCls = fromPP.cls || 'ao';
+      const row = document.createElement('div');
+      row.className = 'm-conn-row';
+
+      const dot = document.createElement('div');
+      dot.className = 'm-conn-sig ' + sigCls;
+
+      const labels = document.createElement('div');
+      labels.className = 'm-conn-labels';
+      const src = document.createElement('span');
+      src.className = 'm-conn-src';
+      src.textContent = this._ppLabel(cable.fromId);
+      const arrow = document.createElement('span');
+      arrow.className = 'm-conn-arrow';
+      arrow.textContent = '→';
+      const dst = document.createElement('span');
+      dst.className = 'm-conn-dst';
+      dst.textContent = this._ppLabel(cable.toId);
+      labels.append(src, arrow, dst);
+
+      const del = document.createElement('button');
+      del.className = 'm-conn-del';
+      del.textContent = '✕';
+      del.title = 'Remove';
+      del.addEventListener('click', () => { delCable(cable); this.refreshPatchTab(); });
+
+      row.append(dot, labels, del);
+      list.appendChild(row);
+    });
+  },
+
+  // ── Source picker sheet ────────────────────────────────────────────────────
+  _srcFilter: 'all', // 'all' | 'audio' | 'cv'
+
+  buildSrcSheet() {
+    if(document.getElementById('m-src-sheet')) return;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'm-src-sheet';
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'm-src-backdrop';
+    backdrop.addEventListener('click', () => this.closeSrcSheet());
+
+    const panel = document.createElement('div');
+    panel.id = 'm-src-panel';
+
+    const hdr = document.createElement('div');
+    hdr.id = 'm-src-header';
+    const title = document.createElement('span');
+    title.id = 'm-src-title';
+    title.textContent = 'PATCH FROM…';
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'm-src-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => this.closeSrcSheet());
+    hdr.append(title, closeBtn);
+
+    const filterRow = document.createElement('div');
+    filterRow.id = 'm-src-filter';
+    [{k:'all',l:'ALL'},{k:'audio',l:'AUDIO'},{k:'cv',l:'CV'}].forEach(({k, l}) => {
+      const btn = document.createElement('button');
+      btn.className = 'm-sf-btn' + (k === 'all' ? ' on' : '');
+      btn.dataset.srcFilter = k;
+      btn.textContent = l;
+      btn.addEventListener('click', () => {
+        this._srcFilter = k;
+        document.querySelectorAll('.m-sf-btn').forEach(b => b.classList.toggle('on', b.dataset.srcFilter === k));
+        this._applySrcFilter();
+      });
+      filterRow.appendChild(btn);
+    });
+
+    const list = document.createElement('div');
+    list.id = 'm-src-list';
+
+    panel.append(hdr, filterRow, list);
+    sheet.append(backdrop, panel);
+    document.body.appendChild(sheet);
+  },
+
+  openSrcSheet() {
+    const sheet = document.getElementById('m-src-sheet');
+    const list  = document.getElementById('m-src-list');
+    if(!sheet || !list) return;
+
+    list.innerHTML = '';
+    this._srcFilter = 'all';
+    document.querySelectorAll('.m-sf-btn').forEach(b => b.classList.toggle('on', b.dataset.srcFilter === 'all'));
+
+    // Collect all output patch points from ppMap, sorted by display name
+    const outputs = Object.values(ppMap)
+      .filter(pp => pp.role === 'out')
+      .sort((a, b) => a.id.localeCompare(b.id));
+
+    outputs.forEach(pp => {
+      const isLinked = (cables || []).some(c => c.fromId === pp.id);
+      const row = document.createElement('div');
+      row.className = 'm-src-row';
+      row.dataset.cls = pp.cls;
+
+      const dot = document.createElement('div');
+      dot.className = 'm-src-dot ' + (pp.cls || 'ao');
+
+      const name = document.createElement('span');
+      name.className = 'm-src-name';
+      name.textContent = this._ppLabel(pp.id);
+
+      const linked = document.createElement('span');
+      linked.className = 'm-src-linked';
+      linked.textContent = isLinked ? '● connected' : '';
+
+      row.append(dot, name, linked);
+      row.addEventListener('click', () => {
+        this.closeSrcSheet();
+        // Begin patch from this source, then open dest sheet
+        if(typeof cancelPatch === 'function') cancelPatch();
+        if(typeof beginPatch === 'function') beginPatch(pp.id);
+        setTimeout(() => {
+          if(typeof ensurePatchDestSheet === 'function') {
+            ensurePatchDestSheet().show(pp.id);
+          }
+        }, 120);
+      });
+      list.appendChild(row);
+    });
+
+    this._applySrcFilter();
+    sheet.classList.add('open');
+    document.getElementById('m-src-panel').scrollTop = 0;
+  },
+
+  closeSrcSheet() {
+    const sheet = document.getElementById('m-src-sheet');
+    const panel = document.getElementById('m-src-panel');
+    if(!sheet) return;
+    if(panel) {
+      panel.style.transform = 'translateY(100%)';
+      setTimeout(() => { sheet.classList.remove('open'); panel.style.transform = ''; }, 270);
+    } else {
+      sheet.classList.remove('open');
+    }
+  },
+
+  _applySrcFilter() {
+    const f = this._srcFilter;
+    document.querySelectorAll('.m-src-row').forEach(row => {
+      const cls = row.dataset.cls;
+      let show = true;
+      if(f === 'audio') show = cls === 'ao';
+      else if(f === 'cv')    show = cls === 'co';
+      row.classList.toggle('hidden', !show);
+    });
+  },
+
+  // ── Library helpers ────────────────────────────────────────────────────────
+  refreshPresetList() {
+    const list = document.getElementById('m-preset-list');
+    if(!list) return;
+    list.innerHTML = '';
+    let presets = [];
+    try { presets = JSON.parse(localStorage.getItem('nm2synth_presets') || '[]'); } catch(e) {}
+    if(presets.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--text-dim);font-size:11px;padding:12px 0;text-align:center;';
+      empty.textContent = 'No saved presets yet.';
+      list.appendChild(empty);
+      return;
+    }
+    presets.forEach((p, idx) => {
+      const row = document.createElement('div');
+      row.className = 'm-preset-row';
+      const name = document.createElement('span');
+      name.textContent = p.name || 'Untitled';
+      const del = document.createElement('span');
+      del.className = 'm-preset-del';
+      del.textContent = '✕';
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        presets.splice(idx, 1);
+        localStorage.setItem('nm2synth_presets', JSON.stringify(presets));
+        this.refreshPresetList();
+        // Sync desktop preset dropdown
+        const sel = document.getElementById('preset-sel');
+        if(sel) { const ev = new Event('change'); document.getElementById('ps-del')?.dispatchEvent(ev); }
+      });
+      row.append(name, del);
+      row.addEventListener('click', () => {
+        if(p.config) applyConfig(p.config);
+        this.patchName = p.name || 'INIT PATCH';
+        document.getElementById('m-patch-name').textContent = this.patchName;
+        setStatus('Loaded: ' + this.patchName);
+        // Sync desktop dropdown
+        const sel = document.getElementById('preset-sel');
+        if(sel) { sel.value = idx; }
+      });
+      list.appendChild(row);
+    });
+  },
+
+  syncLibraryScenes() {
+    if(typeof scenes === 'undefined') return;
+    scenes.forEach((s, i) => {
+      const card = document.getElementById('m-scene-card-' + i);
+      if(card) card.classList.toggle('filled', s !== null);
+    });
+  },
+
+  // ── Performance state sync ─────────────────────────────────────────────────
+  syncPerfState() {
+    const playing = mods.seq?.playing || false;
+    document.getElementById('m-play-btn')?.classList.toggle('on', playing);
+    document.getElementById('m-stop-btn')?.classList.toggle('on', !playing);
+  },
+
+  syncSceneBtns() {
+    if(typeof scenes === 'undefined') return;
+    document.querySelectorAll('.m-scene-btn').forEach(btn => {
+      const i = parseInt(btn.dataset.sceneIdx);
+      btn.classList.toggle('filled', scenes[i] !== null);
+    });
+  },
+
+  syncBPM() {
+    const el = document.getElementById('m-bpm');
+    if(el && mods.seq) el.textContent = Math.round(mods.seq.bpm || 120) + ' BPM';
+  },
+
+  // ── Activity strip polling ─────────────────────────────────────────────────
+  startActivityPoll() {
+    this._activityInterval = setInterval(() => this.updateActivity(), 500);
+    this.updateActivity();
+  },
+  stopActivityPoll() {
+    clearInterval(this._activityInterval);
+  },
+  updateActivity() {
+    const seqEl  = document.getElementById('m-act-seq');
+    const loopEl = document.getElementById('m-act-loop');
+    const patchEl = document.getElementById('m-act-patch');
+    const seqDot  = document.getElementById('m-act-dot-seq');
+    const loopDot = document.getElementById('m-act-dot-loop');
+
+    if(seqEl && mods.seq) {
+      const playing = mods.seq.playing;
+      seqEl.textContent = 'SEQ ' + (playing ? '▸ ' + (mods.seq.stepCount||8) + ' steps' : 'stopped');
+      if(seqDot) seqDot.classList.toggle('live', playing);
+    }
+    if(loopEl) {
+      const loopActive = typeof mods.looper !== 'undefined' && Array.isArray(mods.looper?.tracks)
+        ? mods.looper.tracks.some(t => t.playing || t.recording)
+        : false;
+      loopEl.textContent = 'LOOP ' + (loopActive ? 'playing' : 'idle');
+      if(loopDot) loopDot.classList.toggle('live', loopActive);
+    }
+    if(patchEl) {
+      patchEl.textContent = (cables?.length || 0) + ' routes';
+    }
+    // Keep Patch tab count badge current
+    const countEl = document.getElementById('m-patch-count');
+    if(countEl && cables) countEl.textContent = '(' + cables.length + ')';
+    this.refreshQuickCards();
+    this.refreshCards();
+    this.syncBPM();
+    this.syncPerfState();
+    this.syncSceneBtns();
+    if(this.currentTab === 'perform') this.refreshPerformBPM();
+  },
+
+  refreshQuickCards() {
+    document.querySelectorAll('.m-quick-card-val-num').forEach(el => {
+      const k = el.dataset.knob;
+      if(k && knobRefs[k]) {
+        const valBtn = document.querySelector(`[data-knob-id="${k}"]`)?.closest('.knob-wrap')?.querySelector('.knob-val');
+        el.textContent = valBtn ? valBtn.textContent : (typeof knobRefs[k].getVal() === 'number' ? knobRefs[k].getVal().toFixed(2) : '—');
+      }
+    });
+  },
+
+  // Update all card quick-control value buttons from knobRefs
+  refreshCards() {
+    document.querySelectorAll('.m-ctrl-btn[data-knob]').forEach(btn => {
+      const k = btn.dataset.knob;
+      if(!k) return;
+      const valBtn = document.querySelector(`[data-knob-id="${k}"]`)?.closest('.knob-wrap')?.querySelector('.knob-val');
+      if(valBtn) { btn.textContent = valBtn.textContent; return; }
+      if(knobRefs[k]) {
+        const v = knobRefs[k].getVal();
+        btn.textContent = typeof v === 'number' ? (v >= 100 ? Math.round(v).toString() : v.toFixed(2)) : '—';
+      }
+    });
+  },
+
+  // ── Tiny VU meter in top bar ───────────────────────────────────────────────
+  startMeter() {
+    const cv = document.getElementById('m-meter-canvas');
+    if(!cv) return;
+    const c = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const buf = new Uint8Array(analyserNode.fftSize);
+    const drawMeter = () => {
+      if(!this.active) return;
+      this._meterRAF = requestAnimationFrame(drawMeter);
+      analyserNode.getByteTimeDomainData(buf);
+      // Compute RMS
+      let sum = 0;
+      for(let i=0; i<buf.length; i++) { const s=(buf[i]-128)/128; sum+=s*s; }
+      const rms = Math.sqrt(sum/buf.length);
+      const level = Math.min(1, rms * 6);
+      c.clearRect(0, 0, W, H);
+      const barW = (W-2)/2;
+      // Two bars (L+R mirrored from mono analyser)
+      [0, barW+2].forEach(x => {
+        const fillH = Math.round(level * H);
+        const hue = level > 0.75 ? 0 : level > 0.5 ? 40 : 140;
+        c.fillStyle = `hsl(${hue},100%,55%)`;
+        c.fillRect(x, H-fillH, barW, fillH);
+      });
+    };
+    drawMeter();
+  },
+  stopMeter() {
+    cancelAnimationFrame(this._meterRAF);
+  },
+
+  // ── Haptic feedback ────────────────────────────────────────────────────────
+  _haptic(type) {
+    if(!navigator.vibrate) return;
+    if(type === 'light')  navigator.vibrate(8);
+    else if(type === 'medium') navigator.vibrate(20);
+    else if(type === 'heavy')  navigator.vibrate([30, 10, 30]);
+  },
+
+  // ── Perform tab helpers ────────────────────────────────────────────────────
+  refreshPerformBPM() {
+    const el = document.getElementById('m-perf-bpm-val');
+    if(el && mods.seq) el.textContent = Math.round(mods.seq.bpm);
+    this.syncBPM();
+  },
+
+  _syncPfTransport() {
+    if(!mods.seq) return;
+    const playing = mods.seq.playing;
+    document.getElementById('m-pf-play')?.classList.toggle('on', playing);
+    document.getElementById('m-pf-stop')?.classList.toggle('on', !playing);
+  },
+
+  refreshPerformStepGrid() {
+    if(!mods.seq) return;
+    const count = mods.seq.stepCount || 8;
+    // Show/hide steps 8-15
+    for(let i = 0; i < 16; i++) {
+      const btn = document.getElementById('m-step-btn-' + i);
+      if(!btn) return;
+      btn.style.display = (i >= 8 && count < 16) ? 'none' : '';
+      const step = mods.seq.steps[i];
+      if(step) {
+        btn.classList.toggle('on', step.on);
+        const pitchEl = btn.querySelector('.m-step-pitch');
+        if(pitchEl) pitchEl.textContent = step.pitch ? (step.pitch > 0 ? '+' + step.pitch : step.pitch) : '';
+      }
+    }
+    // Sync count buttons
+    document.querySelectorAll('[data-step-count-mobile]').forEach(el =>
+      el.classList.toggle('on', Number(el.dataset.stepCountMobile) === count));
+    // Sync direction buttons
+    const dir = mods.seq.direction || 'fwd';
+    document.querySelectorAll('[data-dir-mobile]').forEach(el =>
+      el.classList.toggle('on', el.dataset.dirMobile === dir));
+    // Sync transport
+    this._syncPfTransport();
+  },
+
+  startPerformStepHighlight() {
+    if(this._performRAF) return;
+    let lastStep = -1;
+    const tick = () => {
+      if(!this.active || this.currentTab !== 'perform') { this._performRAF = null; return; }
+      this._performRAF = requestAnimationFrame(tick);
+      if(!mods.seq) return;
+      const cur = mods.seq.playing ? mods.seq.step : -1;
+      if(cur !== lastStep) {
+        if(lastStep >= 0) document.getElementById('m-step-btn-' + lastStep)?.classList.remove('cur');
+        if(cur >= 0)      document.getElementById('m-step-btn-' + cur)?.classList.add('cur');
+        lastStep = cur;
+      }
+    };
+    this._performRAF = requestAnimationFrame(tick);
+  },
+
+  stopPerformStepHighlight() {
+    cancelAnimationFrame(this._performRAF);
+    this._performRAF = null;
+    document.querySelectorAll('.m-step-btn.cur').forEach(el => el.classList.remove('cur'));
+  },
+
+  // ── Macro button ──────────────────────────────────────────────────────────
+  _macroTrigger() {
+    const opt = this.MACRO_OPTIONS.find(o => o.id === this._macroId);
+    if(opt) { opt.action(); this._haptic('medium'); }
+  },
+
+  syncMacroBtn() {
+    const btn = document.getElementById('m-macro-btn');
+    if(!btn) return;
+    const opt = this.MACRO_OPTIONS.find(o => o.id === this._macroId);
+    if(opt) { btn.textContent = opt.label; btn.classList.add('active'); }
+  },
+
+  buildMacroSheet() {
+    if(document.getElementById('m-macro-sheet')) return;
+    const sheet = document.createElement('div'); sheet.id = 'm-macro-sheet';
+    const backdrop = document.createElement('div'); backdrop.id = 'm-macro-backdrop';
+    backdrop.addEventListener('click', () => this.closeMacroSheet());
+    const panel = document.createElement('div'); panel.id = 'm-macro-panel';
+    const hdr = document.createElement('div'); hdr.id = 'm-macro-hdr';
+    const title = document.createElement('span'); title.id = 'm-macro-title'; title.textContent = 'ASSIGN MACRO';
+    const closeBtn = document.createElement('button'); closeBtn.id = 'm-macro-close'; closeBtn.className = 'btn';
+    closeBtn.textContent = '✕'; closeBtn.addEventListener('click', () => this.closeMacroSheet());
+    hdr.append(title, closeBtn); panel.appendChild(hdr);
+    this.MACRO_OPTIONS.forEach(opt => {
+      const row = document.createElement('div');
+      row.className = 'm-macro-opt' + (opt.id === this._macroId ? ' sel' : '');
+      row.dataset.macroId = opt.id;
+      const check = document.createElement('span'); check.className = 'm-macro-check';
+      check.textContent = opt.id === this._macroId ? '✓' : '';
+      const lbl = document.createElement('span'); lbl.className = 'm-macro-lbl'; lbl.textContent = opt.label;
+      row.append(check, lbl);
+      row.addEventListener('click', () => {
+        this._macroId = opt.id;
+        document.querySelectorAll('.m-macro-opt').forEach(el => {
+          const sel = el.dataset.macroId === opt.id;
+          el.classList.toggle('sel', sel);
+          el.querySelector('.m-macro-check').textContent = sel ? '✓' : '';
+        });
+        this.syncMacroBtn();
+        this._haptic('light');
+        setTimeout(() => this.closeMacroSheet(), 200);
+      });
+      panel.appendChild(row);
+    });
+    sheet.append(backdrop, panel);
+    document.body.appendChild(sheet);
+  },
+
+  openMacroSheet() {
+    this.buildMacroSheet();
+    const sheet = document.getElementById('m-macro-sheet');
+    if(sheet) sheet.classList.add('open');
+  },
+
+  closeMacroSheet() {
+    const sheet = document.getElementById('m-macro-sheet');
+    const panel = document.getElementById('m-macro-panel');
+    if(!sheet) return;
+    if(panel) { panel.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.classList.remove('open'); panel.style.transform = ''; }, 270); }
+    else sheet.classList.remove('open');
+  },
+
+  // ── Customizable quick cards ───────────────────────────────────────────────
+  _loadQuickCardConfig() {
+    if(this._quickCardConfig) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('nm2-mobile-quick-cards') || 'null');
+      if(Array.isArray(saved) && saved.length === 4 && saved.every(t => this.CARD_DEFS[t])) {
+        this._quickCardConfig = saved; return;
+      }
+    } catch(e) {}
+    this._quickCardConfig = ['vcf', 'reverb', 'adsr', 'vco'];
+  },
+
+  _rebuildQuickCards(container) {
+    container.innerHTML = '';
+    this._loadQuickCardConfig();
+    this._quickCardConfig.forEach(type => {
+      const def = this.CARD_DEFS[type];
+      if(!def) return;
+      const card = document.createElement('div');
+      card.className = 'm-quick-card'; card.dataset.cardType = type;
+      const nameEl = document.createElement('div');
+      nameEl.className = 'm-quick-card-name'; nameEl.textContent = def.label;
+      card.appendChild(nameEl);
+      const valsEl = document.createElement('div');
+      valsEl.className = 'm-quick-card-vals';
+      def.knobs.slice(0, 2).forEach(({l, k}) => {
+        const row = document.createElement('div'); row.className = 'm-quick-card-val-row';
+        const lbl = document.createElement('span'); lbl.className = 'm-quick-card-val-lbl'; lbl.textContent = l;
+        const num = document.createElement('span'); num.className = 'm-quick-card-val-num';
+        num.dataset.knob = k; num.textContent = '—';
+        row.append(lbl, num); valsEl.appendChild(row);
+      });
+      if(def.knobs.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'm-quick-card-val-lbl'; empty.textContent = 'TAP TO EDIT';
+        valsEl.appendChild(empty);
+      }
+      card.appendChild(valsEl);
+      // Tap: open this module's editor sheet (fastest path to editing)
+      card.addEventListener('click', () => {
+        this.openEditor(type, 1);
+      });
+      container.appendChild(card);
+    });
+    this.refreshQuickCards();
+  },
+
+  buildQuickCfgSheet() {
+    if(document.getElementById('m-quick-cfg-sheet')) return;
+    const sheet = document.createElement('div'); sheet.id = 'm-quick-cfg-sheet';
+    const backdrop = document.createElement('div'); backdrop.id = 'm-quick-cfg-backdrop';
+    backdrop.addEventListener('click', () => this.closeQuickCfgSheet());
+    const panel = document.createElement('div'); panel.id = 'm-quick-cfg-panel';
+    const hdr = document.createElement('div'); hdr.id = 'm-quick-cfg-hdr';
+    const title = document.createElement('span'); title.id = 'm-quick-cfg-title'; title.textContent = 'QUICK CARDS';
+    const closeBtn = document.createElement('button'); closeBtn.id = 'm-quick-cfg-close'; closeBtn.className = 'btn';
+    closeBtn.textContent = '✕'; closeBtn.addEventListener('click', () => this.closeQuickCfgSheet());
+    hdr.append(title, closeBtn); panel.appendChild(hdr);
+    const hint = document.createElement('p');
+    hint.style.cssText = 'font-size:10px;color:var(--text-dim);letter-spacing:.5px;margin-bottom:12px;line-height:1.6;';
+    hint.textContent = 'Pick a module for each card. Tap any card on the Play screen to open that module\'s editor.';
+    panel.appendChild(hint);
+    const groupOrder = Object.keys(this.GROUPS);
+    for(let i = 0; i < 4; i++) {
+      const row = document.createElement('div'); row.className = 'm-cfg-row';
+      const num = document.createElement('span'); num.className = 'm-cfg-slot-num'; num.textContent = i + 1;
+      const sel = document.createElement('select'); sel.className = 'm-cfg-select'; sel.dataset.slotIndex = i;
+      groupOrder.forEach(grp => {
+        const og = document.createElement('optgroup'); og.label = this.GROUP_LABELS[grp];
+        this.GROUPS[grp].forEach(type => {
+          if(!this.CARD_DEFS[type]) return;
+          const opt = document.createElement('option'); opt.value = type;
+          opt.textContent = this.CARD_DEFS[type].label;
+          og.appendChild(opt);
+        });
+        sel.appendChild(og);
+      });
+      sel.addEventListener('change', () => {
+        this._quickCardConfig[i] = sel.value;
+        localStorage.setItem('nm2-mobile-quick-cards', JSON.stringify(this._quickCardConfig));
+        const container = document.getElementById('m-quick-row');
+        if(container) this._rebuildQuickCards(container);
+      });
+      row.append(num, sel); panel.appendChild(row);
+    }
+    sheet.append(backdrop, panel);
+    document.body.appendChild(sheet);
+  },
+
+  openQuickCfgSheet() {
+    this._loadQuickCardConfig();
+    this.buildQuickCfgSheet();
+    // Sync selects to current config
+    document.querySelectorAll('.m-cfg-select').forEach((sel, i) => {
+      if(this._quickCardConfig[i]) sel.value = this._quickCardConfig[i];
+    });
+    document.getElementById('m-quick-cfg-sheet')?.classList.add('open');
+    document.getElementById('m-quick-cfg-panel')?.scrollTo(0, 0);
+  },
+
+  closeQuickCfgSheet() {
+    const sheet = document.getElementById('m-quick-cfg-sheet');
+    const panel = document.getElementById('m-quick-cfg-panel');
+    if(!sheet) return;
+    if(panel) { panel.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.classList.remove('open'); panel.style.transform = ''; }, 270); }
+    else sheet.classList.remove('open');
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
@@ -9005,7 +10911,7 @@ async function init() {
 
 document.getElementById('start').addEventListener('click',()=>{
   document.getElementById('start').style.display='none';
-  init();
+  init().then(()=>nm2Mobile.init());
 });
 
 // ── Keyboard shortcuts ──────────────────────────────────────────────────────
