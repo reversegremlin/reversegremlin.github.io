@@ -480,6 +480,9 @@ body.edit-mode .module-drag-handle{display:inline;}
   #m-patch-empty{color:var(--text-dim);font-size:11px;letter-spacing:.5px;padding:20px 0;text-align:center;}
   #m-patch-count{font-size:10px;color:var(--text-dim);letter-spacing:.5px;margin-left:auto;}
 
+  /* ── Destination picker sheet (desktop element, raised above mobile shell on mobile) ── */
+  #patch-dest-sheet{z-index:870!important;}
+
   /* ── Source picker sheet ── */
   #m-src-sheet{position:fixed;inset:0;z-index:845;display:none;align-items:flex-end;}
   #m-src-sheet.open{display:flex;}
@@ -9742,6 +9745,35 @@ const nm2Mobile = {
     this._editorInstanceId = null;
   },
 
+  _selectDesktopPreset(name = '') {
+    const sel = document.getElementById('preset-sel');
+    if(!sel) return;
+    sel.value = name;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  },
+
+  _loadPresetFromMobile(name) {
+    if(!name) return;
+    this._selectDesktopPreset(name);
+    document.getElementById('ps-load')?.click();
+    this.patchName = name;
+    const patchNameEl = document.getElementById('m-patch-name');
+    if(patchNameEl) patchNameEl.textContent = this.patchName;
+    this.refreshCards();
+    this.refreshQuickCards();
+    this.refreshPatchTab();
+    this.syncLibraryScenes();
+  },
+
+  _deletePresetFromMobile(name) {
+    if(!name) return;
+    savePresets(getPresets().filter(p => p.name !== name));
+    refreshPresetDropdown();
+    this._selectDesktopPreset('');
+    this.refreshPresetSheet();
+    this.refreshPresetList();
+  },
+
   // ── Preset browser sheet ───────────────────────────────────────────────────
   buildPresetSheet() {
     if(document.getElementById('m-preset-sheet')) return;
@@ -9829,19 +9861,12 @@ const nm2Mobile = {
       del.textContent = '✕';
       del.addEventListener('click', e => {
         e.stopPropagation();
-        presets.splice(idx, 1);
-        localStorage.setItem('nm2synth_presets', JSON.stringify(presets));
-        this.refreshPresetSheet(); this.refreshPresetList();
+        this._deletePresetFromMobile(p.name || '');
       });
       row.append(name, del);
       row.addEventListener('click', () => {
-        if(p.config) applyConfig(p.config);
-        this.patchName = p.name || 'INIT PATCH';
-        const pn = document.getElementById('m-patch-name');
-        if(pn) pn.textContent = this.patchName;
-        setStatus('Loaded: ' + this.patchName);
+        this._loadPresetFromMobile(p.name || '');
         this.closePresetSheet();
-        this.refreshCards();
       });
       list.appendChild(row);
     });
@@ -10411,22 +10436,11 @@ const nm2Mobile = {
       del.textContent = '✕';
       del.addEventListener('click', e => {
         e.stopPropagation();
-        presets.splice(idx, 1);
-        localStorage.setItem('nm2synth_presets', JSON.stringify(presets));
-        this.refreshPresetList();
-        // Sync desktop preset dropdown
-        const sel = document.getElementById('preset-sel');
-        if(sel) { const ev = new Event('change'); document.getElementById('ps-del')?.dispatchEvent(ev); }
+        this._deletePresetFromMobile(p.name || '');
       });
       row.append(name, del);
       row.addEventListener('click', () => {
-        if(p.config) applyConfig(p.config);
-        this.patchName = p.name || 'INIT PATCH';
-        document.getElementById('m-patch-name').textContent = this.patchName;
-        setStatus('Loaded: ' + this.patchName);
-        // Sync desktop dropdown
-        const sel = document.getElementById('preset-sel');
-        if(sel) { sel.value = idx; }
+        this._loadPresetFromMobile(p.name || '');
       });
       list.appendChild(row);
     });
