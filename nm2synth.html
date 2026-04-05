@@ -442,6 +442,34 @@ body.edit-mode .module-drag-handle{display:inline;}
   .m-ctrl-btn:active{border-color:var(--accent-cyan);background:color-mix(in srgb,var(--accent-cyan) 10%,var(--bg-input));}
   .m-card-empty{font-size:10px;color:var(--text-dim);letter-spacing:.5px;padding:2px 0;}
 
+  /* ── Card patch-point indicators (Layer 1) ── */
+  .m-card-pp-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border-soft);min-height:16px;}
+  .m-card-pp-side{display:flex;gap:4px;align-items:center;}
+  .m-card-pp-lbl{font-size:8px;letter-spacing:.5px;color:var(--text-dim);margin:0 2px;}
+  .m-pp-dot{width:8px;height:8px;border-radius:50%;opacity:.2;flex-shrink:0;transition:opacity .25s,box-shadow .25s;cursor:pointer;}
+  .m-pp-dot.live{opacity:1;}
+  .m-pp-dot.ao{background:#cc00ff;}.m-pp-dot.live.ao{box-shadow:0 0 6px #cc00ff;}
+  .m-pp-dot.co{background:#00aaff;}.m-pp-dot.live.co{box-shadow:0 0 6px #00aaff;}
+  .m-pp-dot.ai{background:#00ff66;}.m-pp-dot.live.ai{box-shadow:0 0 6px #00ff66;}
+  .m-pp-dot.ci,.m-pp-dot.gi{background:#ffee00;}.m-pp-dot.live.ci,.m-pp-dot.live.gi{box-shadow:0 0 6px #ffee00;}
+
+  /* ── Connection spine SVG (Layer 2) ── */
+  #m-tab-sound{position:relative;}
+  #m-sound-spine{position:absolute;top:0;left:0;width:100%;height:1px;overflow:visible;pointer-events:none;z-index:2;}
+
+  /* ── Patch tab flow map (Layer 3) ── */
+  #m-flow-map{display:flex;flex-direction:column;gap:5px;}
+  .m-flow-row{display:flex;align-items:stretch;background:var(--bg-panel-3);border:1px solid var(--border-soft);border-radius:6px;overflow:hidden;}
+  .m-flow-tile{flex:1;background:none;border:none;padding:9px 10px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;min-height:44px;}
+  .m-flow-tile:active{background:color-mix(in srgb,var(--accent-cyan) 8%,transparent);}
+  .m-flow-tile-name{font-size:10px;letter-spacing:1.5px;color:var(--accent-soft);}
+  .m-flow-tile-sub{font-size:9px;letter-spacing:.3px;color:var(--text-dim);line-height:1.3;}
+  .m-flow-mid{flex:0 0 38px;display:flex;align-items:center;justify-content:center;position:relative;border-left:1px solid var(--border-soft);border-right:1px solid var(--border-soft);}
+  .m-flow-line{position:absolute;top:50%;left:0;right:0;height:1.5px;transform:translateY(-50%);opacity:.65;}
+  .m-flow-dot{width:8px;height:8px;border-radius:50%;position:relative;z-index:1;flex-shrink:0;}
+  .m-flow-del{flex:0 0 36px;background:none;border:none;border-left:1px solid var(--border-soft);color:var(--text-dim);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .m-flow-del:active{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);}
+
   /* ── Full-editor bottom sheet ── */
   #m-editor-sheet{position:fixed;inset:0;z-index:840;display:none;align-items:flex-end;}
   #m-editor-sheet.open{display:flex;}
@@ -3696,8 +3724,12 @@ function completePatch(toId) {
   setStatus('');
   stopGhost();
   updatePatchTouchBanner();
-  // Refresh the mobile patch tab when active
-  if(nm2Mobile?.active && nm2Mobile.currentTab === 'patch') nm2Mobile.refreshPatchTab();
+  // Refresh mobile visuals when active
+  if(nm2Mobile?.active) {
+    if(nm2Mobile.currentTab === 'patch') nm2Mobile.refreshPatchTab();
+    nm2Mobile.refreshCardPPs();
+    requestAnimationFrame(() => nm2Mobile._refreshSpine());
+  }
 }
 
 function patchClick(id) {
@@ -3779,6 +3811,10 @@ function delCable(cable) {
   ppMap[cable.toId].el.classList.remove('linked');
   disconnectAudio(cable.fromId, cable.toId);
   buildFlowDiagram();
+  if(nm2Mobile?.active) {
+    nm2Mobile.refreshCardPPs();
+    requestAnimationFrame(() => nm2Mobile._refreshSpine());
+  }
 }
 
 function moveCable(cable) {
@@ -9580,6 +9616,11 @@ const nm2Mobile = {
     if(tab.dataset.built) return;
     tab.dataset.built = '1';
 
+    // Spine SVG overlay — drawn over the tab content
+    const spine = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    spine.id = 'm-sound-spine';
+    tab.appendChild(spine);
+
     Object.entries(this.GROUPS).forEach(([key, types]) => {
       const group = document.createElement('div');
       group.className = 'm-snd-group';
@@ -9651,6 +9692,47 @@ const nm2Mobile = {
             empty.className = 'm-card-empty';
             empty.textContent = 'Tap EDIT to open';
             card.appendChild(empty);
+          }
+
+          // PP indicator row — dim dots for each patch point; glow when connected
+          const {outs, ins} = this._getModulePPs(type, instanceId);
+          if(outs.length || ins.length) {
+            const ppRow = document.createElement('div');
+            ppRow.className = 'm-card-pp-row';
+            const insEl = document.createElement('div');
+            insEl.className = 'm-card-pp-side';
+            if(ins.length) {
+              const lbl = document.createElement('span');
+              lbl.className = 'm-card-pp-lbl';
+              lbl.textContent = 'IN';
+              insEl.appendChild(lbl);
+              ins.forEach(pp => {
+                const dot = document.createElement('div');
+                dot.className = 'm-pp-dot ' + pp.cls;
+                dot.dataset.ppId = pp.id;
+                dot.title = pp.label || pp.id;
+                dot.addEventListener('click', e => { e.stopPropagation(); this.openEditor(type, instanceId); });
+                insEl.appendChild(dot);
+              });
+            }
+            const outsEl = document.createElement('div');
+            outsEl.className = 'm-card-pp-side';
+            if(outs.length) {
+              outs.forEach(pp => {
+                const dot = document.createElement('div');
+                dot.className = 'm-pp-dot ' + pp.cls;
+                dot.dataset.ppId = pp.id;
+                dot.title = pp.label || pp.id;
+                dot.addEventListener('click', e => { e.stopPropagation(); this.openEditor(type, instanceId); });
+                outsEl.appendChild(dot);
+              });
+              const lbl = document.createElement('span');
+              lbl.className = 'm-card-pp-lbl';
+              lbl.textContent = 'OUT';
+              outsEl.appendChild(lbl);
+            }
+            ppRow.append(insEl, outsEl);
+            card.appendChild(ppRow);
           }
 
           body.appendChild(card);
@@ -9912,7 +9994,7 @@ const nm2Mobile = {
     });
 
     const list = document.createElement('div');
-    list.id = 'm-conn-list';
+    list.id = 'm-flow-map';
 
     tab.append(header, filterRow, list);
     this.refreshPatchTab();
@@ -10180,6 +10262,7 @@ const nm2Mobile = {
     if(tabEl) tabEl.classList.add('active');
     this.currentTab = name;
     if(name === 'patch') this.refreshPatchTab();
+    if(name === 'sound') { this.refreshCardPPs(); requestAnimationFrame(() => this._refreshSpine()); }
     if(name === 'library') { this.refreshPresetList(); this.syncLibraryScenes(); }
     if(name === 'play') this.refreshQuickCards();
     if(name === 'perform') { this.refreshPerformStepGrid(); this.refreshPerformBPM(); this.startPerformStepHighlight(); }
@@ -10196,6 +10279,7 @@ const nm2Mobile = {
     const isOpen = hdr.classList.contains('open');
     hdr.classList.toggle('open', !isOpen);
     body.classList.toggle('open', !isOpen);
+    requestAnimationFrame(() => this._refreshSpine());
   },
 
   openGroup(key) {
@@ -10228,10 +10312,10 @@ const nm2Mobile = {
   },
 
   refreshPatchTab() {
-    const list = document.getElementById('m-conn-list');
+    const map = document.getElementById('m-flow-map');
     const countEl = document.getElementById('m-patch-count');
-    if(!list) return;
-    list.innerHTML = '';
+    if(!map) return;
+    map.innerHTML = '';
 
     const filter = this._patchFilter || 'all';
     const filterMap = { audio: ['ao','ai'], cv: ['co','ci'], gate: ['co','gi'] };
@@ -10249,7 +10333,7 @@ const nm2Mobile = {
       const empty = document.createElement('div');
       empty.id = 'm-patch-empty';
       empty.textContent = cables?.length ? 'No ' + filter + ' connections.' : 'No connections. Tap + ADD to patch.';
-      list.appendChild(empty);
+      map.appendChild(empty);
       return;
     }
 
@@ -10258,34 +10342,59 @@ const nm2Mobile = {
       const toPP   = ppMap[cable.toId];
       if(!fromPP || !toPP) return;
 
-      const sigCls = fromPP.cls || 'ao';
+      const sigCls  = fromPP.cls || 'ao';
+      const color   = PP_COLOR[sigCls] || '#cc00ff';
+      const srcMod  = fromPP.el.closest('.module');
+      const dstMod  = toPP.el.closest('.module');
+      const srcName = srcMod?.querySelector('.module-label')?.textContent?.trim()
+                   || srcMod?.id?.replace('mod-','')?.toUpperCase() || '?';
+      const dstName = dstMod?.querySelector('.module-label')?.textContent?.trim()
+                   || dstMod?.id?.replace('mod-','')?.toUpperCase() || '?';
+      const srcSub  = (fromPP.label || cable.fromId.split('-').slice(1).join(' ')).toUpperCase();
+      const dstSub  = (toPP.label   || cable.toId.split('-').slice(1).join(' ')).toUpperCase();
+
+      // Resolve type + instanceId for editor navigation
+      const srcType = srcMod?.dataset?.moduleType || srcMod?.id?.replace(/^mod-/,'').replace(/-\d+$/,'') || '';
+      const dstType = dstMod?.dataset?.moduleType || dstMod?.id?.replace(/^mod-/,'').replace(/-\d+$/,'') || '';
+      const srcInst = parseInt(srcMod?.dataset?.instanceId || '1');
+      const dstInst = parseInt(dstMod?.dataset?.instanceId || '1');
+
       const row = document.createElement('div');
-      row.className = 'm-conn-row';
+      row.className = 'm-flow-row';
 
+      // Source tile
+      const srcTile = document.createElement('button');
+      srcTile.className = 'm-flow-tile';
+      srcTile.innerHTML = `<div class="m-flow-tile-name">${srcName}</div><div class="m-flow-tile-sub">${srcSub}</div>`;
+      if(srcType) srcTile.addEventListener('click', () => this.openEditor(srcType, srcInst));
+
+      // Middle connector
+      const mid = document.createElement('div');
+      mid.className = 'm-flow-mid';
+      const line = document.createElement('div');
+      line.className = 'm-flow-line';
+      line.style.background = color;
       const dot = document.createElement('div');
-      dot.className = 'm-conn-sig ' + sigCls;
+      dot.className = 'm-flow-dot';
+      dot.style.background = color;
+      dot.style.boxShadow = `0 0 5px ${color}`;
+      mid.append(line, dot);
 
-      const labels = document.createElement('div');
-      labels.className = 'm-conn-labels';
-      const src = document.createElement('span');
-      src.className = 'm-conn-src';
-      src.textContent = this._ppLabel(cable.fromId);
-      const arrow = document.createElement('span');
-      arrow.className = 'm-conn-arrow';
-      arrow.textContent = '→';
-      const dst = document.createElement('span');
-      dst.className = 'm-conn-dst';
-      dst.textContent = this._ppLabel(cable.toId);
-      labels.append(src, arrow, dst);
+      // Dest tile
+      const dstTile = document.createElement('button');
+      dstTile.className = 'm-flow-tile';
+      dstTile.innerHTML = `<div class="m-flow-tile-name">${dstName}</div><div class="m-flow-tile-sub">${dstSub}</div>`;
+      if(dstType) dstTile.addEventListener('click', () => this.openEditor(dstType, dstInst));
 
+      // Delete button
       const del = document.createElement('button');
-      del.className = 'm-conn-del';
+      del.className = 'm-flow-del';
       del.textContent = '✕';
-      del.title = 'Remove';
-      del.addEventListener('click', () => { delCable(cable); this.refreshPatchTab(); });
+      del.setAttribute('aria-label', 'Remove connection');
+      del.addEventListener('click', () => { delCable(cable); this.refreshPatchTab(); this.refreshCardPPs(); requestAnimationFrame(() => this._refreshSpine()); });
 
-      row.append(dot, labels, del);
-      list.appendChild(row);
+      row.append(srcTile, mid, dstTile, del);
+      map.appendChild(row);
     });
   },
 
@@ -10537,6 +10646,99 @@ const nm2Mobile = {
         const v = knobRefs[k].getVal();
         btn.textContent = typeof v === 'number' ? (v >= 100 ? Math.round(v).toString() : v.toFixed(2)) : '—';
       }
+    });
+    this.refreshCardPPs();
+    requestAnimationFrame(() => this._refreshSpine());
+  },
+
+  // Update glow state on all card PP dots to reflect live cables
+  refreshCardPPs() {
+    const livePPs = new Set();
+    (cables || []).forEach(c => { livePPs.add(c.fromId); livePPs.add(c.toId); });
+    document.querySelectorAll('.m-pp-dot[data-pp-id]').forEach(dot => {
+      dot.classList.toggle('live', livePPs.has(dot.dataset.ppId));
+    });
+  },
+
+  // ── Spine SVG: draws bezier threads between connected card PP dots ──────────
+  _getModulePPs(type, instanceId) {
+    const panelId = instanceId === 1 ? 'mod-' + type : 'mod-' + type + '-' + instanceId;
+    const outs = [], ins = [];
+    if(!ppMap) return {outs, ins};
+    Object.values(ppMap).forEach(pp => {
+      if(pp.el.closest('.module')?.id === panelId) {
+        if(pp.role === 'out') outs.push(pp);
+        else ins.push(pp);
+      }
+    });
+    return {outs, ins};
+  },
+
+  _getDotCoords(ppId, tabRect) {
+    const dot = document.querySelector(`.m-pp-dot[data-pp-id="${ppId}"]`);
+    if(dot) {
+      const body = dot.closest('.m-snd-body');
+      if(body && body.classList.contains('open')) {
+        const r = dot.getBoundingClientRect();
+        if(r.width > 0) {
+          return { x: r.left - tabRect.left + r.width/2, y: r.top - tabRect.top + r.height/2 };
+        }
+      }
+      // Collapsed — terminate at group header
+      const grp = dot.closest('.m-snd-group');
+      if(grp) {
+        const hdr = grp.querySelector('.m-snd-hdr');
+        if(hdr) {
+          const r = hdr.getBoundingClientRect();
+          const role = ppMap[ppId]?.role;
+          return {
+            x: role === 'out' ? r.right - tabRect.left - 8 : r.left - tabRect.left + 8,
+            y: r.top - tabRect.top + r.height / 2,
+            collapsed: true,
+          };
+        }
+      }
+    }
+    return null;
+  },
+
+  _refreshSpine() {
+    const svg = document.getElementById('m-sound-spine');
+    const tab = document.getElementById('m-tab-sound');
+    if(!svg || !tab || !cables) return;
+    while(svg.lastChild) svg.removeChild(svg.lastChild);
+
+    const tabRect = tab.getBoundingClientRect();
+    const W = tabRect.width;
+    const spineX = W - 6; // right-side channel
+
+    (cables || []).forEach(cable => {
+      const fromPP = ppMap[cable.fromId];
+      const toPP   = ppMap[cable.toId];
+      if(!fromPP || !toPP) return;
+
+      const src = this._getDotCoords(cable.fromId, tabRect);
+      const dst = this._getDotCoords(cable.toId,   tabRect);
+      if(!src || !dst) return;
+
+      const color = PP_COLOR[fromPP.cls] || '#cc00ff';
+      const path  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      // C-curve: src → spine right edge → dst
+      const cx = Math.min(spineX, W - 4);
+      const d  = `M${src.x},${src.y} C${cx},${src.y} ${cx},${dst.y} ${dst.x},${dst.y}`;
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', src.collapsed || dst.collapsed ? '1' : '1.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.55');
+      path.setAttribute('stroke-dasharray', src.collapsed || dst.collapsed ? '3,3' : 'none');
+      svg.appendChild(path);
+
+      // Small circle endpoint at dest
+      const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circ.setAttribute('cx', dst.x); circ.setAttribute('cy', dst.y); circ.setAttribute('r', '3');
+      circ.setAttribute('fill', color); circ.setAttribute('opacity', '0.7');
+      svg.appendChild(circ);
     });
   },
 
