@@ -5962,8 +5962,19 @@ function deletePreset() {
 }
 
 function exportPresets() {
-  const arr = getPresets();
-  if(!arr.length) { setStatus('No presets saved yet.'); return; }
+  let arr = getPresets();
+  if(!arr.length) {
+    if(!ctx) { setStatus('Power on first, then save a preset to export.'); return; }
+    const name = prompt('No presets saved yet.\n\nSave current patch before exporting:', 'My Patch');
+    if(!name?.trim()) { setStatus('Export cancelled.'); return; }
+    const n = name.trim();
+    const notes = document.getElementById('notes-area')?.value || '';
+    const entry = { name:n, config:getConfig(), notes, scenes:getSceneSnapshot(), trackScript:currentTrackScript };
+    arr.push(entry);
+    savePresets(arr);
+    refreshPresetDropdown();
+    setStatus(`"${n}" saved ✓`);
+  }
   const blob = new Blob([JSON.stringify(arr,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -7119,6 +7130,7 @@ function decodePatch(str) {
 
 function exportGraph() {
   if (!ctx) { setStatus('Power on first.'); return; }
+  if (nm2Mobile?.active) { setStatus('Graph export requires desktop view — resize browser above 640px.'); return; }
   const rack = document.getElementById('rack');
   const rRect = rack.getBoundingClientRect();
   const cw = Math.round(rRect.width), ch = Math.round(rRect.height);
@@ -7177,9 +7189,23 @@ document.getElementById('share-btn').addEventListener('click', () => {
   if (!ctx) { setStatus('Power on first.'); return; }
   const encoded = encodePatch(getConfig());
   history.replaceState(null, '', '#patch=' + encoded);
-  navigator.clipboard.writeText(window.location.href)
-    .then(() => setStatus('Share link copied to clipboard ✓'))
-    .catch(() => setStatus('Link: ' + window.location.href));
+  const url = window.location.href;
+  // Use native share sheet on mobile if available
+  if (navigator.share) {
+    navigator.share({ title: 'nm² patch', url })
+      .then(() => setStatus('Patch shared ✓'))
+      .catch(e => { if (e.name !== 'AbortError') setStatus('Share cancelled.'); });
+    return;
+  }
+  // Clipboard API (desktop / HTTPS)
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => setStatus('Share link copied to clipboard ✓'))
+      .catch(() => prompt('Copy this link:', url));
+    return;
+  }
+  // Last resort — show in a prompt so the user can copy manually
+  prompt('Copy this link:', url);
 });
 
 document.getElementById('save-btn').addEventListener('click',()=>{
@@ -9333,19 +9359,33 @@ const nm2Mobile = {
       {label:'⬡ SHARE',   src:'share-btn'},
       {label:'✦ RANDOM',  src:'rand-btn'},
       {label:'⎷ MIDI',    src:'midi-btn'},
+      // GRAPH: rack is hidden on mobile — delegate to graph-btn which shows a clear error
       {label:'◈ GRAPH',   src:'graph-btn'},
       {label:'⊹ FLOW',    src:'flow-btn'},
-      {label:'⊕ MODULE',  src:'add-mod-btn'},
+      // MODULE: picker works but new panel must be synced into Sound tab groups
+      {label:'⊕ MODULE',  action() {
+        this.closeOverflow();
+        document.getElementById('add-mod-btn')?.click();
+        // After picker closes, move any new rack panels into Sound groups
+        const checkSync = setInterval(() => {
+          const picker = document.getElementById('mod-picker');
+          if(!picker || picker.style.display !== 'block') {
+            clearInterval(checkSync);
+            setTimeout(() => this._syncNewRackModules(), 100);
+          }
+        }, 250);
+        setTimeout(() => clearInterval(checkSync), 30000);
+      }},
       {label:'◐ LIGHT',   src:'theme-btn'},
       {label:'A+ ACCESS', src:'a11y-btn'},
     ];
-    ovItems.forEach(({label, src}) => {
+    ovItems.forEach(({label, src, action}) => {
       const b = document.createElement('button');
       b.className = 'btn';
       b.textContent = label;
       b.addEventListener('click', () => {
-        document.getElementById(src)?.click();
-        this.closeOverflow();
+        if(action) { action.call(this); }
+        else { document.getElementById(src)?.click(); this.closeOverflow(); }
       });
       ovPanel.appendChild(b);
     });
@@ -10757,6 +10797,45 @@ const nm2Mobile = {
     if(!sheet) return;
     if(panel) { panel.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.classList.remove('open'); panel.style.transform = ''; }, 270); }
     else sheet.classList.remove('open');
+  },
+
+  // ── Module picker sync (mobile) ────────────────────────────────────────────
+  // Called after the module picker closes to move any newly-added panels
+  // from #rack into the Sound tab groups and update savedRackChildren.
+  _syncNewRackModules() {
+    const pool = document.getElementById('m-module-pool');
+    const soundTab = document.getElementById('m-tab-sound');
+    const newPanels = [...document.querySelectorAll('#rack .module')]
+      .filter(p => p.id !== 'mod-affect');
+    if(!newPanels.length) return;
+
+    newPanels.forEach(panel => {
+      // Register in savedRackChildren so deactivate() restores it
+      if(!this.savedRackChildren.includes(panel)) this.savedRackChildren.push(panel);
+      // Move to pool
+      pool?.appendChild(panel);
+    });
+
+    // Rebuild Sound tab to pick up new modules
+    if(soundTab) {
+      soundTab.dataset.built = '';
+      soundTab.innerHTML = '';
+      this.buildSoundTab();
+    }
+
+    // Figure out which groups were affected and open them
+    newPanels.forEach(panel => {
+      const type = panel.dataset.moduleType;
+      for(const [key, types] of Object.entries(this.GROUPS)) {
+        if(types.includes(type)) { this.openGroup(key); break; }
+      }
+    });
+
+    const names = newPanels.map(p => {
+      const def = this.CARD_DEFS[p.dataset.moduleType];
+      return def?.label || p.dataset.moduleType?.toUpperCase() || 'module';
+    }).join(', ');
+    setStatus('Added: ' + names + ' — see Sound tab');
   },
 };
 
