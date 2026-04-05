@@ -786,16 +786,19 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 .patch-toast.toast-tip{border-color:#ffcc0055;color:#ffcc88;}
 .patch-toast.toast-warn{border-color:#ff660055;color:#ffaa66;}
 
-/* ── Mobile tutorial overlay ── */
-/* Tutorial sits above workspace (0) but below all sheets (840+) */
+/* ── Mobile tutorial overlay ──
+   z-index 835: above workspace (auto/0), below all sheets (840+).
+   Card sits above tabbar+perfstrip (~115px total). SKIP ALL lives inside
+   the card — no floating element that can overlap app UI. */
 #nm2-tutorial-overlay{position:fixed;inset:0;z-index:835;pointer-events:none;}
-.nm2-tut-mask{position:absolute;inset:0;pointer-events:none;transition:opacity 250ms;}
-.nm2-tut-skip{position:fixed;top:max(16px,env(safe-area-inset-top,16px));right:16px;z-index:836;pointer-events:all;background:none;border:none;color:var(--text-dim);font-family:var(--font-ui);font-size:11px;letter-spacing:.08em;cursor:pointer;padding:8px 12px;}
-.nm2-tut-card{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);left:12px;right:12px;background:var(--bg-panel-6);border:1px solid var(--accent-cyan);border-radius:12px;padding:16px;z-index:836;pointer-events:none;}
-.nm2-tut-tip-text{font-size:14px;color:var(--text-main);line-height:1.5;margin:0 0 12px;transition:opacity 200ms,transform 200ms;}
-.nm2-tut-btn-row{display:flex;justify-content:flex-end;}
-.nm2-tut-next{background:none;border:1px solid var(--accent-cyan);color:var(--accent-cyan);padding:6px 16px;border-radius:6px;cursor:pointer;font-family:var(--font-ui);font-size:13px;letter-spacing:.06em;pointer-events:all;}
-.nm2-tut-complete{position:fixed;inset:0;z-index:995;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);color:var(--text-main);font-size:15px;line-height:1.6;text-align:center;padding:32px 24px;opacity:0;transition:opacity 200ms;pointer-events:none;}
+.nm2-tut-mask{position:absolute;inset:0;pointer-events:none;}
+.nm2-tut-card{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 115px);left:12px;right:12px;background:var(--bg-panel-6);border:1.5px solid var(--accent-cyan);border-radius:12px;padding:14px 16px 12px;z-index:836;pointer-events:all;transition:box-shadow 150ms;}
+.nm2-tut-step{font-size:9px;letter-spacing:.12em;color:var(--text-dim);margin:0 0 7px;text-transform:uppercase;}
+.nm2-tut-tip-text{font-size:14px;color:var(--text-main);line-height:1.55;margin:0 0 12px;}
+.nm2-tut-btn-row{display:flex;justify-content:space-between;align-items:center;}
+.nm2-tut-skip{background:none;border:none;color:var(--text-dim);font-family:var(--font-ui);font-size:11px;letter-spacing:.06em;cursor:pointer;padding:5px 0;min-height:32px;}
+.nm2-tut-next{background:none;border:1.5px solid var(--accent-cyan);color:var(--accent-cyan);padding:6px 18px;border-radius:6px;cursor:pointer;font-family:var(--font-ui);font-size:13px;letter-spacing:.06em;min-height:36px;}
+.nm2-tut-complete{position:fixed;inset:0;z-index:995;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.78);color:var(--text-main);font-size:15px;line-height:1.6;text-align:center;padding:32px 24px;opacity:0;transition:opacity 200ms;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -11228,55 +11231,64 @@ async function init() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const nm2Tutorial = {
   _step: 0,
+  _enteredAt: 0,   // timestamp when current step was entered (guards against instant advances)
   _steps: [
     {
       id: 'a1',
+      task: 'Power on',
       spotlightFn: () => document.getElementById('start'),
       tooltip: 'Tap anywhere to power on. nm² is a modular synthesizer — it makes sound through connected modules.',
-      advanceOn: () => ctx?.state === 'running',
-      nextLabel: 'NEXT →',
+      advanceOn: () => typeof ctx !== 'undefined' && ctx?.state === 'running',
     },
     {
       id: 'a2',
+      task: 'Press PLAY',
       spotlightFn: () => document.getElementById('m-play-btn'),
-      tooltip: 'Hit PLAY to start the sequencer. This is where your performance begins.',
+      tooltip: 'Tap ▶ to start the sequencer. You should hear the default patch right away.',
       advanceOn: () => mods?.seq?.playing === true,
-      nextLabel: 'NEXT →',
     },
     {
       id: 'a3',
+      task: 'Touch the pad',
       spotlightFn: () => document.querySelector('#m-play-hero canvas'),
-      tooltip: 'Drag the pad to shape the sound. Move between MELANCHOLY, CALM, TENSE, and EUPHORIC — filter, reverb, envelope, and LFO all respond.',
-      advanceEvent: { selector: '#m-play-hero canvas', type: 'pointerdown' },
+      tooltip: 'Drag the XY pad. It remaps filter, reverb, LFO and envelope — zones run from MELANCHOLY (bottom-left) to EUPHORIC (top-right).',
+      // advance on a deliberate drag: require pointermove with ≥8px travel after pointerdown
       onEnter() {
-        // Auto-enable Affect so dragging has immediate effect
         if (typeof mods !== 'undefined' && mods.affect && !mods.affect.active) {
           document.getElementById('affect-on-btn')?.click();
         }
       },
-      nextLabel: 'NEXT →',
+      advanceDrag: { selector: '#m-play-hero canvas', minPx: 8 },
     },
     {
       id: 'b1',
+      task: 'Explore the tabs',
       spotlightFn: () => document.getElementById('m-tabbar'),
-      tooltip: 'Five tabs: PLAY for performing, SOUND to edit modules, PATCH to route signals, PERFORM for the step sequencer, LIBRARY for presets.',
+      tooltip: 'Five tabs: PLAY performs, SOUND edits modules, PATCH routes signals, PERFORM runs the sequencer, LIBRARY manages presets.',
       advanceOn: () => {
         const on = document.querySelector('#m-tabbar .m-tab.on');
-        return on && on.dataset.tab !== 'play';
+        return !!on && on.dataset.tab !== 'play';
       },
-      nextLabel: 'NEXT →',
     },
     {
       id: 'b2',
-      spotlightFn: () => document.querySelector('#m-tab-sound .m-card'),
-      tooltip: 'Tap any module card to open its controls. Swipe down to dismiss. Long-press a knob for fine-tune control.',
+      task: 'Open a module',
+      spotlightFn: () => {
+        // Spotlight first Sound card if on Sound tab; otherwise point at the Sound tab button
+        const soundTab = document.getElementById('m-tab-sound');
+        if (soundTab && soundTab.classList.contains('active')) {
+          return soundTab.querySelector('.m-card');
+        }
+        return document.querySelector('.m-tab[data-tab="sound"]');
+      },
+      tooltip: 'Go to SOUND and tap any module card to open its controls. Long-press a knob for fine-tune mode.',
       advanceOn: () => document.getElementById('m-editor-sheet')?.classList.contains('open'),
-      nextLabel: 'DONE',
     },
   ],
   _overlay: null,
   _interval: null,
-  _eventCleanups: [],
+  _stepCleanups: [],    // cleared on each step transition
+  _overlayCleanups: [], // cleared only when overlay is destroyed
 
   shouldShow() {
     return window.matchMedia('(max-width:640px)').matches
@@ -11284,59 +11296,87 @@ const nm2Tutorial = {
   },
 
   start() {
-    this._clearAdvance();
-    if (this._overlay) this._removeOverlay();
+    this._clearStep();
+    if (this._overlay) this._destroyOverlay();
     this._buildOverlay();
-    // Skip A1 if AudioContext already running
+    // Skip A1 if AudioContext is already running (re-launch scenario)
     const startStep = (typeof ctx !== 'undefined' && ctx?.state === 'running') ? 1 : 0;
     this.goTo(startStep);
   },
 
   goTo(n) {
-    this._clearAdvance();
+    this._clearStep();
     this._step = n;
     if (n >= this._steps.length) { this.complete(); return; }
     const step = this._steps[n];
+    this._enteredAt = Date.now();
 
     if (step.onEnter) step.onEnter();
 
-    // Update spotlight
+    // Spotlight the target element
     this._updateSpotlight();
 
-    // Animate tooltip text
+    // Step label e.g. "STEP 2 OF 5 — PRESS PLAY"
+    const stepEl = this._overlay?.querySelector('.nm2-tut-step');
+    if (stepEl) stepEl.textContent = `STEP ${n + 1} OF ${this._steps.length} — ${step.task.toUpperCase()}`;
+
+    // Tooltip text (animate in)
     const tipEl = this._overlay?.querySelector('.nm2-tut-tip-text');
     if (tipEl) {
-      tipEl.style.transition = 'none';
-      tipEl.style.opacity = '0';
-      tipEl.style.transform = 'translateY(12px)';
+      tipEl.style.cssText = 'transition:none;opacity:0;transform:translateY(8px);font-size:14px;color:var(--text-main);line-height:1.55;margin:0 0 12px;';
       tipEl.textContent = step.tooltip;
       requestAnimationFrame(() => {
-        tipEl.style.transition = 'opacity 200ms, transform 200ms';
-        tipEl.style.opacity = '1';
-        tipEl.style.transform = 'translateY(0)';
+        tipEl.style.cssText = 'transition:opacity 200ms,transform 200ms;opacity:1;transform:translateY(0);font-size:14px;color:var(--text-main);line-height:1.55;margin:0 0 12px;';
       });
     }
 
-    // Update button label
+    // NEXT/SKIP label
     const nextBtn = this._overlay?.querySelector('.nm2-tut-next');
-    if (nextBtn) nextBtn.textContent = step.nextLabel;
+    if (nextBtn) nextBtn.textContent = n === this._steps.length - 1 ? 'DONE' : 'SKIP →';
 
-    // Wire advance condition (polled)
+    // Poll-based advance
     if (step.advanceOn) {
       this._interval = setInterval(() => {
-        if (step.advanceOn()) this.goTo(n + 1);
+        if (step.advanceOn()) this._taskDone();
       }, 200);
     }
 
-    // Wire advance event
-    if (step.advanceEvent) {
-      const el = document.querySelector(step.advanceEvent.selector);
+    // Drag-based advance (A3: require actual drag motion, not accidental tap)
+    if (step.advanceDrag) {
+      const el = document.querySelector(step.advanceDrag.selector);
       if (el) {
-        const handler = () => this.goTo(n + 1);
-        el.addEventListener(step.advanceEvent.type, handler, { once: true });
-        this._eventCleanups.push(() => el.removeEventListener(step.advanceEvent.type, handler));
+        let startX = 0, startY = 0, armed = false;
+        const minPx = step.advanceDrag.minPx;
+        const onDown = (e) => { armed = true; startX = e.clientX; startY = e.clientY; };
+        const onMove = (e) => {
+          if (!armed) return;
+          const dx = e.clientX - startX, dy = e.clientY - startY;
+          if (Math.sqrt(dx*dx + dy*dy) >= minPx) this._taskDone();
+        };
+        const onUp = () => { armed = false; };
+        el.addEventListener('pointerdown', onDown);
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onUp);
+        this._stepCleanups.push(
+          () => el.removeEventListener('pointerdown', onDown),
+          () => el.removeEventListener('pointermove', onMove),
+          () => el.removeEventListener('pointerup', onUp),
+        );
       }
     }
+  },
+
+  // Called when the user completes a step's task — brief flash then advance
+  _taskDone() {
+    if (this._taskDone._busy) return;
+    this._taskDone._busy = true;
+    const card = this._overlay?.querySelector('.nm2-tut-card');
+    if (card) card.style.boxShadow = '0 0 0 2px #00ffff, 0 0 18px #00ffff88';
+    setTimeout(() => {
+      if (card) card.style.boxShadow = '';
+      this._taskDone._busy = false;
+      this.goTo(this._step + 1);
+    }, 220);
   },
 
   _updateSpotlight() {
@@ -11346,23 +11386,23 @@ const nm2Tutorial = {
     this._spotlight(el);
   },
 
-  _clearAdvance() {
+  _clearStep() {
     if (this._interval) { clearInterval(this._interval); this._interval = null; }
-    this._eventCleanups.forEach(fn => fn());
-    this._eventCleanups = [];
+    this._stepCleanups.forEach(fn => fn());
+    this._stepCleanups = [];
+    this._taskDone._busy = false;
   },
 
   skipAll() {
-    this._clearAdvance();
+    this._clearStep();
     localStorage.setItem('nm2-mobile-tutorial-done', '1');
-    this._removeOverlay();
+    this._destroyOverlay();
   },
 
   complete() {
-    this._clearAdvance();
+    this._clearStep();
     localStorage.setItem('nm2-mobile-tutorial-done', '1');
-    this._removeOverlay();
-    // Completion card
+    this._destroyOverlay();
     const card = document.createElement('div');
     card.className = 'nm2-tut-complete';
     card.textContent = "You're in. Explore the PATCH tab to route signals, or just play.";
@@ -11386,17 +11426,21 @@ const nm2Tutorial = {
       return;
     }
     const r = el.getBoundingClientRect();
-    const pad = 4;
-    const x = r.left - pad, y = r.top - pad, w = r.width + pad * 2, h = r.height + pad * 2, rx = 6;
+    // Hidden or zero-size elements get full dim
+    if (!r.width || !r.height) {
+      svg.innerHTML = `<rect x="0" y="0" width="${W}" height="${H}" fill="rgba(0,0,0,0.65)"/>`;
+      return;
+    }
+    const pad = 4, rx = 6;
+    const x = (r.left - pad).toFixed(1), y = (r.top - pad).toFixed(1);
+    const w = (r.width + pad * 2).toFixed(1), h = (r.height + pad * 2).toFixed(1);
     svg.innerHTML = `
       <defs><mask id="nm2thole">
         <rect x="0" y="0" width="${W}" height="${H}" fill="white"/>
         <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="black"/>
       </mask></defs>
       <rect x="0" y="0" width="${W}" height="${H}" fill="rgba(0,0,0,0.65)" mask="url(#nm2thole)"/>
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none"
-            stroke="var(--accent-cyan)" stroke-width="1.5"
-            style="filter:drop-shadow(0 0 6px var(--accent-cyan))"/>`;
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="#00ffff" stroke-width="1.5" opacity="0.85"/>`;
   },
 
   _buildOverlay() {
@@ -11404,46 +11448,42 @@ const nm2Tutorial = {
     const ov = document.createElement('div');
     ov.id = 'nm2-tutorial-overlay';
 
-    // SVG mask (visual dim + cutout)
+    // SVG backdrop (dim + cutout)
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'nm2-tut-mask');
     ov.appendChild(svg);
 
-    // SKIP ALL
-    const skipBtn = document.createElement('button');
-    skipBtn.className = 'nm2-tut-skip';
-    skipBtn.textContent = 'SKIP ALL';
-    skipBtn.addEventListener('click', () => this.skipAll());
-    ov.appendChild(skipBtn);
-
-    // Tooltip card
+    // Tooltip card — SKIP ALL and NEXT are both inside; no floating elements
     const card = document.createElement('div');
     card.className = 'nm2-tut-card';
+    const stepEl = document.createElement('p');
+    stepEl.className = 'nm2-tut-step';
     const tipText = document.createElement('p');
     tipText.className = 'nm2-tut-tip-text';
     const btnRow = document.createElement('div');
     btnRow.className = 'nm2-tut-btn-row';
+    const skipBtn = document.createElement('button');
+    skipBtn.className = 'nm2-tut-skip';
+    skipBtn.textContent = 'SKIP ALL';
+    skipBtn.addEventListener('click', () => this.skipAll());
     const nextBtn = document.createElement('button');
     nextBtn.className = 'nm2-tut-next';
     nextBtn.addEventListener('click', () => this.goTo(this._step + 1));
-    btnRow.appendChild(nextBtn);
-    card.append(tipText, btnRow);
+    btnRow.append(skipBtn, nextBtn);
+    card.append(stepEl, tipText, btnRow);
     ov.appendChild(card);
-
     document.body.appendChild(ov);
     this._overlay = ov;
 
-    // Reposition spotlight on resize / workspace scroll
+    // Spotlight repositions on resize — overlay-lifetime, survives step transitions
     const respot = () => this._updateSpotlight();
     window.addEventListener('resize', respot);
-    document.getElementById('m-workspace')?.addEventListener('scroll', respot);
-    this._eventCleanups.push(
-      () => window.removeEventListener('resize', respot),
-      () => document.getElementById('m-workspace')?.removeEventListener('scroll', respot)
-    );
+    this._overlayCleanups.push(() => window.removeEventListener('resize', respot));
   },
 
-  _removeOverlay() {
+  _destroyOverlay() {
+    this._overlayCleanups.forEach(fn => fn());
+    this._overlayCleanups = [];
     this._overlay?.remove();
     this._overlay = null;
   },
