@@ -11252,13 +11252,7 @@ const nm2Tutorial = {
       id: 'a3',
       task: 'Touch the pad',
       spotlightFn: () => document.querySelector('#m-play-hero canvas'),
-      tooltip: 'Drag the XY pad. It remaps filter, reverb, LFO and envelope — zones run from MELANCHOLY (bottom-left) to EUPHORIC (top-right).',
-      // advance on a deliberate drag: require pointermove with ≥8px travel after pointerdown
-      onEnter() {
-        if (typeof mods !== 'undefined' && mods.affect && !mods.affect.active) {
-          document.getElementById('affect-on-btn')?.click();
-        }
-      },
+      tooltip: 'This is the AFFECT pad — tap ON below it to activate, then drag to remap filter, reverb, LFO and envelope across four emotional zones.',
       advanceDrag: { selector: '#m-play-hero canvas', minPx: 8 },
     },
     {
