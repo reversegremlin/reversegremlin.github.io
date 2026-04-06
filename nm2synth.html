@@ -9098,11 +9098,30 @@ function buildAffectPanel() {
   btnRow.style.cssText = 'display:flex;gap:4px;margin-top:4px;';
   const onBtn = document.createElement('button');
   onBtn.className = 'btn'; onBtn.id = 'affect-on-btn'; onBtn.textContent = 'ON';
+  const _affectKnobIds = ['vcf-cutoff','vcf-res','adsr-A','adsr-D','adsr-S','adsr-R',
+    'lfo-rate','lfo-depth','reverb-size','reverb-mix','delay-mix',
+    'tape-drive','tape-mix','phaser-mix','chorus-mix'];
   onBtn.addEventListener('click', () => {
     m.active = !m.active;
     onBtn.classList.toggle('on', m.active);
-    if (m.active) { applyAffect(m.x, m.y); }
-    else if (m.wanderMode) { m.wanderMode = false; wanderBtn.classList.remove('on'); driftWrap.style.display = 'none'; }
+    if (m.active) {
+      // Snapshot current values so we can restore them on turn-off
+      m._snapshot = {};
+      _affectKnobIds.forEach(id => { if (knobRefs[id]) m._snapshot[id] = knobRefs[id].getVal(); });
+      m._snapshot._vcoType   = mods.vco?.type;
+      m._snapshot._chordName = mods.chord?.chordName;
+      applyAffect(m.x, m.y);
+    } else {
+      // Restore pre-AFFECT parameter values
+      if (m._snapshot) {
+        _affectKnobIds.forEach(id => { if (knobRefs[id] && m._snapshot[id] != null) knobRefs[id].applyInput(m._snapshot[id]); });
+        if (m._snapshot._vcoType   && mods.vco)   { mods.vco.setType(m._snapshot._vcoType);       sk('vco-wave',      m._snapshot._vcoType); }
+        if (m._snapshot._chordName && mods.chord)  { mods.chord.setChord(m._snapshot._chordName);  sk('chord-type-sel',m._snapshot._chordName); }
+        m._snapshot = null;
+        m.lastQuadrant = null;
+      }
+      if (m.wanderMode) { m.wanderMode = false; wanderBtn.classList.remove('on'); driftWrap.style.display = 'none'; }
+    }
   });
   const wanderBtn = document.createElement('button');
   wanderBtn.className = 'btn'; wanderBtn.id = 'affect-wander-btn'; wanderBtn.textContent = 'WANDER';
