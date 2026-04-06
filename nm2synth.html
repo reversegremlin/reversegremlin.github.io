@@ -6458,7 +6458,7 @@ const FACTORY_PRESETS = [
     chord:{name:'min7',spread:9,level:0.6,wave:'sawtooth'}, quant:{active:false,randMode:false,scale:'minor',root:9},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:2,octaves:1,root:0},
     formant:{vowel:0.15,q:10,mix:0.88},
-    cables:[{fromId:'vca-out',toId:'formant-ai',color:'#ff6600'},{fromId:'formant-ao',toId:'reverb-in',color:'#ffaa00'},{fromId:'lfo-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'formant-cv',color:'#00ffff'}]
+    cables:[{fromId:'chord-out',toId:'formant-ai',color:'#ff6600'},{fromId:'formant-ao',toId:'reverb-in',color:'#ffaa00'},{fromId:'lfo-out',toId:'att-in',color:'#00ffff'},{fromId:'att-out',toId:'formant-cv',color:'#00ffff'}]
   }},
   { name:'Glass Bell Garden', desc:'Karplus-Strong bells tracking the sequencer, each note a resonator pluck blooming into cathedral reverb', cfg:{v:1,
     vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:0},
