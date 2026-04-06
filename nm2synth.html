@@ -6464,7 +6464,7 @@ const FACTORY_PRESETS = [
     vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:0},
     lfo:{type:'sine',rate:0.12,depth:250}, lfo2:{type:'triangle',rate:0.18,depth:0.4},
     adsr:{A:0.6,D:0.4,S:0.7,R:3.5}, vcf:{cutoff:3200,res:2,ftype:'lowpass'}, vca:{gain:0.65},
-    reverb:{size:8.5,decay:0.965,mix:0.82}, delay:{time:0.5,fb:0.25,mix:0.15},
+    reverb:{size:7.0,decay:0.93,mix:0.70}, delay:{time:0.5,fb:0.25,mix:0.15},
     chorus:{rate:0.3,depth:0.15,width:0.7,mix:0.35}, tape:{drive:1.2,wow:0.06,mix:0.2},
     phaser:{rate:0.08,depth:0.25,mix:0.2}, noise:{type:'white',level:0}, mixer:{a:0.5,b:0,c:0},
     seq:{bpm:60,direction:'pp',stepCount:8,steps:Array.from({length:16},(_,i)=>({on:[true,false,true,false,true,false,false,true,false,false,false,false,false,false,false,false][i],pitch:[0,5,7,12,9,5,3,12,0,0,0,0,0,0,0,0][i],prob:[1,1,1,1,0.8,1,1,0.7,1,1,1,1,1,1,1,1][i]}))},
@@ -6472,7 +6472,7 @@ const FACTORY_PRESETS = [
     microcosm:{blend:0.35,grainSz:0.18,scatter:0.25,pitch:1,density:10,mode:'granular'},
     chord:{name:'maj7',spread:6,level:0.35,wave:'sine'}, quant:{active:true,randMode:false,scale:'penta',root:0},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:2,octaves:1,root:0},
-    res:{freq:220,decay:0.97,bright:0.6,excite:'mallet',track:true},
+    res:{freq:220,decay:0.92,bright:0.40,excite:'mallet',track:true},
     cables:[{fromId:'res-ao',toId:'reverb-in',color:'#88ffcc'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
   }},
   { name:'Frozen Horizon', desc:'SPECTRAL SMEAR dissolves the sequence into continuous texture — press ❄ to crystallize any moment forever', cfg:{v:1,
