@@ -8454,11 +8454,12 @@ function makeResonator() {
 
   const m = mods.res = {
     sumGain, dampFilter, delay, feedback, inlet, outlet,
-    freqVal: 220, decayVal: 0.95, brightVal: 0.5, excite: 'pluck', track: false
+    freqVal: 220, baseFreqVal: 220, decayVal: 0.95, brightVal: 0.5, excite: 'pluck', track: false
   };
 
-  m.setFreq = v => {
+  m.setFreq = (v, updateBase = true) => {
     m.freqVal = Math.max(30, Math.min(2000, v));
+    if (updateBase) m.baseFreqVal = m.freqVal;
     delay.delayTime.setTargetAtTime(1 / m.freqVal, ctx.currentTime, 0.001);
   };
   m.setDecay = v => {
@@ -8501,8 +8502,8 @@ function makeResonator() {
 
   m.trackNote = semi => {
     if (!m.track) return;
-    const hz = 440 * Math.pow(2, semi / 12);
-    m.setFreq(hz);
+    const hz = m.baseFreqVal * Math.pow(2, semi / 12);
+    m.setFreq(hz, false);
     sk('res-freq', Math.max(30, Math.min(2000, hz)));
     m.pluck(); // auto-excite on each sequenced/MIDI note
   };
