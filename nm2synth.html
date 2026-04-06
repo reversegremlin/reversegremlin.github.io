@@ -6533,7 +6533,7 @@ const FACTORY_PRESETS = [
       ]},
     cables:[{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'},{fromId:'chaos-out',toId:'morph-ci',color:'#ff00ff'}]
   }},
-  { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', hints:['track-edit-btn','track-play-btn'], cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
+  { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', hints:['track-play-btn'], cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
 ];
 
 function applyPatchHints(hints) {
@@ -6569,7 +6569,7 @@ function openFactoryPicker() {
     card.innerHTML = `<div style="color:var(--accent);font-size:13px;letter-spacing:3px;margin-bottom:6px;">${String(i+1).padStart(2,'0')} ${p.name}</div><div style="color:var(--text-dim);font-size:11px;line-height:1.6;">${p.desc}</div>`;
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
-      _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript, true); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
+      _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
       applyPatchHints(p.hints);
       // Auto-start the sequencer so the preset is immediately audible
       if (!mods.seq.playing) {
