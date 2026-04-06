@@ -9011,7 +9011,7 @@ function buildAffectPanel() {
 
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
-  cv.style.cssText = `border:1px solid var(--border-main);box-shadow:0 0 8px color-mix(in srgb,var(--shadow-panel) 70%, transparent);cursor:crosshair;display:block;`;
+  cv.style.cssText = `border:1px solid var(--border-main);box-shadow:0 0 8px color-mix(in srgb,var(--shadow-panel) 70%, transparent);cursor:crosshair;display:block;touch-action:none;`;
   d.appendChild(cv);
   const c = cv.getContext('2d');
 
@@ -9059,7 +9059,8 @@ function buildAffectPanel() {
   };
   cv.addEventListener('pointerdown', e => { dragging=true; cv.setPointerCapture(e.pointerId); setPuck(e); });
   cv.addEventListener('pointermove', e => { if (dragging) setPuck(e); });
-  cv.addEventListener('pointerup',   () => { dragging=false; });
+  cv.addEventListener('pointerup',     () => { dragging=false; });
+  cv.addEventListener('pointercancel', () => { dragging=false; });
 
   // Mood dropdown
   const sel = document.createElement('select');
