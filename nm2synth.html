@@ -446,6 +446,8 @@ body.edit-mode .module-drag-handle{display:inline;}
   .m-card-pp-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border-soft);min-height:16px;}
   .m-card-pp-side{display:flex;gap:4px;align-items:center;}
   .m-card-pp-lbl{font-size:8px;letter-spacing:.5px;color:var(--text-dim);margin:0 2px;}
+  .m-pp-chip{display:inline-flex;align-items:center;gap:4px;padding:1px 4px;border:1px solid var(--border-soft);border-radius:999px;background:var(--bg-input);}
+  .m-pp-mini{font-size:7px;letter-spacing:.4px;color:var(--text-dim);white-space:nowrap;}
   .m-pp-dot{width:8px;height:8px;border-radius:50%;opacity:.2;flex-shrink:0;transition:opacity .25s,box-shadow .25s;cursor:pointer;}
   .m-pp-dot.live{opacity:1;}
   .m-pp-dot.ao{background:#cc00ff;}.m-pp-dot.live.ao{box-shadow:0 0 6px #cc00ff;}
@@ -6476,7 +6478,7 @@ const FACTORY_PRESETS = [
     chord:{name:'maj7',spread:6,level:0.22,wave:'sine'}, quant:{active:true,randMode:false,scale:'penta',root:0},
     sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'maj7',dir:'up',rateMul:2,octaves:1,root:0},
     res:{freq:220,decay:0.86,bright:0.14,excite:'mallet',track:true},
-    cables:[{fromId:'res-ao',toId:'reverb-in',color:'#88ffcc'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
+    cables:[{fromId:'vca-out',toId:'res-ai',color:'#88aaff'},{fromId:'res-ao',toId:'reverb-in',color:'#88ffcc'},{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'}]
   }},
   { name:'Frozen Horizon', desc:'SPECTRAL SMEAR dissolves the sequence into continuous texture — press ❄ to crystallize any moment forever', cfg:{v:1,
     vco:{type:'sawtooth',oct:3,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:3,coarse:7,detune:6},
@@ -9774,24 +9776,40 @@ const nm2Mobile = {
               lbl.textContent = 'IN';
               insEl.appendChild(lbl);
               ins.forEach(pp => {
+                const chip = document.createElement('span');
+                chip.className = 'm-pp-chip';
                 const dot = document.createElement('div');
                 dot.className = 'm-pp-dot ' + pp.cls;
                 dot.dataset.ppId = pp.id;
                 dot.title = pp.label || pp.id;
-                dot.addEventListener('click', e => { e.stopPropagation(); this.openEditor(type, instanceId); });
-                insEl.appendChild(dot);
+                const txt = document.createElement('span');
+                txt.className = 'm-pp-mini';
+                txt.textContent = pp.label || pp.id;
+                const open = e => { e.stopPropagation(); this.openEditor(type, instanceId); };
+                chip.addEventListener('click', open);
+                dot.addEventListener('click', open);
+                chip.append(dot, txt);
+                insEl.appendChild(chip);
               });
             }
             const outsEl = document.createElement('div');
             outsEl.className = 'm-card-pp-side';
             if(outs.length) {
               outs.forEach(pp => {
+                const chip = document.createElement('span');
+                chip.className = 'm-pp-chip';
                 const dot = document.createElement('div');
                 dot.className = 'm-pp-dot ' + pp.cls;
                 dot.dataset.ppId = pp.id;
                 dot.title = pp.label || pp.id;
-                dot.addEventListener('click', e => { e.stopPropagation(); this.openEditor(type, instanceId); });
-                outsEl.appendChild(dot);
+                const txt = document.createElement('span');
+                txt.className = 'm-pp-mini';
+                txt.textContent = pp.label || pp.id;
+                const open = e => { e.stopPropagation(); this.openEditor(type, instanceId); };
+                chip.addEventListener('click', open);
+                dot.addEventListener('click', open);
+                chip.append(dot, txt);
+                outsEl.appendChild(chip);
               });
               const lbl = document.createElement('span');
               lbl.className = 'm-card-pp-lbl';
