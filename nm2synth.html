@@ -756,6 +756,8 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 /* ── Scene Morph ── */
 @keyframes morphpulse{0%,100%{opacity:1}50%{opacity:.35}}
 #morph-btn.morphing{animation:morphpulse 1s ease-in-out infinite;border-color:color-mix(in srgb,var(--accent) 66%, transparent);color:var(--accent);}
+@keyframes hintpulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px 2px color-mix(in srgb,var(--accent-cyan) 60%,transparent);border-color:var(--accent-cyan)!important;color:var(--accent-cyan)!important;}}
+.hint-pulse{animation:hintpulse 1.4s ease-in-out infinite!important;}
 #morph-bars{display:none;gap:2px;align-items:center;}
 .morph-bar-btn{min-width:22px;}
 /* ── 16-step grid extension ── */
@@ -5996,6 +5998,7 @@ function loadPreset() {
   if(!name) { setStatus('Select a preset first.'); return; }
   const p = getPresets().find(p=>p.name===name);
   if(p) {
+    applyPatchHints([]);
     _sessionSuppress=true;
     applyConfig(p.config);
     if (p.scenes) applySceneSet(p.scenes);
@@ -6351,7 +6354,7 @@ const FACTORY_PRESETS = [
     sidechain:{attack:0.005,release:0.2,amount:1.2}, arp:{chord:'min',dir:'ud',rateMul:2,octaves:2,root:0},
     cables:[{fromId:'vco2-out',toId:'vcf-in',color:'#cc00ff'},{fromId:'vca-out',toId:'tape-in',color:'#ffff00'},{fromId:'vca-out',toId:'reverb-in',color:'#00ffff'}]
   }},
-  { name:'Morph Demo Canvas', desc:'A minimal starting point for exploring Scene Morphing. Load this, press PLAY. Save as Scene A. Then change VCF CUTOFF, LFO RATE, reverb MIX, and save as Scene B. Click ⟿ MORPH (4 bars) then click B — hear everything glide.', cfg:{v:1,
+  { name:'Morph Demo Canvas', desc:'A minimal starting point for exploring Scene Morphing. Load this, press PLAY. Save as Scene A. Then change VCF CUTOFF, LFO RATE, reverb MIX, and save as Scene B. Click ⟿ MORPH (4 bars) then click B — hear everything glide.', hints:['scene-save-mode','morph-btn'], cfg:{v:1,
     vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'triangle',oct:3,coarse:0,detune:5},
     lfo:{type:'sine',rate:0.15,depth:600}, lfo2:{type:'sine',rate:0.06,depth:250},
     adsr:{A:1.5,D:0.5,S:0.88,R:4}, vcf:{cutoff:1200,res:2,ftype:'lowpass'}, vca:{gain:0.65},
@@ -6528,8 +6531,19 @@ const FACTORY_PRESETS = [
       ]},
     cables:[{fromId:'vca-out',toId:'reverb-in',color:'#ff6600'},{fromId:'chaos-out',toId:'morph-ci',color:'#ff00ff'}]
   }},
-  { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
+  { name:'Full Ambient Track', desc:'Sparse intro to long-form bloom — includes 4 preloaded scenes for morphing a full arc', hints:['track-play-btn'], cfg:FULL_AMBIENT_TRACK_SCENES[2], scenes:FULL_AMBIENT_TRACK_SCENES, trackScript:'A8 > B8 > C16 > D16' },
 ];
+
+function applyPatchHints(hints) {
+  document.querySelectorAll('.hint-pulse').forEach(el => el.classList.remove('hint-pulse'));
+  if (!hints?.length) return;
+  hints.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hint-pulse');
+    el.addEventListener('click', () => el.classList.remove('hint-pulse'), { once: true });
+  });
+}
 
 function openFactoryPicker() {
   let overlay = document.getElementById('factory-overlay');
@@ -6554,6 +6568,7 @@ function openFactoryPicker() {
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
       _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript, true); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
+      applyPatchHints(p.hints);
       // Auto-start the sequencer so the preset is immediately audible
       if (!mods.seq.playing) {
         mods.seq.playing = true; mods.seq.start();
@@ -8440,20 +8455,37 @@ function makeResonator() {
   dampFilter.type = 'lowpass'; dampFilter.frequency.value = 6000; dampFilter.Q.value = 0.7;
   const delay      = ctx.createDelay(0.1);
   delay.delayTime.value = 1 / 220; // direct assignment — no audio context needed at init
+  const dcBlock    = ctx.createBiquadFilter();
+  dcBlock.type = 'highpass'; dcBlock.frequency.value = 35; dcBlock.Q.value = 0.0001;
+  const loopDrive  = ctx.createWaveShaper();
+  loopDrive.oversample = '2x';
+  const loopGain   = ctx.createGain(); loopGain.gain.value = 0.9;
   const feedback   = ctx.createGain(); feedback.gain.value = 0.95;
   const inlet      = ctx.createGain(); // resonator audio in
   const outlet     = ctx.createGain();
 
+  const buildLoopCurve = amount => {
+    const n = 256, curve = new Float32Array(n);
+    const norm = Math.tanh(amount);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / (n - 1) - 1;
+      curve[i] = Math.tanh(x * amount) / norm;
+    }
+    return curve;
+  };
+  loopDrive.curve = buildLoopCurve(1.6);
+
   // sumGain → dampFilter → delay → outlet
   //                          ↓
-  //                     feedback → sumGain  (feedback loop)
+  //              dcBlock → soft clip → feedback → sumGain
   sumGain.connect(dampFilter); dampFilter.connect(delay);
-  delay.connect(feedback); feedback.connect(sumGain);
-  delay.connect(outlet);
+  delay.connect(dcBlock); dcBlock.connect(loopDrive); loopDrive.connect(loopGain);
+  loopGain.connect(feedback); feedback.connect(sumGain);
+  loopDrive.connect(outlet);
   inlet.connect(sumGain); // resonator mode: audio in adds to excitation
 
   const m = mods.res = {
-    sumGain, dampFilter, delay, feedback, inlet, outlet,
+    sumGain, dampFilter, delay, dcBlock, loopDrive, loopGain, feedback, inlet, outlet,
     freqVal: 220, baseFreqVal: 220, decayVal: 0.95, brightVal: 0.5, excite: 'pluck', track: false
   };
 
