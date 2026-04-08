@@ -11279,10 +11279,14 @@ async function init() {
   setStatus('nm² modsynth v1.0.1 — POWERED ON');
 
   // First-launch: auto-open tutorial picker
-  if (!localStorage.getItem('nm2-tut-seen')) {
+  // Skip if loading a shared patch (recipient should land on the patch, not the tutorial)
+  // Skip panel open on mobile (mobile overlay tutorial handles onboarding instead)
+  if (!localStorage.getItem('nm2-tut-seen') && !window.location.hash.startsWith('#patch=')) {
     localStorage.setItem('nm2-tut-seen', '1');
-    tutShowPicker();
-    document.getElementById('tut-panel').classList.add('open');
+    if (!window.matchMedia('(max-width:640px)').matches) {
+      tutShowPicker();
+      document.getElementById('tut-panel').classList.add('open');
+    }
   }
 
   // Load patch from URL hash if present: nm2synth.html#patch=<base64>
@@ -11475,6 +11479,7 @@ const nm2Tutorial = {
     this._clearStep();
     localStorage.setItem('nm2-mobile-tutorial-done', '1');
     this._destroyOverlay();
+    document.getElementById('tut-panel')?.classList.remove('open');
   },
 
   complete() {
@@ -11571,7 +11576,7 @@ document.getElementById('start').addEventListener('click',()=>{
   document.getElementById('start').style.display='none';
   init().then(()=>{
     nm2Mobile.init();
-    if (nm2Tutorial.shouldShow()) nm2Tutorial.start();
+    if (!window.location.hash.startsWith('#patch=') && nm2Tutorial.shouldShow()) nm2Tutorial.start();
   });
 });
 
