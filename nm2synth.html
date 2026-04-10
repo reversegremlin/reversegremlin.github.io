@@ -1352,6 +1352,33 @@ const TIPS = {
   'seq-g6':     'Step 6 Gate Out — fires a 10ms gate pulse when step 6 is active.',
   'seq-g7':     'Step 7 Gate Out — fires a 10ms gate pulse when step 7 is active.',
   'seq-g8':     'Step 8 Gate Out — fires a 10ms gate pulse when step 8 is active. Patch steps 1 and 5 to two different sampler triggers for a kick/snare pattern locked to your sequence.',
+  'mod-xypad':    'XY PAD — a 2D performance pad outputting two simultaneous CV signals. Drag anywhere on the canvas to set position. X OUT tracks horizontal position, Y OUT tracks vertical position. Patch to VCF cutoff + LFO rate, or two VCO CVs, for expressive two-dimensional live control.',
+  'xypad-xo':     'X CV Out — horizontal position as CV (-1 to +1). Rightward = positive. Patch to VCF cutoff, VCO detune, reverb mix, or any CV input.',
+  'xypad-yo':     'Y CV Out — vertical position as CV (-1 to +1). Upward = positive. Use together with X OUT to map a two-axis gesture into your patch.',
+  'mod-ringmod':  'RING MODULATOR — multiplies two audio signals (true bipolar multiplication: Carrier × Modulator). At musical frequency ratios: bell and metallic tones. At slightly detuned pitches: throbbing intermodulation. Patch VCO into CARRIER, a second VCO or LFO into MOD IN.',
+  'ringmod-ai':   'Ring Mod Carrier In — the signal being ring-modulated. Patch VCO, chord, or any audio source.',
+  'ringmod-bi':   'Ring Mod Modulator In — drives the carrier amplitude at audio rate. Patch a second VCO for metallic tones, or a slow LFO for tremolo.',
+  'ringmod-ao':   'Ring Mod Out — carrier × modulator. Patch to VCF IN, mixer, or effects.',
+  'mod-fmop':     'FM OPERATOR — a 2-operator FM synthesizer: carrier oscillator + modulator oscillator. RATIO sets the modulator-to-carrier frequency ratio. INDEX sets modulation depth in Hz. At ratio 1:1 = electric piano; 2:1 = bells; 1:7 = gong-like. CV IN tracks pitch from sequencer.',
+  'fmop-cv':      'FM Carrier CV In — pitch CV for the carrier oscillator. Patch from SEQ, ARP, TURING, or DRUNK for melodic FM lines.',
+  'fmop-ao':      'FM Audio Out — the carrier oscillator output, frequency-modulated by the internal modulator. Patch to VCF, mixer, or effects.',
+  'mod-flanger':  'FLANGER — short delay (0–15ms) + feedback + LFO modulation. Creates the jet-plane sweeping comb-filter effect. FBACK controls resonance: high values give metallic howl. Unlike chorus (thick doubling), flanging is phase-cancellation-heavy and dramatic. Send model: patch audio into IN to activate.',
+  'flanger-ai':   'Flanger Audio In — patch any audio source to process through the flanger.',
+  'flanger-ao':   'Flanger Audio Out — flanged signal output. Patch to mixer or final output.',
+  'mod-turing':   'TURING MACHINE — a probabilistic 16-bit shift register generating evolving melody. On each clock tick bits shift; CHANCE controls mutation probability (0 = frozen loop, 1 = pure random, ~0.15 = slowly evolving). The register window maps to a pentatonic scale. Patch CV OUT to VCO for generative melody.',
+  'turing-cv':    'Turing CV Out — pitch CV from the current register state. Patch to VCO CV IN or QUANT CV IN.',
+  'turing-go':    'Turing Gate Out — fires a gate on each clock tick. Patch to ADSR GATE IN.',
+  'mod-pclock':   'POLYRHYTHM CLOCK — three independent gate outputs at prime-ratio tempos (3:4:5). They start together and slowly drift apart, realigning after LCM(3,4,5)=60 beats. Patch outputs to multiple ADSRs, Euclid triggers, or Turing clock inputs for evolving polyrhythmic texture.',
+  'pclock-g3':    'Clock Gate ÷3 — fires every 3 tempo beats. Patch to ADSR GATE for triplet rhythm.',
+  'pclock-g4':    'Clock Gate ÷4 — fires every 4 tempo beats.',
+  'pclock-g5':    'Clock Gate ÷5 — fires every 5 tempo beats. Creates quintuplet polyrhythms against the other outputs.',
+  'mod-drunk':    'DRUNK WALK — random melody generator that steps up or down by a random interval each tick. STEP limits maximum jump size (semitones). Scale quantization keeps it musical. Slow rate + small step = meditative wander. Fast rate + large step = unpredictable angular lines. Patch CV OUT to VCO CV.',
+  'drunk-cv':     'Drunk Walk CV Out — pitch CV that wanders step by step. Patch to VCO CV IN.',
+  'drunk-go':     'Drunk Walk Gate Out — fires on each step. Patch to ADSR GATE IN for triggered notes.',
+  'mod-theremin': 'THEREMIN STRIP — vertical touch strip for expressive real-time CV control. Drag vertically for pitch, horizontally for volume. Pair with granular processing and reverb for ethereal performance. Patch PITCH CV to VCO, VOL CV to VCA envelope.',
+  'theremin-cv':  'Theremin Pitch CV — vertical position as CV. Patch to VCO CV IN for pitch control.',
+  'theremin-vel': 'Theremin Volume CV — horizontal position as CV. Patch to VCA ENV for amplitude control.',
+  'mod-tesla':    'TESLA COIL — reactive SVG animation branching and flickering in sync with output amplitude. Pure aesthetic — not a musical module. The arc complexity and brightness scale with signal level.',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2846,6 +2873,8 @@ function wireDefault() {
   mods.sampler.outlet.connect(masterOut);
   // Pad sampler → master (always audible; patch padsampler-out for effects routing)
   mods.padsampler.outlet.connect(masterOut);
+  // Flanger → master (send effect: patch flanger-ai to activate)
+  mods.flanger.outlet.connect(masterOut);
   // Stutter → master (send effect: wet-only outlet, patch stutter-ai to activate)
   mods.stutter.outlet.connect(masterOut);
   // Mic Looper → master (always audible; patch micloop-out for effects routing)
@@ -2945,6 +2974,25 @@ function buildPPRegistry() {
   regPP('spectral-ai',  ()=>mods.spectral.inlet);
   regPP('spectral-ao',  ()=>mods.spectral.outlet);
   regPP('morph-ci',     ()=>mods.morph.cvIn);
+  // ── Phase 15 ──
+  regPP('xypad-xo',    ()=>mods.xypad?.xOut);
+  regPP('xypad-yo',    ()=>mods.xypad?.yOut);
+  regPP('ringmod-ai',  ()=>mods.ringmod?.inlet);
+  regPP('ringmod-bi',  ()=>mods.ringmod?.modIn);
+  regPP('ringmod-ao',  ()=>mods.ringmod?.outlet);
+  regPP('fmop-cv',     ()=>mods.fmop?.cvIn);
+  regPP('fmop-ao',     ()=>mods.fmop?.outlet);
+  regPP('flanger-ai',  ()=>mods.flanger?.inlet);
+  regPP('flanger-ao',  ()=>mods.flanger?.outlet);
+  regPP('turing-cv',   ()=>mods.turing?.cvOut);
+  regPP('turing-go',   ()=>mods.turing?.gateOut);
+  regPP('pclock-g3',   ()=>mods.pclock?.gateA);
+  regPP('pclock-g4',   ()=>mods.pclock?.gateB);
+  regPP('pclock-g5',   ()=>mods.pclock?.gateC);
+  regPP('drunk-cv',    ()=>mods.drunk?.cvOut);
+  regPP('drunk-go',    ()=>mods.drunk?.gateOut);
+  regPP('theremin-cv', ()=>mods.theremin?.cvOut);
+  regPP('theremin-vel',()=>mods.theremin?.velOut);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5561,6 +5609,12 @@ function getConfig() {
     res:      { freq: mods.res.freqVal, decay: mods.res.decayVal, bright: mods.res.brightVal, excite: mods.res.excite, track: mods.res.track },
     spectral: { mode: mods.spectral.mode, mix: mods.spectral.mixVal, smear: mods.spectral.smearVal, pitch: mods.spectral.pitchVal },
     morph:    { pos: mods.morph.pos, paramIds: [...mods.morph.paramIds], waypoints: mods.morph.waypoints.map(w=>({slot:w.slot,vals:{...w.vals}})) },
+    xypad:    { x: mods.xypad?.x??0.5, y: mods.xypad?.y??0.5 },
+    fmop:     { freq: mods.fmop?.baseFreq??220, ratio: mods.fmop?.ratioVal??2, index: mods.fmop?.indexVal??100, wave: mods.fmop?.waveType??'sine' },
+    flanger:  { rate: mods.flanger?.rateVal??0.4, depth: mods.flanger?.depthVal??0.7, fb: mods.flanger?.fbVal??0.5, mix: mods.flanger?.mixVal??0.7 },
+    turing:   { steps: mods.turing?.stepsVal??8, chance: mods.turing?.chanceVal??0.5, rate: mods.turing?.rateVal??2 },
+    pclock:   { tempo: mods.pclock?.tempoVal??1 },
+    drunk:    { rate: mods.drunk?.rateVal??1, step: mods.drunk?.stepVal??3, scale: mods.drunk?.scaleName??'penta', root: mods.drunk?.root??0 },
     cables:cables.map(c=>({fromId:c.fromId,toId:c.toId,color:c.color})),
     rackOrder: rackOrder.slice(),
     extraModules: DUPLICATABLE_TYPES.flatMap(type => (moduleInstances[type] || []).filter(id => id > 1).map(id => {
@@ -5742,6 +5796,12 @@ function applyConfig(cfg) {
     const affWanderBtn=document.getElementById('affect-wander-btn'); if(affWanderBtn) affWanderBtn.classList.toggle('on',mods.affect.wanderMode);
     if(mods.affect.active) applyAffect(mods.affect.targetX, mods.affect.targetY);
   }
+  if(cfg.xypad){ mods.xypad?.setX(cfg.xypad.x??0.5); mods.xypad?.setY(cfg.xypad.y??0.5); }
+  if(cfg.fmop){ mods.fmop?.setFreq(cfg.fmop.freq??220); sk('fmop-freq',cfg.fmop.freq??220); mods.fmop?.setRatio(cfg.fmop.ratio??2); sk('fmop-ratio',cfg.fmop.ratio??2); mods.fmop?.setIndex(cfg.fmop.index??100); sk('fmop-index',cfg.fmop.index??100); if(cfg.fmop.wave){mods.fmop.setWave(cfg.fmop.wave);} }
+  if(cfg.flanger){ mods.flanger?.setRate(cfg.flanger.rate??0.4); sk('flange-rate',cfg.flanger.rate??0.4); mods.flanger?.setDepth(cfg.flanger.depth??0.7); sk('flange-depth',cfg.flanger.depth??0.7); mods.flanger?.setFb(cfg.flanger.fb??0.5); sk('flange-fb',cfg.flanger.fb??0.5); mods.flanger?.setMix(cfg.flanger.mix??0.7); sk('flange-mix',cfg.flanger.mix??0.7); }
+  if(cfg.turing){ mods.turing?.setSteps(cfg.turing.steps??8); sk('turing-steps',cfg.turing.steps??8); mods.turing?.setChance(cfg.turing.chance??0.5); sk('turing-chance',cfg.turing.chance??0.5); mods.turing?.setRate(cfg.turing.rate??2); sk('turing-rate',cfg.turing.rate??2); }
+  if(cfg.pclock){ mods.pclock?.setTempo(cfg.pclock.tempo??1); sk('pclock-tempo',cfg.pclock.tempo??1); }
+  if(cfg.drunk){ mods.drunk?.setRate(cfg.drunk.rate??1); sk('drunk-rate',cfg.drunk.rate??1); mods.drunk?.setStep(cfg.drunk.step??3); sk('drunk-step',cfg.drunk.step??3); if(cfg.drunk.scale){mods.drunk.setScale(cfg.drunk.scale);} mods.drunk?.setRoot(cfg.drunk.root??0); }
   // Restore extra module instances
   if (cfg.extraModules && cfg.extraModules.length) {
     cfg.extraModules.forEach(({ type, instanceId, vals }) => {
@@ -8775,6 +8835,160 @@ function makeLimiter() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 15 — XY PAD · RING MOD · FM OP · FLANGER · TURING · POLY CLOCK · DRUNK · THEREMIN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeXYPad() {
+  const xSrc = ctx.createConstantSource(); xSrc.offset.value = 0; xSrc.start();
+  const ySrc = ctx.createConstantSource(); ySrc.offset.value = 0; ySrc.start();
+  const xOut = ctx.createGain(); xOut.gain.value = 1;
+  const yOut = ctx.createGain(); yOut.gain.value = 1;
+  xSrc.connect(xOut); ySrc.connect(yOut);
+  const m = { xSrc, ySrc, xOut, yOut, x: 0.5, y: 0.5 };
+  m.setX = v => { m.x = v; xSrc.offset.setTargetAtTime((v*2)-1, ctx.currentTime, 0.01); };
+  m.setY = v => { m.y = v; ySrc.offset.setTargetAtTime((v*2)-1, ctx.currentTime, 0.01); };
+  mods.xypad = m; return m;
+}
+
+function makeRingMod() {
+  const inlet    = ctx.createGain(); inlet.gain.value = 1;
+  const modIn    = ctx.createGain(); modIn.gain.value = 1;
+  const ringGain = ctx.createGain(); ringGain.gain.value = 0;
+  const outlet   = ctx.createGain();
+  inlet.connect(ringGain);
+  modIn.connect(ringGain.gain); // audio-rate bipolar multiplication = ring mod
+  ringGain.connect(outlet);
+  mods.ringmod = { inlet, modIn, outlet };
+}
+
+function makeFMOp() {
+  const carrier = ctx.createOscillator(); carrier.type = 'sine'; carrier.frequency.value = 220;
+  const modOsc  = ctx.createOscillator(); modOsc.type  = 'sine'; modOsc.frequency.value  = 440;
+  const modIdx  = ctx.createGain(); modIdx.gain.value = 100;
+  const cvIn    = ctx.createGain();
+  const outlet  = ctx.createGain();
+  modOsc.connect(modIdx); modIdx.connect(carrier.frequency);
+  cvIn.connect(carrier.frequency);
+  carrier.connect(outlet);
+  carrier.start(); modOsc.start();
+  const m = { carrier, modOsc, modIdx, cvIn, outlet, baseFreq:220, ratioVal:2, indexVal:100, waveType:'sine' };
+  m.setFreq  = v => { m.baseFreq=v; carrier.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); modOsc.frequency.setTargetAtTime(v*m.ratioVal, ctx.currentTime, 0.01); };
+  m.setRatio = v => { m.ratioVal=v; modOsc.frequency.setTargetAtTime(m.baseFreq*v, ctx.currentTime, 0.01); };
+  m.setIndex = v => { m.indexVal=v; modIdx.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setWave  = v => { m.waveType=v; try{carrier.type=v;}catch(e){} };
+  mods.fmop = m; return m;
+}
+
+function makeFlanger() {
+  const inlet    = ctx.createGain();
+  const dryGain  = ctx.createGain(); dryGain.gain.value = 0;
+  const wetGain  = ctx.createGain(); wetGain.gain.value = 0.7;
+  const outlet   = ctx.createGain();
+  const del      = ctx.createDelay(0.02); del.delayTime.value = 0.005;
+  const feedback = ctx.createGain(); feedback.gain.value = 0.5;
+  const lfo      = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.4;
+  const lfoG     = ctx.createGain(); lfoG.gain.value = 0.004;
+  lfo.connect(lfoG); lfoG.connect(del.delayTime); lfo.start();
+  inlet.connect(dryGain); dryGain.connect(outlet);
+  inlet.connect(del);
+  del.connect(feedback); feedback.connect(del);
+  del.connect(wetGain); wetGain.connect(outlet);
+  const m = { inlet, outlet, rateVal:0.4, depthVal:0.7, fbVal:0.5, mixVal:0.7 };
+  m.setRate  = v => { m.rateVal=v; lfo.frequency.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setDepth = v => { m.depthVal=v; lfoG.gain.setTargetAtTime(v*0.006, ctx.currentTime, 0.05); };
+  m.setFb    = v => { m.fbVal=v; feedback.gain.setTargetAtTime(Math.min(0.95,v), ctx.currentTime, 0.05); };
+  m.setMix   = v => { m.mixVal=v; wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  mods.flanger = m; return m;
+}
+
+function makeTuring() {
+  const register = Array.from({length:16}, ()=>Math.random()>0.5?1:0);
+  const cvSrc   = ctx.createConstantSource(); cvSrc.offset.value = 0; cvSrc.start();
+  const cvOut   = ctx.createGain(); cvSrc.connect(cvOut);
+  const gateSrc = ctx.createConstantSource(); gateSrc.offset.value = 0; gateSrc.start();
+  const gateOut = ctx.createGain(); gateSrc.connect(gateOut);
+  const PENTA = [0,2,4,7,9];
+  const m = { register, cvOut, gateOut, stepsVal:8, chanceVal:0.5, rateVal:2, _updateDisplay:null };
+  m.tick = () => {
+    const entering = register[m.stepsVal-1];
+    const mutated  = Math.random() < m.chanceVal ? 1-entering : entering;
+    for(let i=m.stepsVal-1;i>0;i--) register[i]=register[i-1];
+    register[0]=mutated;
+    let val=0;
+    for(let i=0;i<m.stepsVal;i++) val=(val*2)+register[i];
+    const idx = val % (PENTA.length*2);
+    const oct = Math.floor(idx/PENTA.length);
+    const semi = PENTA[idx%PENTA.length] + oct*12;
+    cvSrc.offset.setTargetAtTime(semi/12, ctx.currentTime, 0.005);
+    gateSrc.offset.setValueAtTime(1, ctx.currentTime);
+    gateSrc.offset.setValueAtTime(0, ctx.currentTime+0.025);
+    if(m._updateDisplay) m._updateDisplay();
+  };
+  m.setSteps  = v => { m.stepsVal  = Math.max(2,Math.min(16,Math.round(v))); };
+  m.setChance = v => { m.chanceVal = v; };
+  m.setRate   = v => { m.rateVal   = Math.max(0.1, v); };
+  let _lastTick=0;
+  (function _turingLoop(t){ requestAnimationFrame(_turingLoop); if(t-_lastTick>=1000/m.rateVal){_lastTick=t;m.tick();} })();
+  mods.turing = m; return m;
+}
+
+function makePolyClock() {
+  const _mkGate = () => {
+    const src=ctx.createConstantSource(); src.offset.value=0; src.start();
+    const out=ctx.createGain(); src.connect(out); return {src,out};
+  };
+  const gA=_mkGate(), gB=_mkGate(), gC=_mkGate();
+  const m = { gateA:gA.out, gateB:gB.out, gateC:gC.out, tempoVal:1 };
+  let lastA=0, lastB=0, lastC=0;
+  const fire=(src,now)=>{src.offset.setValueAtTime(1,now);src.offset.setValueAtTime(0,now+0.018);};
+  (function _pclockLoop(){
+    requestAnimationFrame(_pclockLoop);
+    const now=ctx.currentTime;
+    if(now-lastA>=3/m.tempoVal){fire(gA.src,now);lastA=now;}
+    if(now-lastB>=4/m.tempoVal){fire(gB.src,now);lastB=now;}
+    if(now-lastC>=5/m.tempoVal){fire(gC.src,now);lastC=now;}
+  })();
+  m.setTempo = v => { m.tempoVal=Math.max(0.05,v); };
+  mods.pclock = m; return m;
+}
+
+function makeDrunk() {
+  const cvSrc   = ctx.createConstantSource(); cvSrc.offset.value=0; cvSrc.start();
+  const cvOut   = ctx.createGain(); cvSrc.connect(cvOut);
+  const gateSrc = ctx.createConstantSource(); gateSrc.offset.value=0; gateSrc.start();
+  const gateOut = ctx.createGain(); gateSrc.connect(gateOut);
+  const m = { cvOut, gateOut, rateVal:1, stepVal:3, scaleName:'penta', root:0, currentSemi:12 };
+  m.step = () => {
+    const scale = QUANT_SCALES[m.scaleName]||QUANT_SCALES.penta;
+    const dir   = Math.random()>0.5?1:-1;
+    const jump  = Math.ceil(Math.random()*m.stepVal);
+    m.currentSemi = Math.max(0,Math.min(36,m.currentSemi+dir*jump));
+    const snapped = snapToScale(m.currentSemi, scale, m.root);
+    cvSrc.offset.setTargetAtTime(snapped/12, ctx.currentTime, 0.005);
+    gateSrc.offset.setValueAtTime(1, ctx.currentTime);
+    gateSrc.offset.setValueAtTime(0, ctx.currentTime+0.025);
+  };
+  m.setRate  = v => { m.rateVal=Math.max(0.05,v); };
+  m.setStep  = v => { m.stepVal=Math.max(1,Math.round(v)); };
+  m.setScale = v => { m.scaleName=v; };
+  m.setRoot  = v => { m.root=v; };
+  let _lastTick=0;
+  (function _drunkLoop(t){ requestAnimationFrame(_drunkLoop); if(t-_lastTick>=1000/m.rateVal){_lastTick=t;m.step();} })();
+  mods.drunk = m; return m;
+}
+
+function makeTheremin() {
+  const cvSrc  = ctx.createConstantSource(); cvSrc.offset.value=0; cvSrc.start();
+  const cvOut  = ctx.createGain(); cvSrc.connect(cvOut);
+  const velSrc = ctx.createConstantSource(); velSrc.offset.value=0; velSrc.start();
+  const velOut = ctx.createGain(); velSrc.connect(velOut);
+  const m = { cvOut, velOut, cvSrc, velSrc, pitchVal:0, volVal:0 };
+  m.setPitch = v => { m.pitchVal=v; cvSrc.offset.setTargetAtTime(v, ctx.currentTime, 0.02); };
+  m.setVol   = v => { m.volVal=v;   velSrc.offset.setTargetAtTime(v, ctx.currentTime, 0.02); };
+  mods.theremin = m; return m;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BUILD PANELS — new modules
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -9184,6 +9398,278 @@ function buildAffectPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 15 BUILD PANELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildXYPadPanel() {
+  const m = mods.xypad;
+  const W = 160, H = 160;
+  const d = document.createElement('div'); d.style.minWidth = `${W+8}px`;
+  const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
+  cv.style.cssText = `border:1px solid color-mix(in srgb,var(--accent-cyan) 30%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--accent-cyan) 8%,transparent);cursor:crosshair;display:block;touch-action:none;`;
+  const c = cv.getContext('2d');
+  function drawXY() {
+    c.fillStyle = '#04040e'; c.fillRect(0,0,W,H);
+    c.strokeStyle='rgba(0,255,255,0.08)'; c.lineWidth=0.5;
+    for(let i=1;i<4;i++){const x=i*W/4;c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
+    for(let i=1;i<4;i++){const y=i*H/4;c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
+    c.strokeStyle='rgba(0,255,255,0.18)'; c.lineWidth=0.8;
+    c.beginPath();c.moveTo(W/2,0);c.lineTo(W/2,H);c.stroke();
+    c.beginPath();c.moveTo(0,H/2);c.lineTo(W,H/2);c.stroke();
+    const px=m.x*W, py=(1-m.y)*H;
+    c.strokeStyle='rgba(0,255,255,0.2)'; c.lineWidth=0.5;
+    c.beginPath();c.moveTo(px,0);c.lineTo(px,H);c.stroke();
+    c.beginPath();c.moveTo(0,py);c.lineTo(W,py);c.stroke();
+    c.beginPath(); c.arc(px,py,7,0,Math.PI*2);
+    c.fillStyle='#00ffff'; c.shadowBlur=14; c.shadowColor='#00ffff'; c.fill(); c.shadowBlur=0;
+    c.fillStyle='rgba(0,255,255,0.55)'; c.font='7px "JetBrains Mono"';
+    c.fillText(`X:${(m.x*2-1).toFixed(2)}`,3,H-4);
+    c.fillText(`Y:${(m.y*2-1).toFixed(2)}`,3,14);
+  }
+  let _dragging=false;
+  const _setPos=(e)=>{
+    const r=cv.getBoundingClientRect();
+    m.setX(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)));
+    m.setY(Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height)));
+  };
+  cv.addEventListener('pointerdown',e=>{_dragging=true;cv.setPointerCapture(e.pointerId);_setPos(e);});
+  cv.addEventListener('pointermove',e=>{if(_dragging)_setPos(e);});
+  cv.addEventListener('pointerup',()=>_dragging=false);
+  d.appendChild(cv);
+  const ppRow=document.createElement('div'); ppRow.style.cssText='display:flex;justify-content:space-between;margin-top:3px;';
+  ppRow.appendChild(mkPP('xypad-xo','co','X OUT','out'));
+  ppRow.appendChild(mkPP('xypad-yo','co','Y OUT','out'));
+  d.appendChild(ppRow);
+  (function _xyLoop(){ requestAnimationFrame(_xyLoop); drawXY(); })();
+  return panel('xypad','XY PAD',d);
+}
+
+function buildRingModPanel() {
+  const d = document.createElement('div'); d.style.minWidth='100px';
+  const tag=document.createElement('div');
+  tag.style.cssText='font-size:18px;text-align:center;margin:8px 0 4px;color:rgba(255,0,255,0.5);';
+  tag.textContent='A × B';
+  d.appendChild(tag);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('ringmod-ai','ai','CARRIER','in'));
+  d.appendChild(mkPP('ringmod-bi','ai','MOD IN','in'));
+  d.appendChild(mkPP('ringmod-ao','ao','OUT','out'));
+  return panel('ringmod','RING MOD',d);
+}
+
+function buildFMOpPanel() {
+  const m = mods.fmop;
+  const d = document.createElement('div');
+  const WAVES = ['sine','triangle','sawtooth','square'];
+  const waveRow=document.createElement('div'); waveRow.style.cssText='display:flex;gap:2px;margin-bottom:4px;';
+  WAVES.forEach(w=>{
+    const b=document.createElement('button'); b.className='wbtn';
+    b.textContent={sine:'SIN',triangle:'TRI',sawtooth:'SAW',square:'SQR'}[w];
+    b.style.fontSize='9px'; b.classList.toggle('on',w===m.waveType);
+    b.addEventListener('click',()=>{m.setWave(w);waveRow.querySelectorAll('.wbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+    waveRow.appendChild(b);
+  });
+  d.appendChild(waveRow);
+  const r1=document.createElement('div');r1.style.cssText='display:flex;gap:2px;';
+  r1.appendChild(mkKnob({id:'fmop-freq', label:'FREQ', min:20,   max:2000, val:220, log:true, tip:TIPS['fmop-cv'],  onChange:v=>m.setFreq(v)}));
+  r1.appendChild(mkKnob({id:'fmop-ratio',label:'RATIO',min:0.125,max:16,  val:2,   log:true,                       onChange:v=>m.setRatio(v)}));
+  d.appendChild(r1);
+  d.appendChild(mkKnob({id:'fmop-index',label:'INDEX',min:0,max:1000,val:100,log:true,                             onChange:v=>m.setIndex(v)}));
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('fmop-cv','ci','CV IN','in'));
+  d.appendChild(mkPP('fmop-ao','ao','OUT','out'));
+  return panel('fmop','FM OP',d);
+}
+
+function buildFlangerPanel() {
+  const m = mods.flanger;
+  const d = document.createElement('div');
+  const r1=document.createElement('div');r1.style.cssText='display:flex;gap:2px;';
+  r1.appendChild(mkKnob({id:'flange-rate', label:'RATE', min:0.05,max:10,   val:0.4, log:true, onChange:v=>m.setRate(v)}));
+  r1.appendChild(mkKnob({id:'flange-depth',label:'DEPTH',min:0,   max:1,    val:0.7,           onChange:v=>m.setDepth(v)}));
+  d.appendChild(r1);
+  const r2=document.createElement('div');r2.style.cssText='display:flex;gap:2px;';
+  r2.appendChild(mkKnob({id:'flange-fb',  label:'FBACK',min:0,max:0.95,val:0.5,               onChange:v=>m.setFb(v)}));
+  r2.appendChild(mkKnob({id:'flange-mix', label:'MIX',  min:0,max:1,   val:0.7,               onChange:v=>m.setMix(v)}));
+  d.appendChild(r2);
+  const tag=document.createElement('div');
+  tag.style.cssText='font-size:7px;color:rgba(255,0,255,0.4);letter-spacing:2px;text-align:center;margin:2px 0;';
+  tag.textContent='JET SWEEP';
+  d.appendChild(tag);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('flanger-ai','ai','IN','in'));
+  d.appendChild(mkPP('flanger-ao','ao','OUT','out'));
+  return panel('flanger','FLANGER',d);
+}
+
+function buildTuringPanel() {
+  const m = mods.turing;
+  const d = document.createElement('div'); d.style.minWidth='180px';
+  const cv=document.createElement('canvas'); cv.width=170; cv.height=22;
+  cv.style.cssText='display:block;margin:2px 0;border:1px solid rgba(0,255,255,0.15);';
+  const c=cv.getContext('2d');
+  m._updateDisplay = () => {
+    c.fillStyle='#04040e'; c.fillRect(0,0,170,22);
+    const n=m.stepsVal, bw=Math.floor(170/n);
+    for(let i=0;i<n;i++){
+      if(m.register[i]){
+        c.shadowBlur=6; c.shadowColor='#00ffff';
+        c.fillStyle='#00ffff';
+      } else {
+        c.shadowBlur=0;
+        c.fillStyle='rgba(0,255,255,0.1)';
+      }
+      c.fillRect(i*bw+1,2,bw-2,18);
+    }
+    c.shadowBlur=0;
+  };
+  m._updateDisplay();
+  d.appendChild(cv);
+  const r1=document.createElement('div');r1.style.cssText='display:flex;gap:2px;';
+  r1.appendChild(mkKnob({id:'turing-steps', label:'STEPS', min:2,   max:16, val:8,  tip:TIPS['mod-turing'], onChange:v=>m.setSteps(v)}));
+  r1.appendChild(mkKnob({id:'turing-chance',label:'CHANCE',min:0,   max:1,  val:0.5,                       onChange:v=>m.setChance(v)}));
+  r1.appendChild(mkKnob({id:'turing-rate',  label:'RATE',  min:0.25,max:16, val:2,  log:true,              onChange:v=>m.setRate(v)}));
+  d.appendChild(r1);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('turing-cv','co','CV OUT','out'));
+  d.appendChild(mkPP('turing-go','co','GATE OUT','out'));
+  return panel('turing','TURING',d);
+}
+
+function buildPolyClockPanel() {
+  const m = mods.pclock;
+  const d = document.createElement('div'); d.style.minWidth='100px';
+  d.appendChild(mkKnob({id:'pclock-tempo',label:'TEMPO',min:0.05,max:8,val:1,log:true,tip:TIPS['mod-pclock'],onChange:v=>m.setTempo(v)}));
+  const ratioTag=document.createElement('div');
+  ratioTag.style.cssText='font-size:9px;color:rgba(0,255,255,0.55);letter-spacing:2px;text-align:center;margin:5px 0;';
+  ratioTag.textContent='3 : 4 : 5';
+  d.appendChild(ratioTag);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('pclock-g3','co','÷3 GATE','out'));
+  d.appendChild(mkPP('pclock-g4','co','÷4 GATE','out'));
+  d.appendChild(mkPP('pclock-g5','co','÷5 GATE','out'));
+  return panel('pclock','POLY CLK',d);
+}
+
+function buildDrunkPanel() {
+  const m = mods.drunk;
+  const d = document.createElement('div');
+  const SCALES=['penta','major','minor','dorian','phrygian','lydian','chromatic'];
+  const SCALE_LABELS=['PENT','MAJ','MIN','DOR','PHR','LYD','CHR'];
+  const scaleRow=document.createElement('div'); scaleRow.style.cssText='display:flex;flex-wrap:wrap;gap:2px;margin-bottom:4px;';
+  SCALES.forEach((s,i)=>{
+    const b=document.createElement('button'); b.className='wbtn'; b.textContent=SCALE_LABELS[i];
+    b.style.fontSize='8px'; b.classList.toggle('on',s===m.scaleName);
+    b.addEventListener('click',()=>{m.setScale(s);scaleRow.querySelectorAll('.wbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+    scaleRow.appendChild(b);
+  });
+  d.appendChild(scaleRow);
+  const r1=document.createElement('div');r1.style.cssText='display:flex;gap:2px;';
+  r1.appendChild(mkKnob({id:'drunk-rate',label:'RATE',min:0.1,max:16,val:1,log:true,tip:TIPS['mod-drunk'],onChange:v=>m.setRate(v)}));
+  r1.appendChild(mkKnob({id:'drunk-step',label:'STEP',min:1,max:12, val:3,                               onChange:v=>m.setStep(v)}));
+  d.appendChild(r1);
+  d.appendChild(document.createElement('hr'));
+  d.appendChild(mkPP('drunk-cv','co','CV OUT','out'));
+  d.appendChild(mkPP('drunk-go','co','GATE OUT','out'));
+  return panel('drunk','DRUNK',d);
+}
+
+function buildThereminPanel() {
+  const m = mods.theremin;
+  const W=60, H=180;
+  const d = document.createElement('div'); d.style.minWidth=`${W+8}px`;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  cv.style.cssText=`border:1px solid rgba(255,0,255,0.25);cursor:crosshair;display:block;touch-action:none;`;
+  const c=cv.getContext('2d');
+  let _therActive=false, _pitchY=0.5, _volX=0.5;
+  function drawTheremin() {
+    c.fillStyle='#04040e'; c.fillRect(0,0,W,H);
+    const grad=c.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'rgba(255,0,255,0.18)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=grad; c.fillRect(0,0,W,H);
+    // octave markers
+    c.strokeStyle='rgba(255,0,255,0.15)'; c.lineWidth=0.5; c.font='6px "JetBrains Mono"';
+    c.fillStyle='rgba(255,0,255,0.35)';
+    [0,12,24].forEach(semi=>{
+      const y=H*(1-semi/24);
+      c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();
+      c.fillText(semi===0?'C1':semi===12?'C2':'C3',2,y-1);
+    });
+    if(_therActive){
+      const py=H*(1-_pitchY);
+      c.strokeStyle='#ff00ff'; c.lineWidth=2; c.shadowBlur=12; c.shadowColor='#ff00ff';
+      c.beginPath();c.moveTo(0,py);c.lineTo(W,py);c.stroke(); c.shadowBlur=0;
+      c.fillStyle=`rgba(255,0,255,${_volX*0.6+0.1})`;
+      c.fillRect(0,py-1,W*_volX,3);
+    }
+  }
+  const _setFromEvt=(e)=>{
+    const r=cv.getBoundingClientRect();
+    _pitchY=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));
+    _volX  =Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    m.setPitch(_pitchY*2-1);
+    m.setVol(_volX*2-1);
+  };
+  cv.addEventListener('pointerdown',e=>{_therActive=true;cv.setPointerCapture(e.pointerId);_setFromEvt(e);});
+  cv.addEventListener('pointermove',e=>{if(_therActive)_setFromEvt(e);});
+  cv.addEventListener('pointerup',()=>_therActive=false);
+  (function _therLoop(){ requestAnimationFrame(_therLoop); drawTheremin(); })();
+  d.appendChild(cv);
+  d.appendChild(mkPP('theremin-cv','co','PITCH CV','out'));
+  d.appendChild(mkPP('theremin-vel','co','VOL CV','out'));
+  return panel('theremin','THEREMIN',d);
+}
+
+function buildTeslaPanel() {
+  const W=180, H=180;
+  const d=document.createElement('div'); d.style.minWidth=`${W+8}px`;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  cv.style.cssText=`border:1px solid rgba(255,170,0,0.2);box-shadow:0 0 10px rgba(255,170,0,0.06);display:block;`;
+  const c=cv.getContext('2d');
+  const ampAn=ctx.createAnalyser(); ampAn.fftSize=256;
+  analyserNode.connect(ampAn);
+  const timeBuf=new Float32Array(ampAn.fftSize);
+  function _branch(x,y,angle,length,depth,amp){
+    if(depth<0||length<1) return;
+    const ex=x+Math.cos(angle)*length;
+    const ey=y+Math.sin(angle)*length;
+    const alpha=Math.min(1,(depth/7)*amp*2.5);
+    c.beginPath();c.moveTo(x,y);c.lineTo(ex,ey);
+    c.strokeStyle=`rgba(${180+Math.floor(amp*75)},${Math.floor(120+amp*100)},0,${alpha})`;
+    c.lineWidth=Math.max(0.3,depth*0.25);
+    c.shadowBlur=depth*amp*10; c.shadowColor='rgba(255,160,0,0.9)';
+    c.stroke(); c.shadowBlur=0;
+    if(Math.random()<0.65+amp*0.25){
+      const dev=((Math.random()-0.5)*1.3)*(1+amp*0.5);
+      _branch(ex,ey,angle+dev,length*(0.5+Math.random()*0.25),depth-1,amp);
+    }
+    if(depth>2&&Math.random()<0.28+amp*0.35){
+      const dev2=((Math.random()-0.5)*2.2)*(1+amp*0.5);
+      _branch(ex,ey,angle+dev2,length*(0.3+Math.random()*0.2),depth-2,amp);
+    }
+  }
+  (function _teslaLoop(){
+    requestAnimationFrame(_teslaLoop);
+    ampAn.getFloatTimeDomainData(timeBuf);
+    let rms=0; for(const s of timeBuf) rms+=s*s; rms=Math.sqrt(rms/timeBuf.length);
+    const amp=Math.min(1,rms*10);
+    c.fillStyle='rgba(4,4,14,0.88)'; c.fillRect(0,0,W,H);
+    if(amp<0.004) return;
+    const numBolts=Math.max(1,Math.floor(1+amp*3));
+    for(let i=0;i<numBolts;i++){
+      const startAngle=-Math.PI/2+((Math.random()-0.5)*0.6);
+      _branch(W/2,H,startAngle,25+amp*45,5+Math.floor(amp*3),amp);
+    }
+  })();
+  d.appendChild(cv);
+  const lbl=document.createElement('div');
+  lbl.style.cssText='text-align:center;font-size:7px;color:rgba(255,170,0,0.35);margin-top:3px;letter-spacing:2px;';
+  lbl.textContent='AMPLITUDE';
+  d.appendChild(lbl);
+  return panel('tesla','TESLA',d);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SPECTRUM + LISSAJOUS visualization loops
 // ═══════════════════════════════════════════════════════════════════════════════
 function startSpectrum() {
@@ -9283,12 +9769,12 @@ const nm2Mobile = {
   // Module → Sound tab group mapping (panel type strings)
   GROUPS: {
     voice:      ['seq','vco','vcf','adsr','vca'],
-    modulation: ['lfo','lfo2','sandh','att','slew','chaos','clkdiv','euclid','logic','morph','sidechain'],
-    sources:    ['vco2','noise','mixer','ladder','chord','arp','quant','res','formant'],
+    modulation: ['lfo','lfo2','sandh','att','slew','chaos','clkdiv','euclid','logic','morph','sidechain','turing','pclock','drunk','xypad','theremin'],
+    sources:    ['vco2','noise','mixer','ladder','chord','arp','quant','res','formant','fmop','ringmod'],
     character:  ['tape','wavefolder','crush','stutter','spectral'],
-    space:      ['delay','reverb','chorus','phaser','panner'],
+    space:      ['delay','reverb','chorus','flanger','phaser','panner'],
     live:       ['sampler','padsampler','micinput','miclooper','microcosm'],
-    analysis:   ['scope','spectrum','lissajous'],
+    analysis:   ['scope','spectrum','lissajous','tesla'],
   },
   GROUP_LABELS: {
     voice:'VOICE', modulation:'MODULATION', sources:'SOURCES',
@@ -11174,6 +11660,8 @@ async function init() {
   makeCrusher(); makeEuclid();
   makeLogic(); makeFormant(); makeResonator(); makeMorph(); makeSpectral();
   makeAffect();
+  makeXYPad(); makeRingMod(); makeFMOp(); makeFlanger();
+  makeTuring(); makePolyClock(); makeDrunk(); makeTheremin();
   wireDefault();
 
   // Build UI
@@ -11199,6 +11687,11 @@ async function init() {
   rack.appendChild(buildLogicPanel());
   rack.appendChild(buildMorphPanel());
   rack.appendChild(buildSidechainPanel());
+  rack.appendChild(buildTuringPanel());
+  rack.appendChild(buildPolyClockPanel());
+  rack.appendChild(buildDrunkPanel());
+  rack.appendChild(buildXYPadPanel());
+  rack.appendChild(buildThereminPanel());
 
   // ── SOURCES ── alternate and additive sound generators
   rack.appendChild(mkRackGroup('SOURCES'));
@@ -11211,6 +11704,10 @@ async function init() {
   rack.appendChild(buildQuantizerPanel());
   rack.appendChild(buildResonatorPanel());
   rack.appendChild(buildFormantPanel());
+
+  // ── SOURCES continued ── FM and ring mod synthesis
+  rack.appendChild(buildFMOpPanel());
+  rack.appendChild(buildRingModPanel());
 
   // ── CHARACTER ── saturation, distortion, and rhythmic destruction
   rack.appendChild(mkRackGroup('CHARACTER'));
@@ -11225,6 +11722,7 @@ async function init() {
   rack.appendChild(buildDelayPanel());
   rack.appendChild(buildReverbPanel());
   rack.appendChild(buildChorusPanel());
+  rack.appendChild(buildFlangerPanel());
   rack.appendChild(buildPhaserPanel());
   rack.appendChild(buildPannerPanel());
 
@@ -11242,6 +11740,7 @@ async function init() {
   rack.appendChild(buildSpectrumPanel());
   rack.appendChild(buildLissajousPanel());
   rack.appendChild(buildAffectPanel());
+  rack.appendChild(buildTeslaPanel());
 
   buildPPRegistry();
   // Initialize multi-instance tracking
