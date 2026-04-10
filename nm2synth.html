@@ -666,6 +666,19 @@ canvas{display:block;border-radius:3px;}
 /* ── Divider ── */
 hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 
+/* ── Fullscreen Visualizer ── */
+#viz-overlay{position:fixed;inset:0;z-index:9000;background:#000;display:none;}
+#viz-overlay.open{display:block;}
+#viz-canvas{position:absolute;inset:0;display:block;}
+#viz-name{position:absolute;top:22px;left:26px;font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.16);letter-spacing:2px;pointer-events:none;}
+#viz-mode-lbl{position:absolute;top:22px;right:130px;font-family:var(--font-mono);font-size:10px;color:rgba(0,255,255,0.28);letter-spacing:3px;pointer-events:none;}
+#viz-close-btn{position:absolute;top:14px;right:20px;background:none;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.35);padding:5px 14px;cursor:pointer;font-family:var(--font-mono);font-size:10px;letter-spacing:2px;border-radius:2px;}
+#viz-close-btn:hover{border-color:rgba(0,255,255,0.4);color:rgba(0,255,255,0.7);}
+#viz-mode-row{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;cursor:pointer;}
+.viz-pip{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.12);transition:background .2s;}
+.viz-pip.on{background:rgba(0,255,255,0.6);}
+#viz-hint{position:absolute;bottom:22px;right:26px;font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.1);letter-spacing:1px;pointer-events:none;}
+
 /* ── Toolbar ── */
 #toolbar{display:flex;gap:6px;padding:10px 16px;background:var(--bg-toolbar);border-top:1px solid var(--border-bright);align-items:center;flex-wrap:wrap;position:sticky;bottom:0;backdrop-filter:blur(12px);}
 #toolbar .btn{font-size:var(--fs-lg);padding:5px 12px;}
@@ -914,6 +927,7 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
   <button class="btn" id="midi-btn">⎷ MIDI</button>
   <span id="midi-ind">NO MIDI</span>
   <button class="btn" id="mclk-btn">CLK IN</button>
+  <button class="btn" id="viz-btn">◉ VIZ</button>
   <button class="btn" id="flow-btn">⊞ FLOW</button>
   <button class="btn" id="edit-mode-btn" title="Toggle edit mode to drag and rearrange modules">✎ EDIT</button>
   <button class="btn" id="add-mod-btn">⊕ MODULE</button>
@@ -12124,6 +12138,227 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FULLSCREEN VISUALIZER
+// ═══════════════════════════════════════════════════════════════════════════════
+(function() {
+  let _vizOpen = false, _vizMode = 0, _vizAN = null, _vizPhase = 0;
+  const MODES = ['WAVEFORM','LISSAJOUS','RADIAL','AURORA'];
+
+  function _openViz() {
+    if (_vizOpen) return;
+    _vizOpen = true;
+    document.getElementById('viz-overlay').classList.add('open');
+    document.getElementById('viz-btn').classList.add('on');
+    _resizeViz();
+    _runViz();
+  }
+  function _closeViz() {
+    _vizOpen = false;
+    document.getElementById('viz-overlay').classList.remove('open');
+    document.getElementById('viz-btn').classList.remove('on');
+  }
+  function _cycleMode(delta=1) {
+    _vizMode = (_vizMode + delta + MODES.length) % MODES.length;
+    document.getElementById('viz-mode-lbl').textContent = MODES[_vizMode];
+    document.querySelectorAll('.viz-pip').forEach((p,i)=>p.classList.toggle('on',i===_vizMode));
+    // clear canvas on mode switch for clean transition
+    const cv=document.getElementById('viz-canvas');
+    const c=cv.getContext('2d');
+    c.fillStyle='#000'; c.fillRect(0,0,cv.width,cv.height);
+  }
+  function _resizeViz() {
+    const cv=document.getElementById('viz-canvas');
+    cv.width=window.innerWidth; cv.height=window.innerHeight;
+  }
+  function _ensureAN() {
+    if (_vizAN) return;
+    _vizAN = {
+      wave: ctx.createAnalyser(),
+      spec: ctx.createAnalyser(),
+    };
+    _vizAN.wave.fftSize = 4096; _vizAN.wave.smoothingTimeConstant = 0.6;
+    _vizAN.spec.fftSize = 2048; _vizAN.spec.smoothingTimeConstant = 0.82;
+    analyserNode.connect(_vizAN.wave);
+    analyserNode.connect(_vizAN.spec);
+    const s1=ctx.createGain(); s1.gain.value=0; _vizAN.wave.connect(s1); s1.connect(ctx.destination);
+    const s2=ctx.createGain(); s2.gain.value=0; _vizAN.spec.connect(s2); s2.connect(ctx.destination);
+    _vizAN.waveBuf  = new Float32Array(_vizAN.wave.fftSize);
+    _vizAN.freqBuf  = new Float32Array(_vizAN.spec.frequencyBinCount);
+  }
+
+  function _runViz() {
+    const cv=document.getElementById('viz-canvas');
+    const c=cv.getContext('2d');
+    _ensureAN();
+    c.fillStyle='#000'; c.fillRect(0,0,cv.width,cv.height);
+
+    function frame() {
+      if (!_vizOpen) return;
+      requestAnimationFrame(frame);
+      if (cv.width!==window.innerWidth||cv.height!==window.innerHeight) _resizeViz();
+      const W=cv.width, H=cv.height;
+      _vizAN.wave.getFloatTimeDomainData(_vizAN.waveBuf);
+      _vizAN.spec.getFloatFrequencyData(_vizAN.freqBuf);
+      _vizPhase++;
+
+      switch(_vizMode) {
+        case 0: _waveform(c,W,H); break;
+        case 1: _lissajous(c,W,H); break;
+        case 2: _radial(c,W,H); break;
+        case 3: _aurora(c,W,H); break;
+      }
+    }
+    frame();
+  }
+
+  // ── Mode 0: Phosphor Oscilloscope ─────────────────────────────────────────
+  function _waveform(c,W,H) {
+    c.fillStyle='rgba(0,0,0,0.18)'; c.fillRect(0,0,W,H);
+    // Centre guide
+    c.strokeStyle='rgba(0,255,255,0.04)'; c.lineWidth=1;
+    c.beginPath(); c.moveTo(0,H/2); c.lineTo(W,H/2); c.stroke();
+    // Waveform
+    const buf=_vizAN.waveBuf, n=buf.length;
+    c.strokeStyle='#00ffff'; c.lineWidth=1.8;
+    c.shadowBlur=10; c.shadowColor='#00ffff';
+    c.beginPath();
+    for (let i=0;i<n;i++) {
+      const x=(i/n)*W, y=H/2-buf[i]*H*0.44;
+      i===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke();
+    // Soft second pass for glow bloom
+    c.globalAlpha=0.22;
+    c.lineWidth=5; c.shadowBlur=30;
+    c.beginPath();
+    for (let i=0;i<n;i+=2) {
+      const x=(i/n)*W, y=H/2-buf[i]*H*0.44;
+      i===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke();
+    c.globalAlpha=1; c.shadowBlur=0;
+  }
+
+  // ── Mode 1: Lissajous ─────────────────────────────────────────────────────
+  function _lissajous(c,W,H) {
+    c.fillStyle='rgba(0,0,0,0.2)'; c.fillRect(0,0,W,H);
+    const xNode=mods.lissajous?.xNode, yNode=mods.lissajous?.yNode;
+    const xBuf=new Float32Array(xNode?.frequencyBinCount||512);
+    const yBuf=new Float32Array(yNode?.frequencyBinCount||512);
+    if (xNode) xNode.getFloatTimeDomainData(xBuf);
+    else _vizAN.waveBuf.forEach((v,i)=>{ if(i<xBuf.length) xBuf[i]=v; });
+    if (yNode) yNode.getFloatTimeDomainData(yBuf);
+    else { // phase-shifted copy as fallback
+      const shift=Math.floor(xBuf.length/4);
+      for(let i=0;i<yBuf.length;i++) yBuf[i]=xBuf[(i+shift)%xBuf.length];
+    }
+    const cx=W/2, cy=H/2, scale=Math.min(W,H)*0.44;
+    // Trail path — gradient stroke magenta→cyan
+    const n=Math.min(xBuf.length,yBuf.length);
+    c.lineWidth=1.6; c.shadowBlur=14; c.shadowColor='#ff00ff';
+    for (let i=1;i<n;i++) {
+      const t=i/n;
+      const r=Math.round((1-t)*255), g=0, b=Math.round(t*255);
+      c.strokeStyle=`rgba(${r},${g},${b},${0.4+t*0.6})`;
+      c.beginPath();
+      c.moveTo(cx+xBuf[i-1]*scale, cy-yBuf[i-1]*scale);
+      c.lineTo(cx+xBuf[i]*scale,   cy-yBuf[i]*scale);
+      c.stroke();
+    }
+    c.shadowBlur=0;
+  }
+
+  // ── Mode 2: Radial Spectrum ───────────────────────────────────────────────
+  function _radial(c,W,H) {
+    c.fillStyle='rgba(0,0,0,0.14)'; c.fillRect(0,0,W,H);
+    const cx=W/2, cy=H/2;
+    const baseR=Math.min(W,H)*0.14, maxH=Math.min(W,H)*0.38;
+    const BARS=180, nyq=_vizAN.freqBuf.length;
+    const barW=(2*Math.PI*baseR/BARS)*0.72;
+    for (let i=0;i<BARS;i++) {
+      const angle=(i/BARS)*Math.PI*2-Math.PI/2;
+      const binIdx=Math.floor(Math.pow(i/BARS,1.5)*nyq*0.8);
+      const db=_vizAN.freqBuf[Math.min(binIdx,nyq-1)];
+      const norm=Math.max(0,(db+90)/70);
+      const bh=norm*maxH;
+      const hue=200+i/BARS*140; // cyan→magenta sweep
+      c.strokeStyle=`hsla(${hue},100%,65%,${0.3+norm*0.7})`;
+      c.lineWidth=barW; c.shadowBlur=norm*16; c.shadowColor=`hsl(${hue},100%,70%)`;
+      c.beginPath();
+      c.moveTo(cx+Math.cos(angle)*baseR, cy+Math.sin(angle)*baseR);
+      c.lineTo(cx+Math.cos(angle)*(baseR+bh), cy+Math.sin(angle)*(baseR+bh));
+      c.stroke();
+    }
+    // Inner ring
+    c.shadowBlur=0; c.strokeStyle='rgba(0,255,255,0.12)'; c.lineWidth=0.8;
+    c.beginPath(); c.arc(cx,cy,baseR,0,Math.PI*2); c.stroke();
+  }
+
+  // ── Mode 3: Aurora ────────────────────────────────────────────────────────
+  function _aurora(c,W,H) {
+    c.fillStyle='rgba(0,0,0,0.11)'; c.fillRect(0,0,W,H);
+    const nyq=_vizAN.freqBuf.length;
+    const LAYERS=7;
+    for (let l=0;l<LAYERS;l++) {
+      const t=l/(LAYERS-1);
+      const band=Math.floor((0.04+t*0.45)*nyq);
+      const db=_vizAN.freqBuf[Math.min(band,nyq-1)];
+      const amp=Math.max(0,(db+85)/65);
+      const baseY=H*(0.18+t*0.64);
+      const wA=amp*H*0.22;
+      const speed=0.007+t*0.009;
+      const freq=0.0025+t*0.003;
+      const hue=150+t*195; // emerald→magenta arc
+      const alpha=0.025+amp*0.3;
+      c.strokeStyle=`hsla(${hue},100%,62%,${alpha})`;
+      c.lineWidth=H*0.07*(0.5+amp*0.7);
+      c.shadowBlur=18+amp*40; c.shadowColor=`hsl(${hue},100%,70%)`;
+      c.beginPath();
+      for (let x=0;x<=W;x+=5) {
+        const ph=_vizPhase*speed;
+        const y=baseY
+          +Math.sin(x*freq+ph+l*0.9)*wA
+          +Math.sin(x*freq*1.8+ph*1.4+l*0.5)*wA*0.35
+          +Math.cos(x*freq*0.5+ph*0.7)*wA*0.2;
+        x===0?c.moveTo(x,y):c.lineTo(x,y);
+      }
+      c.stroke();
+    }
+    c.shadowBlur=0;
+  }
+
+  // ── Wire up after DOM ready ────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('viz-btn').addEventListener('click', () => {
+      _vizOpen ? _closeViz() : _openViz();
+    });
+    document.getElementById('viz-close-btn').addEventListener('click', e => {
+      e.stopPropagation(); _closeViz();
+    });
+    document.getElementById('viz-canvas').addEventListener('click', () => _cycleMode());
+    document.getElementById('viz-mode-row').addEventListener('click', () => _cycleMode());
+    document.querySelectorAll('.viz-pip').forEach((p,i) => {
+      p.addEventListener('click', e => {
+        e.stopPropagation();
+        _vizMode = i;
+        document.getElementById('viz-mode-lbl').textContent = MODES[_vizMode];
+        document.querySelectorAll('.viz-pip').forEach((q,j)=>q.classList.toggle('on',j===_vizMode));
+        const cv=document.getElementById('viz-canvas');
+        cv.getContext('2d').fillStyle='#000';
+        cv.getContext('2d').fillRect(0,0,cv.width,cv.height);
+      });
+    });
+    window.addEventListener('resize', () => { if(_vizOpen) _resizeViz(); });
+    window.addEventListener('keydown', e => {
+      if (e.key==='Escape' && _vizOpen) { _closeViz(); return; }
+      if ((e.key==='v'||e.key==='V') && !e.target.closest('input,select,textarea,[contenteditable]')) {
+        _vizOpen ? _closeViz() : _openViz();
+      }
+    });
+  });
+})();
+
 // Expose internals for testing
 Object.defineProperties(window, {
   ctx: { get: () => ctx },
@@ -12132,5 +12367,20 @@ Object.defineProperties(window, {
   audioConns: { get: () => audioConns }
 });
 </script>
+
+<!-- ── Fullscreen Visualizer Overlay ── -->
+<div id="viz-overlay">
+  <canvas id="viz-canvas"></canvas>
+  <div id="viz-name">nm²</div>
+  <div id="viz-mode-lbl">WAVEFORM</div>
+  <button id="viz-close-btn">ESC</button>
+  <div id="viz-mode-row">
+    <div class="viz-pip on"></div>
+    <div class="viz-pip"></div>
+    <div class="viz-pip"></div>
+    <div class="viz-pip"></div>
+  </div>
+  <div id="viz-hint">CLICK · CYCLE MODE</div>
+</div>
 </body>
 </html>
