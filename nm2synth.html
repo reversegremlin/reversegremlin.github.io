@@ -1558,9 +1558,24 @@ function makeADSR(instanceId = 1) {
     p.linearRampToValueAtTime(vel, t + m.A);
     p.setTargetAtTime(m.S * vel, t + m.A, m.D / 4);
   };
+  m.onAt = (t, vel=1) => {
+    m.gateOn = true;
+    const p = src.offset;
+    p.cancelScheduledValues(t);
+    p.setValueAtTime(p.value, t);
+    p.linearRampToValueAtTime(vel, t + m.A);
+    p.setTargetAtTime(m.S * vel, t + m.A, m.D / 4);
+  };
   m.off = () => {
     m.gateOn = false;
     const t = ctx.currentTime, p = src.offset;
+    p.cancelScheduledValues(t);
+    p.setValueAtTime(p.value, t);
+    p.setTargetAtTime(0, t, m.R / 4);
+  };
+  m.offAt = (t) => {
+    m.gateOn = false;
+    const p = src.offset;
     p.cancelScheduledValues(t);
     p.setValueAtTime(p.value, t);
     p.setTargetAtTime(0, t, m.R / 4);
@@ -1598,7 +1613,8 @@ function makeSeq() {
     const g = ctx.createConstantSource(); g.offset.value = 0; g.start(); return g;
   });
   m.setBPM = v => { m.bpm = Math.round(v); };
-  m.fireTick = () => {
+  m.fireTick = (stepTime) => {
+    const t = stepTime ?? ctx.currentTime;
     const sc = m.stepCount;
     if (m.direction === 'fwd') {
       m.step = (m.step + 1) % sc;
@@ -1619,15 +1635,14 @@ function makeSeq() {
     refreshStepLights();
     if (mods.clkdiv) mods.clkdiv.tick();
     if (mods.euclid) mods.euclid.tick();
-    const ms = (60 / m.bpm / 2) * 1000;
+    const stepDurS = 60 / m.bpm / 2;
     const s = m.steps[m.step];
     const fires = s.on && Math.random() < (s.prob ?? 1.0);
     // Per-step gate pulse (steps 0–7 only; gate fires regardless of probability)
     if (s.on && m.step < 8) {
       const g = m.gateNodes[m.step];
-      const gateDur = ms * 0.4 / 1000;
-      g.offset.setValueAtTime(1, ctx.currentTime);
-      g.offset.setValueAtTime(0, ctx.currentTime + gateDur);
+      g.offset.setValueAtTime(1, t);
+      g.offset.setValueAtTime(0, t + stepDurS * 0.4);
     }
     if (fires) {
       let pitch = s.pitch;
@@ -1644,23 +1659,36 @@ function makeSeq() {
         const lbl = document.getElementById('quant-note-lbl');
         if (lbl) lbl.textContent = ROOT_NAMES[((pitch % 12) + 12) % 12] || '—';
       }
-      // Emit velocity CV
-      velSrc.offset.setValueAtTime(s.vel ?? 0.7, ctx.currentTime);
-      mods.adsr.on(); setTimeout(() => mods.adsr.off(), ms * 0.65);
+      // Emit velocity CV and trigger ADSR at audio-accurate scheduled time
+      velSrc.offset.setValueAtTime(s.vel ?? 0.7, t);
+      mods.adsr.onAt(t, s.vel ?? 0.7);
+      mods.adsr.offAt(t + stepDurS * 0.65);
     } else {
-      velSrc.offset.setValueAtTime(0, ctx.currentTime);
-      mods.adsr.off();
+      velSrc.offset.setValueAtTime(0, t);
+      mods.adsr.offAt(t);
     }
   };
   m.start = () => {
     clearTimeout(m.timer); m.timer = null; // always clear first — prevents double-start
+    // Drift-correcting scheduler: tracks expected fire time and compensates for late setTimeout.
+    // Notes are scheduled against ctx.currentTime + lookaheadS so they fire at audio-accurate time
+    // even if the scheduler callback fires slightly late.
+    const LOOKAHEAD_S = 0.05; // schedule notes 50ms ahead of now
+    let _nextExpectedMs = 0;
     const tick = () => {
       if (!m.playing) return;
       if (!m.bpm) { m.timer = setTimeout(tick, 200); return; }
-      m.fireTick();
-      m.timer = setTimeout(tick, (60 / m.bpm / 2) * 1000);
+      const stepDurS = 60 / m.bpm / 2;
+      // Schedule the note at the audio-accurate time (lookahead from now)
+      m.fireTick(ctx.currentTime + LOOKAHEAD_S);
+      _nextExpectedMs += stepDurS * 1000;
+      // Compensate for drift: fire next callback early enough to maintain cadence
+      const delay = Math.max(1, _nextExpectedMs - performance.now());
+      m.timer = setTimeout(tick, delay);
     };
-    m.timer = setTimeout(tick, m.bpm ? (60 / m.bpm / 2) * 1000 : 200);
+    const firstMs = m.bpm ? (60 / m.bpm / 2) * 1000 : 200;
+    _nextExpectedMs = performance.now() + firstMs;
+    m.timer = setTimeout(tick, firstMs);
   };
   m.stop = () => {
     clearTimeout(m.timer); m.timer = null;
@@ -2577,7 +2605,7 @@ function makeSidechain() {
   m.setRelease = v => { m.releaseVal = v; };
   m.setAmount  = v => { m.amountVal  = v; };
   const buf = new Float32Array(analyser.fftSize);
-  (function poll() {
+  registerDraw(function _sidechainPoll() {
     analyser.getFloatTimeDomainData(buf);
     let rms=0; for(const x of buf) rms+=x*x; rms=Math.sqrt(rms/buf.length);
     const target = rms * m.amountVal;
@@ -2588,8 +2616,7 @@ function makeSidechain() {
       m.envLevel += (target-m.envLevel)*(1-Math.exp(-dt/Math.max(0.001,m.releaseVal)));
     }
     cvSrc.offset.setTargetAtTime(m.envLevel, ctx.currentTime, 0.001);
-    requestAnimationFrame(poll);
-  })();
+  });
   mods.sidechain = m; return m;
 }
 
@@ -3912,9 +3939,31 @@ function moveCable(cable) {
 }
 
 function updateCables(){ if(nm2Mobile?.active) return; cables.forEach(moveCable); }
-window.addEventListener('resize', updateCables);
-window.addEventListener('scroll', updateCables);
-setInterval(updateCables, 120);
+
+// ─── Unified animation loop ──────────────────────────────────────────────────
+// All per-frame canvas draws register here. One RAF replaces ~17 independent loops.
+// _masterFrameTs: the RAF timestamp (like performance.now()) for timing-based draws.
+// _masterFrameCount: integer counter for frame-rate throttling (e.g. % 4 for ~15fps).
+const _drawFns = new Set();
+let _masterFrameCount = 0;
+let _masterFrameTs = 0;
+function registerDraw(fn) { _drawFns.add(fn); }
+function unregisterDraw(fn) { _drawFns.delete(fn); }
+(function _masterRAF(ts) {
+  requestAnimationFrame(_masterRAF);
+  _masterFrameCount++;
+  _masterFrameTs = ts || 0;
+  for (const fn of _drawFns) fn();
+})(0);
+
+// Cable updates: dirty-flag driven from unified loop (was: setInterval every 120ms)
+let _cablesDirty = true; // start dirty so cables position correctly on first frame
+function markCablesDirty() { _cablesDirty = true; }
+window.addEventListener('resize', markCablesDirty);
+window.addEventListener('scroll', markCablesDirty);
+registerDraw(function _updateCablesIfDirty() {
+  if (_cablesDirty) { updateCables(); _cablesDirty = false; }
+});
 
 // ─── Ghost cable physics ──────────────────────────────────────────────────────
 // Shown while a source is pending and the user is hunting for a destination.
@@ -5349,27 +5398,35 @@ function startScope() {
   const cv=document.getElementById('scope-cv');
   if(!cv) return;
   const c=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
   const buf=new Float32Array(analyserNode.frequencyBinCount);
-  function draw() {
-    requestAnimationFrame(draw);
+  // Pre-render static grid once to an offscreen canvas — blitted each frame instead of
+  // redrawing 12 separate stroke calls per frame.
+  const gridCv=document.createElement('canvas'); gridCv.width=W; gridCv.height=H;
+  const gc=gridCv.getContext('2d');
+  gc.strokeStyle='rgba(255,0,255,.07)'; gc.lineWidth=.5;
+  for(let x=0;x<W;x+=W/8){gc.beginPath();gc.moveTo(x,0);gc.lineTo(x,H);gc.stroke();}
+  for(let y=0;y<H;y+=H/4){gc.beginPath();gc.moveTo(0,y);gc.lineTo(W,y);gc.stroke();}
+  registerDraw(function _scopeDraw() {
     analyserNode.getFloatTimeDomainData(buf);
-    const W=cv.width,H=cv.height;
     c.fillStyle='#04040e'; c.fillRect(0,0,W,H);
-    // grid
-    c.strokeStyle='rgba(255,0,255,.07)'; c.lineWidth=.5;
-    for(let x=0;x<W;x+=W/8){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}
-    for(let y=0;y<H;y+=H/4){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
-    // waveform
+    c.drawImage(gridCv,0,0);
+    // waveform — two-pass bloom without shadowBlur (shadowBlur disables GPU compositing)
     c.strokeStyle='#ff00ff'; c.lineWidth=1.5;
-    c.shadowColor='#ff00ff'; c.shadowBlur=6;
     c.beginPath();
     for(let i=0;i<buf.length;i++){
       const x=i*(W/buf.length), y=(1-buf[i])*H/2;
       i===0?c.moveTo(x,y):c.lineTo(x,y);
     }
-    c.stroke(); c.shadowBlur=0;
-  }
-  draw();
+    c.stroke();
+    c.globalAlpha=0.18; c.lineWidth=4;
+    c.beginPath();
+    for(let i=0;i<buf.length;i+=2){
+      const x=i*(W/buf.length), y=(1-buf[i])*H/2;
+      i===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke(); c.globalAlpha=1;
+  });
 }
 
 function startLFOPreview(canvasId, getMod) {
@@ -5377,12 +5434,10 @@ function startLFOPreview(canvasId, getMod) {
   if(!cv) return;
   const c=cv.getContext('2d');
   let ph=0;
-  function draw() {
-    requestAnimationFrame(draw);
+  registerDraw(function _lfoDraw() {
     const W=cv.width,H=cv.height;
     c.fillStyle='#04040e'; c.fillRect(0,0,W,H);
     c.strokeStyle='#00ffff'; c.lineWidth=1.2;
-    c.shadowColor='#00ffff'; c.shadowBlur=4;
     c.beginPath();
     const m=getMod();
     for(let x=0;x<W;x++){
@@ -5396,10 +5451,9 @@ function startLFOPreview(canvasId, getMod) {
       const py=(1-y)*H/2;
       x===0?c.moveTo(x,py):c.lineTo(x,py);
     }
-    c.stroke(); c.shadowBlur=0;
+    c.stroke();
     ph+=0.04;
-  }
-  draw();
+  });
 }
 
 function drawEnv() {
@@ -5412,38 +5466,36 @@ function drawEnv() {
   const hold=.2, total=A+D+hold+R;
   const tx=v=>4+(v/total)*(W-8);
   c.strokeStyle='#ffff00'; c.lineWidth=1.3;
-  c.shadowColor='#ffff00'; c.shadowBlur=4;
   c.beginPath();
   c.moveTo(4,H-4);
   c.lineTo(tx(A),4);
   c.lineTo(tx(A+D), 4+(1-S)*(H-8));
   c.lineTo(tx(A+D+hold), 4+(1-S)*(H-8));
   c.lineTo(tx(A+D+hold+R),H-4);
-  c.stroke(); c.shadowBlur=0;
+  c.stroke();
 }
 
 function startVCFPreview() {
-  function draw() {
-    requestAnimationFrame(draw);
-    const cv=document.getElementById('vcf-cv');
-    if(!cv||!mods.vcf) return;
-    const c=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const cv=document.getElementById('vcf-cv');
+  if(!cv) return;
+  const c=cv.getContext('2d'), W=cv.width, H=cv.height;
+  // Pre-allocate frequency response arrays — was allocating new Float32Array(W) every frame
+  const freqs=new Float32Array(W);
+  for(let i=0;i<W;i++) freqs[i]=20*Math.pow(1000,i/W);
+  const mag=new Float32Array(W), ph=new Float32Array(W);
+  registerDraw(function _vcfDraw() {
+    if(!mods.vcf) return;
     c.fillStyle='#04040e'; c.fillRect(0,0,W,H);
-    const freqs=new Float32Array(W);
-    for(let i=0;i<W;i++) freqs[i]=20*Math.pow(1000,i/W);
-    const mag=new Float32Array(W), ph=new Float32Array(W);
     mods.vcf.filt.getFrequencyResponse(freqs,mag,ph);
     c.strokeStyle='#00ff88'; c.lineWidth=1.3;
-    c.shadowColor='#00ff88'; c.shadowBlur=4;
     c.beginPath();
     for(let i=0;i<W;i++){
       const db=20*Math.log10(Math.max(mag[i],1e-6));
       const y=H/2-(db/40)*H;
       i===0?c.moveTo(i,Math.min(H,Math.max(0,y))):c.lineTo(i,Math.min(H,Math.max(0,y)));
     }
-    c.stroke(); c.shadowBlur=0;
-  }
-  draw();
+    c.stroke();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -8177,18 +8229,18 @@ function buildMicLooperPanel() {
   vu.style.cssText = 'display:block;margin-bottom:3px;border:1px solid var(--border-soft);background:var(--bg-panel-4);border-radius:2px;';
   const vCtx = vu.getContext('2d');
   const abuf = new Float32Array(256);
-  function drawVU() {
-    requestAnimationFrame(drawVU);
-    vCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-panel-4').trim(); vCtx.fillRect(0, 0, 94, 12);
+  // Pre-allocate gradient (was created every frame); keyed fill avoids getComputedStyle in RAF
+  const _mlGrad = vCtx.createLinearGradient(0, 0, 94, 0);
+  _mlGrad.addColorStop(0, '#00ff88'); _mlGrad.addColorStop(0.6, '#ffff00'); _mlGrad.addColorStop(1, '#ff4444');
+  const _mlVuBg = () => document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#04040e';
+  registerDraw(function _mlVuDraw() {
+    vCtx.fillStyle = _mlVuBg(); vCtx.fillRect(0, 0, 94, 12);
     if (!mods.miclooper.active && !mods.miclooper.playing) return;
     mods.miclooper.analyser.getFloatTimeDomainData(abuf);
     let rms = 0; for (const v of abuf) rms += v * v; rms = Math.sqrt(rms / abuf.length);
     const w = Math.min(94, rms * 380);
-    const g = vCtx.createLinearGradient(0, 0, 94, 0);
-    g.addColorStop(0, '#00ff88'); g.addColorStop(0.6, '#ffff00'); g.addColorStop(1, '#ff4444');
-    vCtx.fillStyle = g; vCtx.fillRect(0, 1, w, 10);
-  }
-  drawVU();
+    vCtx.fillStyle = _mlGrad; vCtx.fillRect(0, 1, w, 10);
+  });
 
   // Waveform display (filled in once loop is recorded)
   const wave = document.createElement('canvas');
@@ -8339,18 +8391,17 @@ function buildMicInputPanel() {
   vu.id = 'mic-vu'; vu.width = 74; vu.height = 20;
   const vCtx = vu.getContext('2d');
   const buf = new Float32Array(256);
-  function drawVU() {
-    if (!mods.mic.active) { vCtx.fillStyle='#04040e'; vCtx.fillRect(0,0,74,20); requestAnimationFrame(drawVU); return; }
+  // Pre-allocate gradient (was created every frame)
+  const _micGrad = vCtx.createLinearGradient(0,0,74,0);
+  _micGrad.addColorStop(0,'#00ff88'); _micGrad.addColorStop(0.6,'#ffff00'); _micGrad.addColorStop(1,'#ff4444');
+  registerDraw(function _micVuDraw() {
+    vCtx.fillStyle='#04040e'; vCtx.fillRect(0,0,74,20);
+    if (!mods.mic.active) return;
     mods.mic.analyser.getFloatTimeDomainData(buf);
     let rms=0; for(const v of buf) rms+=v*v; rms=Math.sqrt(rms/buf.length);
     const w = Math.min(74, rms * 300);
-    vCtx.fillStyle='#04040e'; vCtx.fillRect(0,0,74,20);
-    const g = vCtx.createLinearGradient(0,0,74,0);
-    g.addColorStop(0,'#00ff88'); g.addColorStop(0.6,'#ffff00'); g.addColorStop(1,'#ff4444');
-    vCtx.fillStyle=g; vCtx.fillRect(0,2,w,16);
-    requestAnimationFrame(drawVU);
-  }
-  drawVU();
+    vCtx.fillStyle=_micGrad; vCtx.fillRect(0,2,w,16);
+  });
 
   // ARM button
   const armBtn = document.createElement('button');
@@ -8627,13 +8678,14 @@ function makeFormant() {
     dryGain.gain.setTargetAtTime(1 - v, ctx.currentTime, 0.05);
   };
 
-  (function pollCV() {
+  // CV poll at ~15fps (every 4th frame) — control signals don't need 60fps
+  registerDraw(function _formantPollCV() {
+    if (_masterFrameCount % 4 !== 0) return;
     cvAnalyser.getFloatTimeDomainData(_cvBuf);
     let sum = 0; for (const x of _cvBuf) sum += x;
     const avg = sum / _cvBuf.length;
     if (Math.abs(avg) > 0.005) m.setVowel(Math.max(0, Math.min(4, avg * 4)));
-    requestAnimationFrame(pollCV);
-  })();
+  });
 
   m.setVowel(1, true); // instant init — no audio context needed
 }
@@ -8712,15 +8764,16 @@ function makeResonator() {
   cvIn.connect(cvAnalyser);
   const _resCVBuf = new Float32Array(cvAnalyser.fftSize);
   m.cvIn = cvIn;
-  (function pollResCV() {
+  // CV poll at ~15fps — control signals don't need 60fps
+  registerDraw(function _resPollCV() {
+    if (_masterFrameCount % 4 !== 0) return;
     cvAnalyser.getFloatTimeDomainData(_resCVBuf);
     let sum = 0; for (const x of _resCVBuf) sum += x;
     const avg = sum / _resCVBuf.length;
     if (Math.abs(avg) > 0.005 && !m.track) {
       m.setFreq(Math.max(30, Math.min(2000, 30 * Math.pow(2000 / 30, avg))));
     }
-    requestAnimationFrame(pollResCV);
-  })();
+  });
 
   m.trackNote = semi => {
     if (!m.track) return;
@@ -8776,7 +8829,9 @@ function makeMorph() {
     m._updateSlotButtons?.();
   };
 
-  (function pollCV() {
+  // CV poll at ~15fps — morph position doesn't need 60fps updates
+  registerDraw(function _morphPollCV() {
+    if (_masterFrameCount % 4 !== 0) return;
     cvAnalyser.getFloatTimeDomainData(_cvBuf);
     let sum = 0; for (const x of _cvBuf) sum += x;
     const avg = sum / _cvBuf.length;
@@ -8784,8 +8839,7 @@ function makeMorph() {
       m.applyMorph(Math.max(0, Math.min(1, avg)));
       sk('morph-pos', m.pos);
     }
-    requestAnimationFrame(pollCV);
-  })();
+  });
 }
 
 // ── SPECTRAL — FFT freeze / smear / blur ───────────────────────────────────
@@ -8917,8 +8971,7 @@ function applyAffect(x, y) {
 
 function startAffectLoop() {
   const m = mods.affect;
-  function loop() {
-    requestAnimationFrame(loop);
+  registerDraw(function _affectLoop() {
     if (m.wanderMode && m.active) {
       m.wanderDX += (Math.random() - 0.5) * m.driftSpeed * 0.004;
       m.wanderDY += (Math.random() - 0.5) * m.driftSpeed * 0.004;
@@ -8933,8 +8986,7 @@ function startAffectLoop() {
       applyAffect(m.x, m.y);
     }
     if (typeof drawAffectCanvas === 'function') drawAffectCanvas();
-  }
-  loop();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -9056,7 +9108,7 @@ function makeTuring() {
   m.setChance = v => { m.chanceVal = v; };
   m.setRate   = v => { m.rateVal   = Math.max(0.1, v); };
   let _lastTick=0;
-  (function _turingLoop(t){ requestAnimationFrame(_turingLoop); if(t-_lastTick>=1000/m.rateVal){_lastTick=t;m.tick();} })();
+  registerDraw(function _turingTick(){ if(_masterFrameTs-_lastTick>=1000/m.rateVal){_lastTick=_masterFrameTs;m.tick();} });
   mods.turing = m; return m;
 }
 
@@ -9069,13 +9121,12 @@ function makePolyClock() {
   const m = { gateA:gA.out, gateB:gB.out, gateC:gC.out, tempoVal:1 };
   let lastA=0, lastB=0, lastC=0;
   const fire=(src,now)=>{src.offset.setValueAtTime(1,now);src.offset.setValueAtTime(0,now+0.018);};
-  (function _pclockLoop(){
-    requestAnimationFrame(_pclockLoop);
+  registerDraw(function _pclockTick(){
     const now=ctx.currentTime;
     if(now-lastA>=3/m.tempoVal){fire(gA.src,now);lastA=now;}
     if(now-lastB>=4/m.tempoVal){fire(gB.src,now);lastB=now;}
     if(now-lastC>=5/m.tempoVal){fire(gC.src,now);lastC=now;}
-  })();
+  });
   m.setTempo = v => { m.tempoVal=Math.max(0.05,v); };
   mods.pclock = m; return m;
 }
@@ -9101,7 +9152,7 @@ function makeDrunk() {
   m.setScale = v => { m.scaleName=v; };
   m.setRoot  = v => { m.root=v; };
   let _lastTick=0;
-  (function _drunkLoop(t){ requestAnimationFrame(_drunkLoop); if(t-_lastTick>=1000/m.rateVal){_lastTick=t;m.step();} })();
+  registerDraw(function _drunkTick(){ if(_masterFrameTs-_lastTick>=1000/m.rateVal){_lastTick=_masterFrameTs;m.step();} });
   mods.drunk = m; return m;
 }
 
@@ -9568,7 +9619,7 @@ function buildXYPadPanel() {
   ppRow.appendChild(mkPP('xypad-xo','co','X OUT','out'));
   ppRow.appendChild(mkPP('xypad-yo','co','Y OUT','out'));
   d.appendChild(ppRow);
-  (function _xyLoop(){ requestAnimationFrame(_xyLoop); drawXY(); })();
+  registerDraw(drawXY);
   return panel('xypad','XY PAD',d);
 }
 
@@ -9741,7 +9792,7 @@ function buildThereminPanel() {
   cv.addEventListener('pointerdown',e=>{_therActive=true;cv.setPointerCapture(e.pointerId);_setFromEvt(e);});
   cv.addEventListener('pointermove',e=>{if(_therActive)_setFromEvt(e);});
   cv.addEventListener('pointerup',()=>_therActive=false);
-  (function _therLoop(){ requestAnimationFrame(_therLoop); drawTheremin(); })();
+  registerDraw(drawTheremin);
   d.appendChild(cv);
   d.appendChild(mkPP('theremin-cv','co','PITCH CV','out'));
   d.appendChild(mkPP('theremin-vel','co','VOL CV','out'));
@@ -9765,8 +9816,7 @@ function buildTeslaPanel() {
     c.beginPath();c.moveTo(x,y);c.lineTo(ex,ey);
     c.strokeStyle=`rgba(${180+Math.floor(amp*75)},${Math.floor(120+amp*100)},0,${alpha})`;
     c.lineWidth=Math.max(0.3,depth*0.25);
-    c.shadowBlur=depth*amp*10; c.shadowColor='rgba(255,160,0,0.9)';
-    c.stroke(); c.shadowBlur=0;
+    c.stroke();
     if(Math.random()<0.65+amp*0.25){
       const dev=((Math.random()-0.5)*1.3)*(1+amp*0.5);
       _branch(ex,ey,angle+dev,length*(0.5+Math.random()*0.25),depth-1,amp);
@@ -9776,8 +9826,7 @@ function buildTeslaPanel() {
       _branch(ex,ey,angle+dev2,length*(0.3+Math.random()*0.2),depth-2,amp);
     }
   }
-  (function _teslaLoop(){
-    requestAnimationFrame(_teslaLoop);
+  registerDraw(function _teslaLoop(){
     ampAn.getFloatTimeDomainData(timeBuf);
     let rms=0; for(const s of timeBuf) rms+=s*s; rms=Math.sqrt(rms/timeBuf.length);
     const amp=Math.min(1,rms*10);
@@ -9788,7 +9837,7 @@ function buildTeslaPanel() {
       const startAngle=-Math.PI/2+((Math.random()-0.5)*0.6);
       _branch(W/2,H,startAngle,25+amp*45,5+Math.floor(amp*3),amp);
     }
-  })();
+  });
   d.appendChild(cv);
   const lbl=document.createElement('div');
   lbl.style.cssText='text-align:center;font-size:7px;color:rgba(255,170,0,0.35);margin-top:3px;letter-spacing:2px;';
@@ -9810,14 +9859,13 @@ function startSpectrum() {
   const freqBuf = new Float32Array(specAnalyser.frequencyBinCount);
   const grad = c.createLinearGradient(0,H,0,0);
   grad.addColorStop(0, '#00ffff'); grad.addColorStop(0.5,'#8800ff'); grad.addColorStop(1,'#ff00ff');
-  function draw() {
-    requestAnimationFrame(draw);
+  const nyq = ctx.sampleRate / 2;
+  const logMin = Math.log10(20), logMax = Math.log10(nyq);
+  const barW = Math.ceil(W / 80);
+  registerDraw(function _specDraw() {
     specAnalyser.getFloatFrequencyData(freqBuf);
     c.fillStyle = '#04040e'; c.fillRect(0,0,W,H);
     const bins = freqBuf.length;
-    const nyq = ctx.sampleRate / 2;
-    const logMin = Math.log10(20), logMax = Math.log10(nyq);
-    const barW = Math.ceil(W / 80);
     for (let i = 0; i < 80; i++) {
       const f0 = Math.pow(10, logMin + (i/80)*(logMax-logMin));
       const f1 = Math.pow(10, logMin + ((i+1)/80)*(logMax-logMin));
@@ -9835,8 +9883,7 @@ function startSpectrum() {
       const x = (Math.log10(f)-logMin)/(logMax-logMin)*W;
       c.fillText(lbl, x-4, H-2);
     });
-  }
-  draw();
+  });
 }
 
 function startLissajous() {
@@ -9856,14 +9903,12 @@ function startLissajous() {
   const xBuf = new Float32Array(axNode.frequencyBinCount);
   const yBuf = new Float32Array(ayNode.frequencyBinCount);
   const HISTORY = 512;
-  function draw() {
-    requestAnimationFrame(draw);
+  registerDraw(function _lissajousDraw() {
     axNode.getFloatTimeDomainData(xBuf);
     ayNode.getFloatTimeDomainData(yBuf);
     // Phosphor fade
     c.fillStyle = 'rgba(4,4,14,0.25)'; c.fillRect(0,0,W,H);
     c.strokeStyle = '#ff00ff'; c.lineWidth = 1.2;
-    c.shadowColor = '#ff00ff'; c.shadowBlur = 6;
     c.beginPath();
     const n = Math.min(xBuf.length, yBuf.length, HISTORY);
     for (let i=0; i<n; i++) {
@@ -9871,9 +9916,8 @@ function startLissajous() {
       const py = (1-(yBuf[i]+1)*0.5)*H;
       i===0 ? c.moveTo(px,py) : c.lineTo(px,py);
     }
-    c.stroke(); c.shadowBlur=0;
-  }
-  draw();
+    c.stroke();
+  });
 }
 
 
@@ -12332,55 +12376,55 @@ document.addEventListener('keydown', e => {
     // Centre guide
     c.strokeStyle='rgba(0,255,255,0.04)'; c.lineWidth=1;
     c.beginPath(); c.moveTo(0,H/2); c.lineTo(W,H/2); c.stroke();
-    // Waveform
     const buf=_vizAN.waveBuf, n=buf.length;
-    c.strokeStyle='#00ffff'; c.lineWidth=1.8;
-    c.shadowBlur=10; c.shadowColor='#00ffff';
-    c.beginPath();
-    for (let i=0;i<n;i++) {
-      const x=(i/n)*W, y=H/2-buf[i]*H*0.44;
-      i===0?c.moveTo(x,y):c.lineTo(x,y);
-    }
-    c.stroke();
-    // Soft second pass for glow bloom
-    c.globalAlpha=0.22;
-    c.lineWidth=5; c.shadowBlur=30;
+    // Glow bloom: two-pass without shadowBlur (shadowBlur disables GPU compositing,
+    // adding significant main-thread load at fullscreen resolution)
+    // Pass 1: wide soft bloom
+    c.strokeStyle='rgba(0,255,255,0.18)'; c.lineWidth=7;
     c.beginPath();
     for (let i=0;i<n;i+=2) {
       const x=(i/n)*W, y=H/2-buf[i]*H*0.44;
       i===0?c.moveTo(x,y):c.lineTo(x,y);
     }
     c.stroke();
-    c.globalAlpha=1; c.shadowBlur=0;
+    // Pass 2: crisp bright line
+    c.strokeStyle='#00ffff'; c.lineWidth=1.8;
+    c.beginPath();
+    for (let i=0;i<n;i++) {
+      const x=(i/n)*W, y=H/2-buf[i]*H*0.44;
+      i===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke();
   }
 
   // ── Mode 1: Lissajous ─────────────────────────────────────────────────────
+  // Pre-allocate buffers outside the draw function to avoid per-frame GC pressure
+  const _lissXBuf = new Float32Array(512);
+  const _lissYBuf = new Float32Array(512);
   function _lissajous(c,W,H) {
     c.fillStyle='rgba(0,0,0,0.2)'; c.fillRect(0,0,W,H);
     const xNode=mods.lissajous?.xNode, yNode=mods.lissajous?.yNode;
-    const xBuf=new Float32Array(xNode?.frequencyBinCount||512);
-    const yBuf=new Float32Array(yNode?.frequencyBinCount||512);
-    if (xNode) xNode.getFloatTimeDomainData(xBuf);
-    else _vizAN.waveBuf.forEach((v,i)=>{ if(i<xBuf.length) xBuf[i]=v; });
-    if (yNode) yNode.getFloatTimeDomainData(yBuf);
+    if (xNode) xNode.getFloatTimeDomainData(_lissXBuf);
+    else _vizAN.waveBuf.forEach((v,i)=>{ if(i<_lissXBuf.length) _lissXBuf[i]=v; });
+    if (yNode) yNode.getFloatTimeDomainData(_lissYBuf);
     else { // phase-shifted copy as fallback
-      const shift=Math.floor(xBuf.length/4);
-      for(let i=0;i<yBuf.length;i++) yBuf[i]=xBuf[(i+shift)%xBuf.length];
+      const shift=Math.floor(_lissXBuf.length/4);
+      for(let i=0;i<_lissYBuf.length;i++) _lissYBuf[i]=_lissXBuf[(i+shift)%_lissXBuf.length];
     }
     const cx=W/2, cy=H/2, scale=Math.min(W,H)*0.44;
-    // Trail path — gradient stroke magenta→cyan
-    const n=Math.min(xBuf.length,yBuf.length);
-    c.lineWidth=1.6; c.shadowBlur=14; c.shadowColor='#ff00ff';
-    for (let i=1;i<n;i++) {
-      const t=i/n;
-      const r=Math.round((1-t)*255), g=0, b=Math.round(t*255);
-      c.strokeStyle=`rgba(${r},${g},${b},${0.4+t*0.6})`;
-      c.beginPath();
-      c.moveTo(cx+xBuf[i-1]*scale, cy-yBuf[i-1]*scale);
-      c.lineTo(cx+xBuf[i]*scale,   cy-yBuf[i]*scale);
-      c.stroke();
+    const n=Math.min(_lissXBuf.length,_lissYBuf.length);
+    // Single batched path with a canvas gradient — replaces N separate stroke calls
+    const grd=c.createLinearGradient(cx-scale,0,cx+scale,0);
+    grd.addColorStop(0,'rgba(255,0,0,0.5)');
+    grd.addColorStop(0.5,'rgba(128,0,128,0.7)');
+    grd.addColorStop(1,'rgba(0,0,255,0.9)');
+    c.strokeStyle=grd; c.lineWidth=1.6;
+    c.beginPath();
+    for (let i=0;i<n;i++) {
+      const px=cx+_lissXBuf[i]*scale, py=cy-_lissYBuf[i]*scale;
+      i===0?c.moveTo(px,py):c.lineTo(px,py);
     }
-    c.shadowBlur=0;
+    c.stroke();
   }
 
   // ── Mode 2: Radial Spectrum ───────────────────────────────────────────────
@@ -12390,22 +12434,40 @@ document.addEventListener('keydown', e => {
     const baseR=Math.min(W,H)*0.14, maxH=Math.min(W,H)*0.38;
     const BARS=180, nyq=_vizAN.freqBuf.length;
     const barW=(2*Math.PI*baseR/BARS)*0.72;
+    // shadowBlur was set 180× per frame here — replaced with two-pass rendering:
+    // Pass 1: wider, dimmer bars for bloom effect (no shadowBlur)
+    c.lineWidth=barW*2.2;
+    for (let i=0;i<BARS;i++) {
+      const angle=(i/BARS)*Math.PI*2-Math.PI/2;
+      const binIdx=Math.floor(Math.pow(i/BARS,1.5)*nyq*0.8);
+      const db=_vizAN.freqBuf[Math.min(binIdx,nyq-1)];
+      const norm=Math.max(0,(db+90)/70);
+      if (norm < 0.05) continue;
+      const bh=norm*maxH;
+      const hue=200+i/BARS*140;
+      c.strokeStyle=`hsla(${hue},100%,65%,${norm*0.18})`;
+      c.beginPath();
+      c.moveTo(cx+Math.cos(angle)*baseR, cy+Math.sin(angle)*baseR);
+      c.lineTo(cx+Math.cos(angle)*(baseR+bh), cy+Math.sin(angle)*(baseR+bh));
+      c.stroke();
+    }
+    // Pass 2: sharp bars
+    c.lineWidth=barW;
     for (let i=0;i<BARS;i++) {
       const angle=(i/BARS)*Math.PI*2-Math.PI/2;
       const binIdx=Math.floor(Math.pow(i/BARS,1.5)*nyq*0.8);
       const db=_vizAN.freqBuf[Math.min(binIdx,nyq-1)];
       const norm=Math.max(0,(db+90)/70);
       const bh=norm*maxH;
-      const hue=200+i/BARS*140; // cyan→magenta sweep
+      const hue=200+i/BARS*140;
       c.strokeStyle=`hsla(${hue},100%,65%,${0.3+norm*0.7})`;
-      c.lineWidth=barW; c.shadowBlur=norm*16; c.shadowColor=`hsl(${hue},100%,70%)`;
       c.beginPath();
       c.moveTo(cx+Math.cos(angle)*baseR, cy+Math.sin(angle)*baseR);
       c.lineTo(cx+Math.cos(angle)*(baseR+bh), cy+Math.sin(angle)*(baseR+bh));
       c.stroke();
     }
     // Inner ring
-    c.shadowBlur=0; c.strokeStyle='rgba(0,255,255,0.12)'; c.lineWidth=0.8;
+    c.strokeStyle='rgba(0,255,255,0.12)'; c.lineWidth=0.8;
     c.beginPath(); c.arc(cx,cy,baseR,0,Math.PI*2); c.stroke();
   }
 
@@ -12414,6 +12476,8 @@ document.addEventListener('keydown', e => {
     c.fillStyle='rgba(0,0,0,0.11)'; c.fillRect(0,0,W,H);
     const nyq=_vizAN.freqBuf.length;
     const LAYERS=7;
+    // shadowBlur was set 7× per frame at up to 58px — replaced with two-pass per layer:
+    // a wide soft stroke for the glow, then a narrower bright stroke on top.
     for (let l=0;l<LAYERS;l++) {
       const t=l/(LAYERS-1);
       const band=Math.floor((0.04+t*0.45)*nyq);
@@ -12425,21 +12489,26 @@ document.addEventListener('keydown', e => {
       const freq=0.0025+t*0.003;
       const hue=150+t*195; // emerald→magenta arc
       const alpha=0.025+amp*0.3;
-      c.strokeStyle=`hsla(${hue},100%,62%,${alpha})`;
-      c.lineWidth=H*0.07*(0.5+amp*0.7);
-      c.shadowBlur=18+amp*40; c.shadowColor=`hsl(${hue},100%,70%)`;
+      const baseW=H*0.07*(0.5+amp*0.7);
+      const ph=_vizPhase*speed;
+      // Build the path once and draw twice
       c.beginPath();
       for (let x=0;x<=W;x+=5) {
-        const ph=_vizPhase*speed;
         const y=baseY
           +Math.sin(x*freq+ph+l*0.9)*wA
           +Math.sin(x*freq*1.8+ph*1.4+l*0.5)*wA*0.35
           +Math.cos(x*freq*0.5+ph*0.7)*wA*0.2;
         x===0?c.moveTo(x,y):c.lineTo(x,y);
       }
+      // Bloom pass: wide, low alpha
+      c.strokeStyle=`hsla(${hue},100%,62%,${alpha*0.4})`;
+      c.lineWidth=baseW*2.8;
+      c.stroke();
+      // Bright pass: narrow, full alpha
+      c.strokeStyle=`hsla(${hue},100%,62%,${alpha})`;
+      c.lineWidth=baseW;
       c.stroke();
     }
-    c.shadowBlur=0;
   }
 
   // ── Wire up after DOM ready ────────────────────────────────────────────────
