@@ -1660,7 +1660,11 @@ function makeSeq() {
   });
   m.setBPM = v => { m.bpm = Math.round(v); };
   m.fireTick = (stepTime) => {
-    const t = stepTime ?? ctx.currentTime;
+    // Guard: if stepTime is in the past (suspended context, very late callback),
+    // fall forward to now + minimal lookahead to avoid instant-snap envelope ticks.
+    const t = (stepTime != null && stepTime > ctx.currentTime)
+      ? stepTime
+      : ctx.currentTime + 0.01;
     const sc = m.stepCount;
     if (m.direction === 'fwd') {
       m.step = (m.step + 1) % sc;
@@ -12234,6 +12238,9 @@ const nm2Mobile = {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
   ctx = new AudioContext();
+  // iOS Safari may start the context suspended even inside a click handler.
+  // Resume it explicitly so ctx.currentTime advances before the sequencer starts.
+  if (ctx.state === 'suspended') await ctx.resume();
   masterOut = ctx.createGain(); masterOut.gain.value=0.35;
   analyserNode = ctx.createAnalyser(); analyserNode.fftSize=2048;
   // Signal chain: masterOut → limiter → analyserNode → destination
