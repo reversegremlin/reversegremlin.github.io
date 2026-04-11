@@ -208,6 +208,9 @@ body.edit-mode .module-label{cursor:grab;background:linear-gradient(to bottom,co
 body.edit-mode .module-label:active{cursor:grabbing;}
 .module-drag-handle{display:none;font-size:var(--fs-sm);color:color-mix(in srgb,var(--accent-warm) 55%, transparent);margin-right:3px;pointer-events:none;line-height:1;vertical-align:middle;}
 body.edit-mode .module-drag-handle{display:inline;}
+.module-remove-btn{display:none;position:absolute;top:6px;right:6px;width:18px;height:18px;background:var(--bg-panel-7);border:1px solid var(--border-strong);border-radius:50%;color:var(--text-faint);font-size:14px;line-height:16px;text-align:center;cursor:pointer;z-index:20;transition:all .2s ease;user-select:none;font-family:var(--font-mono);}
+.module-remove-btn:hover{background:#ff4444;color:white;border-color:#ff8888;box-shadow:0 0 10px rgba(255,68,68,0.4);}
+body.edit-mode .module-remove-btn{display:block;}
 /* drop placeholder */
 @keyframes phGlow{0%,100%{border-color:color-mix(in srgb,var(--accent-warm) 34%, transparent);background:color-mix(in srgb,var(--accent-warm) 6%, transparent);}50%{border-color:color-mix(in srgb,var(--accent-warm) 66%, transparent);background:color-mix(in srgb,var(--accent-warm) 13%, transparent);}}
 .module-drop-ph{background:color-mix(in srgb,var(--accent-warm) 6%, transparent);border:2px dashed color-mix(in srgb,var(--accent-warm) 46%, transparent);border-radius:4px;animation:phGlow 1s ease-in-out infinite;position:relative;display:flex;align-items:center;justify-content:center;}
@@ -3297,12 +3300,16 @@ function removeModule(type, instanceId) {
   // Cleanup audio
   if (typeof m.cleanup === 'function') m.cleanup();
   delete mods[mk];
+  // Remove stale patch point registry entries
+  ownPPs.forEach(id => delete ppMap[id]);
   // Remove panel from DOM
   const panelEl = document.getElementById(panelId(type, instanceId));
   if (panelEl) panelEl.remove();
   // Update tracking
   moduleInstances[type] = (moduleInstances[type] || []).filter(id => id !== instanceId);
   syncRackOrder();
+  markCablesDirty();
+  buildFlowDiagram();
   setStatus(`Removed ${type.toUpperCase()} #${instanceId}`);
 }
 
@@ -4430,6 +4437,18 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   p.dataset.moduleType = type;
   p.dataset.instanceId = String(instanceId);
   ['tl','tr','bl','br'].forEach(pos=>{const s=document.createElement('div');s.className=`screw ${pos}`;p.appendChild(s);});
+  if (instanceId > 1) {
+    const rb = document.createElement('span');
+    rb.className = 'module-remove-btn';
+    rb.innerHTML = '&times;';
+    rb.title = 'Remove module';
+    rb.addEventListener('pointerdown', e => e.stopPropagation());
+    rb.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm(`Remove ${label} #${instanceId}?`)) removeModule(type, instanceId);
+    });
+    p.appendChild(rb);
+  }
   const lbl = document.createElement('div');
   lbl.className = 'module-label';
   const handle = document.createElement('span');
@@ -7952,8 +7971,8 @@ document.getElementById('edit-mode-btn').addEventListener('click', () => {
   const btn = document.getElementById('edit-mode-btn');
   btn.classList.toggle('on', editMode);
   btn.textContent = editMode ? '✓ EDITING' : '✎ EDIT';
-  btn.title = editMode ? 'Exit edit mode (back to play)' : 'Toggle edit mode to drag and rearrange modules';
-  setStatus(editMode ? 'Edit mode — drag module labels to rearrange' : 'Play mode');
+  btn.title = editMode ? 'Exit edit mode (back to play)' : 'Toggle edit mode to drag, rearrange, and remove modules';
+  setStatus(editMode ? 'Edit mode — drag labels to rearrange, or click × to remove' : 'Play mode');
 });
 
 document.getElementById('flow-btn').addEventListener('click',()=>document.getElementById('flow-panel').classList.toggle('open'));
@@ -12223,7 +12242,18 @@ async function init() {
   mods.limiter.outlet.connect(analyserNode);
   analyserNode.connect(ctx.destination);
 
-  // Load AudioWorklets (both use data URLs — safe on file:// and http://)
+  // AudioWorklet is required — all DSP modules depend on it.
+  // It is available on localhost, HTTPS, and file:// in most modern browsers.
+  // If missing (very old browser, or non-secure HTTP), abort with a clear message.
+  if (!ctx.audioWorklet) {
+    ctx.close();
+    document.getElementById('start').style.display = '';
+    document.getElementById('start').textContent = '⚠ AudioWorklet unavailable';
+    document.getElementById('start').style.cursor = 'default';
+    showToast('AudioWorklet is not available. Open via localhost (python3 -m http.server 3000) or HTTPS, or update your browser.', 'warn');
+    console.error('nm²: AudioContext.audioWorklet is undefined. AudioWorklet requires a secure context (localhost or HTTPS). Current URL:', location.href);
+    return;
+  }
   await Promise.all([loadPolyBlepOscWorklet(), loadVcfTptWorklet(), loadLadderFilterWorklet(), loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet(), loadLogicWorklet(), loadSpectralWorklet()]);
 
   makeVCO(); makeVCO2(); makeNoise(); makeMixer();
