@@ -1561,23 +1561,28 @@ function makeADSR(instanceId = 1) {
   m.onAt = (t, vel=1) => {
     m.gateOn = true;
     const p = src.offset;
-    p.cancelScheduledValues(t);
-    p.setValueAtTime(p.value, t);
+    // Hold at the interpolated value at t (handles re-trigger during decay/release),
+    // then ramp to peak and decay to sustain.
+    p.cancelAndHoldAtTime(t);
     p.linearRampToValueAtTime(vel, t + m.A);
     p.setTargetAtTime(m.S * vel, t + m.A, m.D / 4);
   };
   m.off = () => {
     m.gateOn = false;
     const t = ctx.currentTime, p = src.offset;
-    p.cancelScheduledValues(t);
-    p.setValueAtTime(p.value, t);
+    // cancelAndHoldAtTime evaluates the automation curve at t and holds it there,
+    // so a release starting mid-attack begins from the actual ramp value, not 0.
+    p.cancelAndHoldAtTime(t);
     p.setTargetAtTime(0, t, m.R / 4);
   };
   m.offAt = (t) => {
     m.gateOn = false;
     const p = src.offset;
-    p.cancelScheduledValues(t);
-    p.setValueAtTime(p.value, t);
+    // When onAt and offAt are called synchronously in the same fireTick, p.value
+    // is 0 (the audio clock hasn't reached the scheduled future time t yet).
+    // cancelAndHoldAtTime holds the interpolated ramp value at time t instead of
+    // snapping to the stale p.value, preserving the attack before the release.
+    p.cancelAndHoldAtTime(t);
     p.setTargetAtTime(0, t, m.R / 4);
   };
   m.cleanup = () => { try { src.stop(); src.disconnect(); } catch(e){} };
