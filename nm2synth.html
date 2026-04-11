@@ -3285,9 +3285,10 @@ function instantiateModule(type) {
 }
 
 function removeModule(type, instanceId) {
-  const mk = modsKey(type, instanceId);
+  // 'micinput' panel type → stored as mods.mic
+  const modsType = type === 'micinput' ? 'mic' : type;
+  const mk = modsKey(modsType, instanceId);
   const m  = mods[mk];
-  if (!m) return;
   // Remove all cables touching this module's patch points
   const ptype = ppTypePrefix(type);
   const pre2 = `${ptype}-${instanceId}-`;
@@ -3296,9 +3297,11 @@ function removeModule(type, instanceId) {
     k.startsWith(pre2) || (instanceId === 1 && k.startsWith(`${ptype}-`) && !primaryRe.test(k))
   ));
   [...cables].filter(c => ownPPs.has(c.fromId) || ownPPs.has(c.toId)).forEach(c => delCable(c));
-  // Cleanup audio
-  if (typeof m.cleanup === 'function') m.cleanup();
-  delete mods[mk];
+  // Cleanup audio and remove from mods (if a module object exists)
+  if (m) {
+    if (typeof m.cleanup === 'function') m.cleanup();
+    delete mods[mk];
+  }
   // Remove stale patch point registry entries
   ownPPs.forEach(id => delete ppMap[id]);
   // Remove panel from DOM
