@@ -3285,7 +3285,6 @@ function instantiateModule(type) {
 }
 
 function removeModule(type, instanceId) {
-  if (instanceId === 1) { setStatus('Cannot remove the primary instance.'); return; }
   const mk = modsKey(type, instanceId);
   const m  = mods[mk];
   if (!m) return;
@@ -4437,18 +4436,16 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   p.dataset.moduleType = type;
   p.dataset.instanceId = String(instanceId);
   ['tl','tr','bl','br'].forEach(pos=>{const s=document.createElement('div');s.className=`screw ${pos}`;p.appendChild(s);});
-  if (instanceId > 1) {
-    const rb = document.createElement('span');
-    rb.className = 'module-remove-btn';
-    rb.innerHTML = '&times;';
-    rb.title = 'Remove module';
-    rb.addEventListener('pointerdown', e => e.stopPropagation());
-    rb.addEventListener('click', e => {
-      e.stopPropagation();
-      if (confirm(`Remove ${label} #${instanceId}?`)) removeModule(type, instanceId);
-    });
-    p.appendChild(rb);
-  }
+  const rb = document.createElement('span');
+  rb.className = 'module-remove-btn';
+  rb.innerHTML = '&times;';
+  rb.title = 'Remove module';
+  rb.addEventListener('pointerdown', e => e.stopPropagation());
+  rb.addEventListener('click', e => {
+    e.stopPropagation();
+    if (confirm(`Remove ${label}${instanceId > 1 ? ` #${instanceId}` : ''}?`)) removeModule(type, instanceId);
+  });
+  p.appendChild(rb);
   const lbl = document.createElement('div');
   lbl.className = 'module-label';
   const handle = document.createElement('span');
