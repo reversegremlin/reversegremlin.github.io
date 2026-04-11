@@ -734,7 +734,13 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 #flow-panel{position:fixed;top:70px;right:0;width:250px;background:var(--bg-flow);border:1px solid var(--border-bright);border-right:none;border-radius:4px 0 0 4px;z-index:200;transform:translateX(100%);transition:transform .3s;box-shadow:-4px 0 16px color-mix(in srgb,var(--accent) 4%, transparent);}
 #flow-panel.open{transform:translateX(0);}
 #flow-hdr{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg-panel-5);border-bottom:1px solid var(--border-soft);font-size:var(--fs-sm);letter-spacing:3px;color:var(--accent);}
-#flow-body{padding:8px;max-height:360px;overflow-y:auto;}
+#flow-body{padding:8px;max-height:360px;overflow-y:auto;overflow-x:auto;}
+
+/* ── Signal Probe (Alt+click any output jack) ── */
+.nm-probe{position:fixed;z-index:600;background:var(--bg-panel-5);border:1px solid var(--border-bright);border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,.65);width:180px;user-select:none;}
+.nm-probe-hdr{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;background:var(--bg-panel-6);border-radius:4px 4px 0 0;cursor:grab;font-size:9px;letter-spacing:2px;}
+.nm-probe-hdr:active{cursor:grabbing;}
+.nm-probe canvas{display:block;border-radius:0 0 4px 4px;}
 .flow-chain{display:flex;align-items:center;gap:3px;margin:3px 0;flex-wrap:wrap;}
 .flow-node{background:var(--bg-panel-3);border:1px solid var(--border-main);border-radius:2px;padding:2px 5px;font-size:var(--fs-xs);white-space:nowrap;}
 .flow-arr{color:var(--text-dim);font-size:var(--fs-sm);animation:farrow 2s infinite;}
@@ -1011,7 +1017,7 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 // STATE
 // ═══════════════════════════════════════════════════════════════════════════════
 let ctx, masterOut, analyserNode;
-let recScriptNode = null, recBuffers = null, recSampleRate = 0, isRec = false;
+let recMediaRecorder = null, recStreamDest = null, isRec = false;
 const undoStack = [];
 const MAX_UNDO = 40;
 let ignoreUndo = false;
@@ -1399,21 +1405,28 @@ const TIPS = {
 // AUDIO MODULES
 // ═══════════════════════════════════════════════════════════════════════════════
 function makeVCO(instanceId = 1) {
-  const osc = ctx.createOscillator();
+  // Primary oscillator: PolyBLEP AudioWorklet (anti-aliased sawtooth/square/triangle/sine)
+  // Eliminates high-frequency aliasing that OscillatorNode produces above ~2kHz.
+  const osc = new AudioWorkletNode(ctx, 'poly-blep-osc', {
+    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  // Expose AudioParams directly on the node for ppMap compat (mods.vco.osc.frequency)
+  osc.frequency = osc.parameters.get('frequency');
+  osc.detune    = osc.parameters.get('detune');
+  osc.frequency.value = 440;
   const gain = ctx.createGain();
   gain.gain.value = 1;
-  osc.type = 'sawtooth';
-  osc.frequency.value = 440;
   osc.connect(gain);
-  osc.start();
-  // Sub-oscillator: always square wave, one octave below main VCO
-  const subOsc = ctx.createOscillator();
-  const subGain = ctx.createGain();
-  subOsc.type = 'square';
+  // Sub-oscillator: square wave, one octave below (PolyBLEP for consistency)
+  const subOsc = new AudioWorkletNode(ctx, 'poly-blep-osc', {
+    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  subOsc.frequency = subOsc.parameters.get('frequency');
   subOsc.frequency.value = 220;
+  subOsc.port.postMessage({ type: 'square' });
+  const subGain = ctx.createGain();
   subGain.gain.value = 0.3;
   subOsc.connect(subGain);
-  subOsc.start();
   const m = { osc, gain, subOsc, subGain, type:'sawtooth', oct:4, coarse:0, fine:0 };
   m.freq = () => 440 * Math.pow(2, (m.oct-4) + m.coarse/12 + m.fine/1200);
   m.sync = () => {
@@ -1421,7 +1434,8 @@ function makeVCO(instanceId = 1) {
     osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.005);
     subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.005);
   };
-  m.setType = t => { m.type=t; osc.type=t; };
+  // Type change via message port (AudioWorkletNode has no .type property)
+  m.setType = t => { m.type=t; osc.port.postMessage({ type: t }); };
   m.setOct = v => { m.oct=v; m.sync(); };
   m.setCoarse = v => { m.coarse=v; m.sync(); };
   m.setFine = v => { m.fine=v; m.sync(); };
@@ -1431,7 +1445,7 @@ function makeVCO(instanceId = 1) {
     subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.003);
   };
   m.cleanup = () => {
-    try { osc.stop(); subOsc.stop(); } catch(e){}
+    try { osc.disconnect(); subOsc.disconnect(); } catch(e){}
     try { gain.disconnect(); subGain.disconnect(); } catch(e){}
   };
   mods[modsKey('vco', instanceId)] = m; return m;
@@ -1454,92 +1468,111 @@ function makeLFO(instanceId = 1) {
 }
 
 function makeVCF(instanceId = 1) {
-  const inlet = ctx.createGain();
-  // Pre-filter drive (tanh WaveShaper)
-  const driveNode = ctx.createWaveShaper();
-  driveNode.oversample = '2x';
-  const filt = ctx.createBiquadFilter();
-  const cvGain = ctx.createGain();
-  const resCVGain = ctx.createGain(); // VC resonance input
-  filt.type = 'lowpass';
-  filt.frequency.value = 800;
-  filt.Q.value = 2;
-  cvGain.gain.value = 1;
-  resCVGain.gain.value = 1;
-  inlet.connect(driveNode); driveNode.connect(filt);
-  cvGain.connect(filt.frequency);
-  resCVGain.connect(filt.Q);
-  const m = { inlet, driveNode, filt, cvGain, resCVGain, cutoff:800, res:2, ftype:'lowpass', driveVal:1 };
-  m.setCutoff = v => { m.cutoff=v; filt.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setRes = v => { m.res=v; filt.Q.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setType = t => { m.ftype=t; filt.type=t; };
+  // TPT (Topology-Preserving Transform) state-variable filter via AudioWorklet.
+  // Stable under a-rate cutoff modulation; correct resonance/self-oscillation.
+  const inlet    = ctx.createGain();
+  const cvGain   = ctx.createGain(); cvGain.gain.value = 1;
+  const resCVGain= ctx.createGain(); resCVGain.gain.value = 1;
+  // outlet GainNode: downstream audio connections attach here (ppMap vcf-out compat)
+  const filt     = ctx.createGain(); filt.gain.value = 1;
+
+  const worklet = new AudioWorkletNode(ctx, 'vcf-tpt', {
+    numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1, outputChannelCount: [1],
+  });
+  const cutoffParam    = worklet.parameters.get('cutoff');
+  const resonanceParam = worklet.parameters.get('resonance');
+  const driveParam     = worklet.parameters.get('drive');
+  cutoffParam.value    = 800;
+  resonanceParam.value = 2;
+
+  // Audio routing: inlet → worklet → filt(outlet)
+  inlet.connect(worklet);
+  worklet.connect(filt);
+  // CV routing: cvGain and resCVGain outputs add to worklet's AudioParams
+  cvGain.connect(cutoffParam);
+  resCVGain.connect(resonanceParam);
+
+  // displayFilt: a disconnected BiquadFilter used only for getFrequencyResponse()
+  // in the VCF preview canvas — not in the audio path
+  const displayFilt = ctx.createBiquadFilter();
+  displayFilt.type = 'lowpass';
+  displayFilt.frequency.value = 800;
+  displayFilt.Q.value = 2;
+
+  const m = { inlet, cvGain, resCVGain, filt, worklet, displayFilt, cutoff:800, res:2, ftype:'lowpass', driveVal:1, kbTrack:false };
+  m.setCutoff = v => {
+    m.cutoff = v;
+    cutoffParam.setTargetAtTime(v, ctx.currentTime, 0.01);
+    displayFilt.frequency.value = v;  // immediate for accurate getFrequencyResponse()
+  };
+  m.setRes = v => {
+    m.res = v;
+    resonanceParam.setTargetAtTime(v, ctx.currentTime, 0.01);
+    displayFilt.Q.value = v;  // immediate
+  };
+  m.setType = t => {
+    m.ftype = t;
+    worklet.port.postMessage({ ftype: t });
+    displayFilt.type = t === 'notch' ? 'notch' : t; // BiquadFilter supports these types
+  };
   m.setDrive = v => {
     m.driveVal = v;
-    const N=256, c=new Float32Array(N);
-    for(let i=0;i<N;i++){const x=(i*2/N-1)*v; c[i]=Math.tanh(x);}
-    driveNode.curve = c;
+    driveParam.setValueAtTime(v, ctx.currentTime);
   };
-  m.setDrive(1); // init: unity gain (tanh(x)≈x for small x)
-  m.kbTrack = false;
   m.trackNote = semi => {
     if (!m.kbTrack) return;
     const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi/12)));
-    filt.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+    cutoffParam.setTargetAtTime(f, ctx.currentTime, 0.01);
+    displayFilt.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
   };
   m.setKbTrack = on => {
     m.kbTrack = on;
-    if (!on) filt.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05);
+    if (!on) {
+      cutoffParam.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05);
+      displayFilt.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05);
+    }
   };
-  m.cleanup = () => { try { inlet.disconnect(); filt.disconnect(); } catch(e){} };
+  m.cleanup = () => { try { inlet.disconnect(); worklet.disconnect(); filt.disconnect(); } catch(e){} };
   mods[modsKey('vcf', instanceId)] = m; return m;
 }
 
 function makeLadder() {
-  // Transistor ladder: 2 cascaded 12dB/oct lowpass (= 24dB/oct), pre-filter tanh drive
-  const inlet = ctx.createGain();
-  const driveNode = ctx.createWaveShaper(); driveNode.oversample = '2x';
-  // Two cascaded biquad lowpass stages (matched Q for 24dB/oct Butterworth response)
-  const f1 = ctx.createBiquadFilter(); f1.type = 'lowpass';
-  const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass';
-  const cvGain = ctx.createGain(); cvGain.gain.value = 1;
-  const resCVGain = ctx.createGain(); resCVGain.gain.value = 1;
-  const outlet = ctx.createGain(); outlet.gain.value = 1;
-  // Chain: inlet → drive → f1 → f2 → outlet
-  inlet.connect(driveNode); driveNode.connect(f1); f1.connect(f2); f2.connect(outlet);
-  // CV connections: cvGain drives both filter stages' frequency
-  cvGain.connect(f1.frequency); cvGain.connect(f2.frequency);
-  resCVGain.connect(f1.Q); resCVGain.connect(f2.Q);
-  f1.frequency.value = 800; f2.frequency.value = 800;
-  f1.Q.value = 1; f2.Q.value = 1;
-  const m = { inlet, driveNode, f1, f2, cvGain, resCVGain, outlet, cutoff:800, res:0, driveVal:1, kbTrack:false };
+  // 4-pole nonlinear transistor ladder (Huovilainen model) via AudioWorklet.
+  // Replaces the previous two-cascaded-BiquadFilter approximation.
+  const worklet = new AudioWorkletNode(ctx, 'ladder-filter', {
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  const inlet     = ctx.createGain();        // patching target
+  const cvGain    = ctx.createGain();        // cutoff CV bus
+  const resCVGain = ctx.createGain();        // resonance CV bus
+  const outlet    = ctx.createGain();        // patching source
+
+  inlet.connect(worklet);
+  worklet.connect(outlet);
+  cvGain.connect(worklet.parameters.get('cutoff'));
+  resCVGain.connect(worklet.parameters.get('resonance'));
+
+  const m = { inlet, worklet, cvGain, resCVGain, outlet, cutoff:800, res:0, driveVal:1, kbTrack:false };
   m.setCutoff = v => {
     m.cutoff = v;
-    f1.frequency.setTargetAtTime(v, ctx.currentTime, 0.01);
-    f2.frequency.setTargetAtTime(v, ctx.currentTime, 0.01);
+    worklet.parameters.get('cutoff').setTargetAtTime(v, ctx.currentTime, 0.01);
   };
   m.setRes = v => {
     m.res = v;
-    // Map 0–1 to Q: 0→0.7, 0.9→8, 0.95→30, 1.0→80 (self-oscillation)
-    const Q = v < 0.95 ? 0.7 + v * 75 : 0.7 + 0.95 * 75 + (v - 0.95) * 1000;
-    f1.Q.setTargetAtTime(Q, ctx.currentTime, 0.01);
-    f2.Q.setTargetAtTime(Q, ctx.currentTime, 0.01);
+    worklet.parameters.get('resonance').setTargetAtTime(v, ctx.currentTime, 0.01);
   };
   m.setDrive = v => {
     m.driveVal = v;
-    const N=256, c=new Float32Array(N);
-    if (v < 0.01) { for(let i=0;i<N;i++) c[i]=(i*2/N-1); }
-    else { const k=1+v*1.5; for(let i=0;i<N;i++){const x=(i*2/N-1)*k; c[i]=Math.tanh(x)/Math.tanh(k);} }
-    driveNode.curve = c;
+    worklet.parameters.get('drive').setTargetAtTime(v, ctx.currentTime, 0.01);
   };
   m.trackNote = semi => {
     if (!m.kbTrack) return;
-    const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi/12)));
-    f1.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
-    f2.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+    const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi / 12)));
+    worklet.parameters.get('cutoff').setTargetAtTime(f, ctx.currentTime, 0.01);
   };
   m.setKbTrack = on => {
     m.kbTrack = on;
-    if (!on) { f1.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05); f2.frequency.setTargetAtTime(m.cutoff, ctx.currentTime, 0.05); }
+    if (!on) worklet.parameters.get('cutoff').setTargetAtTime(m.cutoff, ctx.currentTime, 0.05);
   };
   m.setRes(0); m.setDrive(1);
   mods.ladder = m; return m;
@@ -1704,6 +1737,146 @@ function makeSeq() {
   mods.seq = m; return m;
 }
 
+async function loadVcfTptWorklet() {
+  const code = `
+class VcfTptProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      {name:'cutoff',    defaultValue:800, minValue:1,   maxValue:20000, automationRate:'a-rate'},
+      {name:'resonance', defaultValue:2,   minValue:0.1, maxValue:100,   automationRate:'a-rate'},
+      {name:'drive',     defaultValue:1,   minValue:0,   maxValue:4,     automationRate:'k-rate'},
+    ];
+  }
+  constructor() {
+    super();
+    this.ic1eq=0; this.ic2eq=0; this.ftype='lowpass';
+    this.port.onmessage=({data})=>{ if(data.ftype!==undefined) this.ftype=data.ftype; };
+  }
+  process(inputs, outputs, params) {
+    const inp=inputs[0]?.[0], out=outputs[0][0];
+    const cs=params.cutoff, rs=params.resonance, drv=params.drive[0], sr=sampleRate;
+    for(let i=0;i<out.length;i++){
+      const xr = inp ? inp[i] : 0;
+      const x  = drv>1.001 ? Math.tanh(xr*drv)/Math.tanh(drv) : xr;
+      const fc = Math.min(cs.length>1?cs[i]:cs[0], sr*0.49);
+      const q  = Math.max(0.1, rs.length>1?rs[i]:rs[0]);
+      const g=Math.tan(Math.PI*fc/sr), k=Math.max(0.005,1/q);
+      const a1=1/(1+g*(g+k)), a2=g*a1, a3=g*a2;
+      const v3=x-this.ic2eq, v1=a1*this.ic1eq+a2*v3, v2=this.ic2eq+a2*this.ic1eq+a3*v3;
+      this.ic1eq=Math.tanh(2*v1-this.ic1eq); this.ic2eq=2*v2-this.ic2eq;
+      if(!isFinite(this.ic1eq))this.ic1eq=0; if(!isFinite(this.ic2eq))this.ic2eq=0;
+      switch(this.ftype){
+        case 'highpass': out[i]=x-k*v1-v2; break;
+        case 'bandpass': out[i]=v1; break;
+        case 'notch':    out[i]=x-k*v1; break;
+        default:         out[i]=v2; break;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('vcf-tpt', VcfTptProcessor);`;
+  const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url);
+}
+
+async function loadLadderFilterWorklet() {
+  const code = `
+class LadderFilterProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      {name:'cutoff',    defaultValue:800, minValue:1,   maxValue:20000, automationRate:'a-rate'},
+      {name:'resonance', defaultValue:0,   minValue:0,   maxValue:1,     automationRate:'a-rate'},
+      {name:'drive',     defaultValue:1,   minValue:0.1, maxValue:8,     automationRate:'k-rate'},
+    ];
+  }
+  constructor() {
+    super();
+    this.s = new Float64Array(4);
+  }
+  process(inputs, outputs, params) {
+    const xbuf = inputs[0]?.[0];
+    const out  = outputs[0][0];
+    const fc   = params.cutoff;
+    const res  = params.resonance;
+    const drv  = params.drive[0];
+    const s    = this.s;
+    for (let i = 0; i < out.length; i++) {
+      const x = (xbuf ? xbuf[i] : 0) * drv;
+      const f = Math.max(1, Math.min(sampleRate * 0.45, fc.length > 1 ? fc[i] : fc[0]));
+      const r = Math.max(0, Math.min(1, res.length > 1 ? res[i] : res[0]));
+      const g = 1 - Math.exp(-2 * Math.PI * f / sampleRate);
+      const k = r * 3.99;
+      const u = Math.tanh(x - k * Math.tanh(s[3]));
+      s[0] += g * (u    - s[0]);
+      s[1] += g * (s[0] - s[1]);
+      s[2] += g * (s[1] - s[2]);
+      s[3] += g * (s[2] - s[3]);
+      out[i] = s[3];
+    }
+    return true;
+  }
+}
+registerProcessor('ladder-filter', LadderFilterProcessor);`;
+  const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url);
+}
+
+async function loadPolyBlepOscWorklet() {
+  const code = `
+class PolyBlepOscProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [
+      {name:'frequency',defaultValue:440,minValue:0,maxValue:20000,automationRate:'a-rate'},
+      {name:'detune',defaultValue:0,minValue:-2400,maxValue:2400,automationRate:'a-rate'},
+    ];
+  }
+  constructor() {
+    super();
+    this.phase = 0; this.type = 'sawtooth'; this._tri = -1;
+    this.port.onmessage = ({data}) => {
+      if (data.type !== undefined) { this.type = data.type; if (data.type==='triangle') this._tri=-1; }
+    };
+  }
+  polyBlep(t, dt) {
+    if (t < dt) { const t2=t/dt; return t2+t2-t2*t2-1; }
+    else if (t > 1-dt) { const t2=(t-1)/dt; return t2*t2+t2+t2+1; }
+    return 0;
+  }
+  process(inputs, outputs, params) {
+    const out = outputs[0][0];
+    const freqs = params.frequency; const detunes = params.detune;
+    for (let i=0; i<out.length; i++) {
+      const freq = Math.max(0, freqs.length>1 ? freqs[i] : freqs[0]);
+      const det  = detunes.length>1 ? detunes[i] : detunes[0];
+      const dt   = (freq * (det!==0 ? Math.pow(2,det/1200) : 1)) / sampleRate;
+      const t    = this.phase;
+      let value;
+      switch (this.type) {
+        case 'sawtooth': value=2*t-1; value-=this.polyBlep(t,dt); break;
+        case 'square': {
+          value = t<0.5 ? 1 : -1;
+          value += this.polyBlep(t,dt);
+          value -= this.polyBlep((t+0.5)%1,dt);
+          break;
+        }
+        case 'triangle': {
+          let sq = t<0.5 ? 1 : -1;
+          sq += this.polyBlep(t,dt); sq -= this.polyBlep((t+0.5)%1,dt);
+          this._tri += 2*dt*sq; value=this._tri; break;
+        }
+        default: value=Math.sin(2*Math.PI*t); break;
+      }
+      out[i]=value; this.phase=(this.phase+dt)%1;
+    }
+    return true;
+  }
+}
+registerProcessor('poly-blep-osc', PolyBlepOscProcessor);`;
+  const url = 'data:application/javascript;charset=utf-8,' + encodeURIComponent(code);
+  await ctx.audioWorklet.addModule(url);
+}
+
 let syncWorkletNode = null;
 
 async function loadSyncWorklet() {
@@ -1714,33 +1887,34 @@ class SyncOscProcessor extends AudioWorkletProcessor {
   }
   constructor() {
     super();
-    this.phase2 = 0; this.prev1 = 0;
-    this.type2 = 'sawtooth'; this.enabled = false;
-    this.port.onmessage = ({data}) => {
-      if (data.type2 !== undefined) this.type2 = data.type2;
-      if (data.enabled !== undefined) this.enabled = data.enabled;
+    this.phase2=0; this.prev1=0; this._tri=-1;
+    this.type2='sawtooth'; this.enabled=false;
+    this.port.onmessage=({data})=>{
+      if(data.type2!==undefined){this.type2=data.type2;if(data.type2==='triangle')this._tri=-1;}
+      if(data.enabled!==undefined)this.enabled=data.enabled;
     };
   }
-  wave(p, t) {
-    switch(t) {
-      case 'sine':     return Math.sin(p * 6.28318);
-      case 'sawtooth': return p * 2 - 1;
-      case 'square':   return p < 0.5 ? 1 : -1;
-      case 'triangle': return p < 0.5 ? p*4-1 : 3-p*4;
-    }
+  polyBlep(t,dt){
+    if(t<dt){const t2=t/dt;return t2+t2-t2*t2-1;}
+    else if(t>1-dt){const t2=(t-1)/dt;return t2*t2+t2+t2+1;}
     return 0;
   }
   process(inputs, outputs, params) {
-    const master = inputs[0] && inputs[0][0];
-    const out = outputs[0][0];
-    const f2 = params.freq2;
-    for (let i = 0; i < out.length; i++) {
-      const s1 = master ? master[i] : 0;
-      if (this.enabled && this.prev1 >= 0 && s1 < 0) this.phase2 = 0;
-      this.prev1 = s1;
-      const fi2 = Math.max(1, f2.length > 1 ? f2[i] : f2[0]);
-      this.phase2 = (this.phase2 + fi2 / sampleRate) % 1;
-      out[i] = this.wave(this.phase2, this.type2);
+    const master=inputs[0]&&inputs[0][0], out=outputs[0][0], f2=params.freq2;
+    for(let i=0;i<out.length;i++){
+      const s1=master?master[i]:0;
+      if(this.enabled&&this.prev1>=0&&s1<0){this.phase2=0;this._tri=-1;}
+      this.prev1=s1;
+      const fi2=Math.max(1,f2.length>1?f2[i]:f2[0]);
+      const dt=fi2/sampleRate, t=this.phase2;
+      let value;
+      switch(this.type2){
+        case 'sawtooth': value=2*t-1; value-=this.polyBlep(t,dt); break;
+        case 'square':{value=t<0.5?1:-1;value+=this.polyBlep(t,dt);value-=this.polyBlep((t+0.5)%1,dt);break;}
+        case 'triangle':{let sq=t<0.5?1:-1;sq+=this.polyBlep(t,dt);sq-=this.polyBlep((t+0.5)%1,dt);this._tri+=2*dt*sq;value=this._tri;break;}
+        default:value=Math.sin(2*Math.PI*t);break;
+      }
+      out[i]=this.enabled?value:0; this.phase2=(this.phase2+dt)%1;
     }
     return true;
   }
@@ -2158,10 +2332,15 @@ registerProcessor('pink-noise', PinkNoiseProcessor);`;
 }
 
 function makeVCO2() {
-  const osc = ctx.createOscillator();
-  osc.type = 'sawtooth'; osc.frequency.value = 440; osc.start();
+  // Primary oscillator: PolyBLEP (same as VCO1 — eliminates aliasing)
+  const osc = new AudioWorkletNode(ctx, 'poly-blep-osc', {
+    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  osc.frequency = osc.parameters.get('frequency');
+  osc.detune    = osc.parameters.get('detune');
+  osc.frequency.value = 440;
 
-  // Three-node switch: regGain (osc path) and syncGain (worklet path) → syncOut
+  // Three-node switch: regGain (normal path) and syncGain (hard-sync path) → syncOut
   const regGain  = ctx.createGain(); regGain.gain.value  = 1;
   const syncGain = ctx.createGain(); syncGain.gain.value = 0;
   const syncOut  = ctx.createGain(); syncOut.gain.value  = 1;
@@ -2169,15 +2348,15 @@ function makeVCO2() {
   regGain.connect(syncOut);
   syncGain.connect(syncOut);
 
-  // Create worklet node now that worklet is loaded
+  // Hard-sync worklet: takes VCO1 signal as sync master, outputs VCO2 (PolyBLEP)
   syncWorkletNode = new AudioWorkletNode(ctx, 'sync-osc', {
-    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1]
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1],
   });
   syncWorkletNode.connect(syncGain);
 
   const m = {
     osc, regGain, syncGain, syncOut,
-    type:'sawtooth', oct:4, coarse:0, fine:0, detune:0, hardSync:false
+    type:'sawtooth', oct:4, coarse:0, fine:0, detune:0, hardSync:false,
   };
   m.gain = syncOut; // ppMap reads m.gain for 'vco2-out'
   m.freq = () => 440 * Math.pow(2, (m.oct-4) + m.coarse/12 + (m.fine+m.detune)/1200);
@@ -2187,12 +2366,13 @@ function makeVCO2() {
     if (syncWorkletNode) syncWorkletNode.parameters.get('freq2').setTargetAtTime(f, ctx.currentTime, 0.005);
   };
   m.setType = t => {
-    m.type = t; osc.type = t;
-    if (syncWorkletNode) syncWorkletNode.port.postMessage({type2: t});
+    m.type = t;
+    osc.port.postMessage({ type: t }); // PolyBLEP worklet: type via message
+    if (syncWorkletNode) syncWorkletNode.port.postMessage({ type2: t });
   };
-  m.setOct     = v => { m.oct=v;    m.syncFreq(); };
-  m.setCoarse  = v => { m.coarse=v; m.syncFreq(); };
-  m.setDetune  = v => { m.detune=v; m.syncFreq(); };
+  m.setOct    = v => { m.oct=v;    m.syncFreq(); };
+  m.setCoarse = v => { m.coarse=v; m.syncFreq(); };
+  m.setDetune = v => { m.detune=v; m.syncFreq(); };
   m.setPitchCV = semi => {
     const f = m.freq() * Math.pow(2, semi/12);
     osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.003);
@@ -2201,13 +2381,12 @@ function makeVCO2() {
   m.setHardSync = on => {
     m.hardSync = on;
     if (on) {
-      // Connect VCO1 signal to worklet input for zero-crossing detection
       mods.vco.gain.connect(syncWorkletNode);
-      syncWorkletNode.port.postMessage({enabled: true});
+      syncWorkletNode.port.postMessage({ enabled: true });
       regGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
       syncGain.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
     } else {
-      syncWorkletNode.port.postMessage({enabled: false});
+      syncWorkletNode.port.postMessage({ enabled: false });
       try { mods.vco.gain.disconnect(syncWorkletNode); } catch(e) {}
       regGain.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
       syncGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
@@ -2489,12 +2668,16 @@ function makeChord() {
     'min7': [0, 3, 10],
     'aug':  [0, 4, 8],
   };
-  // 3 oscillators, each goes through its own gain then sum into outlet
+  // 3 PolyBLEP oscillators, each goes through its own gain then sum into outlet
   const voices = [0,1,2].map(() => {
-    const osc = ctx.createOscillator();
-    const g   = ctx.createGain(); g.gain.value = 0.33;
-    osc.type = 'sawtooth'; osc.frequency.value = 440;
-    osc.connect(g); osc.start();
+    const osc = new AudioWorkletNode(ctx, 'poly-blep-osc', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+    });
+    osc.frequency = osc.parameters.get('frequency');
+    osc.frequency.value = 440;
+    osc.port.postMessage({ type: 'sawtooth' }); // default waveform
+    const g = ctx.createGain(); g.gain.value = 0.33;
+    osc.connect(g);
     return { osc, g };
   });
   const outlet = ctx.createGain(); outlet.gain.value = 0.6;
@@ -2513,7 +2696,7 @@ function makeChord() {
     m.updateFreqs();
   };
   m.setLevel = v => { m.levelVal=v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.02); };
-  m.setWave  = t => { m.waveType=t; voices.forEach(v=>{ v.osc.type=t; }); };
+  m.setWave  = t => { m.waveType=t; voices.forEach(v=>{ v.osc.port.postMessage({ type: t }); }); };
   m.updateFreqs = () => {
     const spread = m.spreadVal;
     const detunings = [-spread/2, 0, spread/2]; // cents per voice
@@ -3772,7 +3955,11 @@ function mkPP(id, cls, label, role) {
   ppMap[id] = { id, el:dot, role, cls, label };
   const tip = TIPS[id];
   if(tip){ dot.addEventListener('mouseenter',e=>showTip(tip,e)); dot.addEventListener('mousemove',moveTip); dot.addEventListener('mouseleave',hideTip); }
-  dot.addEventListener('click', e=>{e.stopPropagation(); patchClick(id);});
+  dot.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.altKey && ppMap[id]?.role === 'out') { probePoint(id); return; }
+    patchClick(id);
+  });
   return row;
 }
 
@@ -3858,6 +4045,100 @@ function patchClick(id) {
     if(pp.role==='in'){ completePatch(id); }
     else { switchPatchSource(id); }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIGNAL PROBE  (Phase 5 — targeted inspect view)
+// Alt+click any output jack opens a floating mini-scope for that signal.
+// Safe: AnalyserNode only observes; it does not alter the signal path.
+// Multiple probes can be open simultaneously.
+// ─────────────────────────────────────────────────────────────────────────────
+function probePoint(id) {
+  const pp = ppMap[id];
+  if (!pp || pp.role !== 'out') return;
+  const node = pp.getNode?.();
+  if (!node) return;
+
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  try { node.connect(analyser); } catch (_) { return; }
+  setStatus(`Probing ${FLOW_NAMES[id] || id} — close with ✕`);
+
+  const buf = new Float32Array(analyser.frequencyBinCount); // 128 samples
+  const color = PP_COLOR[pp.cls] || '#cc00ff';
+  const W = 180, H = 60;
+
+  // Build overlay
+  const ov = document.createElement('div'); ov.className = 'nm-probe';
+  const hdr = document.createElement('div'); hdr.className = 'nm-probe-hdr';
+  const lbl = document.createElement('span');
+  lbl.style.color = color; lbl.textContent = '⬤ ' + (FLOW_NAMES[id] || id);
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn'; closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'padding:0 4px;font-size:8px;line-height:1.4;';
+  hdr.appendChild(lbl); hdr.appendChild(closeBtn);
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  cv.style.cssText = `width:${W}px;height:${H}px;`;
+  ov.appendChild(hdr); ov.appendChild(cv);
+
+  // Position near the patch point, clamped to viewport
+  const pr = pp.el.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = pr.right + 8, top = pr.top - 20;
+  if (left + W + 4 > vw) left = pr.left - W - 8;
+  top = Math.max(4, Math.min(vh - H - 28, top));
+  ov.style.left = left + 'px'; ov.style.top = top + 'px';
+  document.body.appendChild(ov);
+
+  // Draw: two-pass bloom (same convention as main scope — no shadowBlur)
+  const c = cv.getContext('2d');
+  function _probeDraw() {
+    analyser.getFloatTimeDomainData(buf);
+    c.fillStyle = '#04040e'; c.fillRect(0, 0, W, H);
+    // center reference line
+    c.strokeStyle = '#ffffff08'; c.lineWidth = 0.5;
+    c.beginPath(); c.moveTo(0, H / 2); c.lineTo(W, H / 2); c.stroke();
+    // bloom pass
+    c.globalAlpha = 0.15; c.strokeStyle = color; c.lineWidth = 4;
+    c.beginPath();
+    for (let i = 0; i < buf.length; i += 2) {
+      const x = i * (W / buf.length), y = (0.5 - buf[i] * 0.45) * H;
+      i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+    }
+    c.stroke();
+    // bright pass
+    c.globalAlpha = 1; c.strokeStyle = color; c.lineWidth = 1.5;
+    c.beginPath();
+    for (let i = 0; i < buf.length; i++) {
+      const x = i * (W / buf.length), y = (0.5 - buf[i] * 0.45) * H;
+      i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+    }
+    c.stroke();
+  }
+  registerDraw(_probeDraw);
+
+  // Drag by header (exempt the close button so its click fires normally)
+  let ox = 0, oy = 0;
+  hdr.addEventListener('pointerdown', e => {
+    if (e.target === closeBtn) return;
+    ox = e.clientX - ov.offsetLeft; oy = e.clientY - ov.offsetTop;
+    hdr.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  hdr.addEventListener('pointermove', e => {
+    if (!hdr.hasPointerCapture(e.pointerId)) return;
+    ov.style.left = (e.clientX - ox) + 'px';
+    ov.style.top  = (e.clientY - oy) + 'px';
+  });
+
+  // Cleanup
+  function closeProbe() {
+    unregisterDraw(_probeDraw);
+    try { node.disconnect(analyser); } catch (_) {}
+    ov.remove();
+  }
+  closeBtn.addEventListener('click', closeProbe);
 }
 
 function addCable(fromId, toId, color) {
@@ -5491,7 +5772,7 @@ function startVCFPreview() {
   registerDraw(function _vcfDraw() {
     if(!mods.vcf) return;
     c.fillStyle='#04040e'; c.fillRect(0,0,W,H);
-    mods.vcf.filt.getFrequencyResponse(freqs,mag,ph);
+    mods.vcf.displayFilt.getFrequencyResponse(freqs,mag,ph);
     c.strokeStyle='#00ff88'; c.lineWidth=1.3;
     c.beginPath();
     for(let i=0;i<W;i++){
@@ -5577,61 +5858,40 @@ function _exportSessionLog() {
 }
 
 function startRec() {
-  recSampleRate = ctx.sampleRate;
-  recBuffers = [[], []]; // [left[], right[]]
-  // ScriptProcessorNode captures interleaved PCM off the master bus
-  recScriptNode = ctx.createScriptProcessor(4096, 2, 2);
-  recScriptNode.onaudioprocess = e => {
-    recBuffers[0].push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    recBuffers[1].push(new Float32Array(e.inputBuffer.getChannelData(1)));
+  // MediaRecorder tap on masterOut — runs entirely off the main thread.
+  // Prefer audio/wav (Chrome 130+, lossless) then audio/webm (universal).
+  recStreamDest = ctx.createMediaStreamDestination();
+  masterOut.connect(recStreamDest);
+  const wavOk  = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/wav');
+  const webmOk = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus');
+  const mime   = wavOk ? 'audio/wav' : webmOk ? 'audio/webm;codecs=opus' : '';
+  const chunks = [];
+  recMediaRecorder = new MediaRecorder(recStreamDest.stream, mime ? { mimeType: mime } : {});
+  recMediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  recMediaRecorder.onstop = () => {
+    masterOut.disconnect(recStreamDest);
+    recStreamDest = null;
+    const actualMime = recMediaRecorder ? recMediaRecorder.mimeType : mime;
+    const ext  = actualMime.includes('wav') ? 'wav' : 'webm';
+    const blob = new Blob(chunks, { type: actualMime || 'audio/webm' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `nm2-modsynth-${Date.now()}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    _exportSessionLog(); _sessionLog = null;
+    setStatus(`Recording saved as ${ext.toUpperCase()} + session log ✓`);
   };
-  masterOut.connect(recScriptNode);
-  // Connect to a silent sink so the node stays active without doubling output
-  recScriptNode._sink = ctx.createMediaStreamDestination();
-  recScriptNode.connect(recScriptNode._sink);
+  recMediaRecorder.start(250); // 250ms timeslices
   isRec = true;
   _sessionLog = []; _sessionStart = Date.now();
   setStatus('⏺ RECORDING...');
 }
 function stopRec() {
-  if (!recScriptNode || !isRec) return;
-  masterOut.disconnect(recScriptNode);
-  recScriptNode.disconnect();
-  recScriptNode = null;
+  if (!recMediaRecorder || !isRec) return;
   isRec = false;
-  // Flatten channel buffers
-  function flatten(bufs) {
-    let len = 0; bufs.forEach(b => len += b.length);
-    const out = new Float32Array(len); let off = 0;
-    bufs.forEach(b => { out.set(b, off); off += b.length; });
-    return out;
-  }
-  const L = flatten(recBuffers[0]);
-  const R = flatten(recBuffers[1]);
-  recBuffers = null;
-  // Encode 32-bit float stereo WAV
-  const nc = 2, bps = 32, sr = recSampleRate;
-  const dataBytes = L.length * nc * (bps / 8);
-  const buf = new ArrayBuffer(44 + dataBytes);
-  const v = new DataView(buf);
-  const ws = (off, s) => { for (let i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); };
-  ws(0,'RIFF'); v.setUint32(4, 36+dataBytes, true); ws(8,'WAVE');
-  ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,3,true); // 3=IEEE float
-  v.setUint16(22,nc,true); v.setUint32(24,sr,true);
-  v.setUint32(28,sr*nc*(bps/8),true); v.setUint16(32,nc*(bps/8),true); v.setUint16(34,bps,true);
-  ws(36,'data'); v.setUint32(40,dataBytes,true);
-  let off = 44;
-  for (let i=0; i<L.length; i++) {
-    v.setFloat32(off, L[i], true); off+=4;
-    v.setFloat32(off, R[i], true); off+=4;
-  }
-  const blob = new Blob([buf], {type:'audio/wav'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `nm2-modsynth-${Date.now()}.wav`;
-  a.click();
-  _exportSessionLog(); _sessionLog = null;
-  setStatus('Recording saved as WAV + session log ✓');
+  recMediaRecorder.stop(); // flushes final chunk, triggers onstop for download
+  recMediaRecorder = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -6993,59 +7253,198 @@ const FLOW_NAMES = {
   'sampler-out':'SMPLR',
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SIGNAL FLOW GRAPH  (Phase 5 — SVG routed graph replacing linear chain list)
+//
+// Renders a left-to-right layered graph of connected modules.
+// Default hardwired connections are shown as dashed edges; user cables as solid.
+// Nodes are coloured by role: source (cyan), processing (purple), sink (orange).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Map patch-point ID → short module label used as graph node identity.
+// Multi-instance IDs (vcf-2-out) are derived programmatically below.
+const _PP_MOD = {
+  'vco-out':'VCO','vco-sub':'VCO','vco-cv':'VCO',
+  'vcf-in':'VCF','vcf-cv':'VCF','vcf-res-cv':'VCF','vcf-out':'VCF',
+  'ladder-ai':'LADR','ladder-ao':'LADR','ladder-cv':'LADR','ladder-res-cv':'LADR',
+  'vca-in':'VCA','vca-env':'VCA','vca-out':'VCA',
+  'adsr-out':'ADSR',
+  'lfo-out':'LFO','lfo2-out':'LFO2',
+  'noise-out':'NOISE',
+  'mix-a-in':'MIX','mix-b-in':'MIX','mix-c-in':'MIX','mix-out':'MIX',
+  'delay-in':'DLY','delay-out':'DLY',
+  'reverb-in':'RVRB','reverb-out':'RVRB',
+  'chorus-in':'CHR','chorus-out':'CHR',
+  'tape-in':'TAPE','tape-out':'TAPE',
+  'phaser-in':'PHZ','phaser-out':'PHZ',
+  'fold-in':'FOLD','fold-out':'FOLD',
+  'microcosm-in':'μCSM','microcosm-out':'μCSM',
+  'seq-cv-out':'SEQ','seq-gate-out':'SEQ','seq-vel-out':'SEQ',
+  'sandh-in':'S&H','sandh-out':'S&H',
+  'att-in':'ATT','att-out':'ATT',
+  'slew-ci':'SLEW','slew-co':'SLEW',
+  'chaos-out':'CHAOS','panner-in':'PAN','panner-out':'PAN',
+  'chord-out':'CHORD',
+  'ringmod-ai':'RING','ringmod-mod-ai':'RING','ringmod-ao':'RING',
+  'fmop-ai':'FMOP','fmop-cv-ai':'FMOP','fmop-ao':'FMOP',
+  'flanger-ai':'FLNG','flanger-ao':'FLNG',
+  'turing-out':'TURING','drunk-out':'DRUNK',
+  'pclk-out':'PCLK','pclk-gate-out':'PCLK',
+  'theremin-out':'THER',
+  'xypad-x':'XYPAD','xypad-y':'XYPAD',
+  'sampler-out':'SMPLR','padsampler-out':'PADS',
+  'micloop-out':'MLOOP','stutter-ai':'STTR','stutter-ao':'STTR',
+  'sidechain-ai':'SCHN','sidechain-trigger-ai':'SCHN',
+  'bitcrush-in':'CRUSH','bitcrush-out':'CRUSH',
+  'spec-in':'SPEC','spec-out':'SPEC',
+  'tesla-ai':'TESLA',
+  '⟳OUT':'OUT',
+};
+function _ppMod(id) {
+  if (_PP_MOD[id]) return _PP_MOD[id];
+  // Multi-instance: type-N-suffix where N is numeric (e.g. vcf-2-out → VCF-2)
+  const p = id.split('-');
+  if (p.length >= 3 && /^\d+$/.test(p[1])) return (p[0] + '-' + p[1]).toUpperCase();
+  return p[0].toUpperCase();
+}
+
+// Known default cable pairs — these are drawn by drawDefaultCables() and shown
+// as dashed in the flow graph regardless of which array they come from.
+const _DEFAULT_PAIRS = new Set([
+  'vco-out→vcf-in', 'vcf-out→vca-in', 'adsr-out→vca-env', 'lfo-out→vcf-cv',
+]);
+
 function buildFlowDiagram() {
   const body = document.getElementById('flow-body');
   if (!body) return;
   body.innerHTML = '';
 
-  // Always-on defaults
-  const defs = document.createElement('div');
-  defs.style.cssText = 'color:#1e1e3a;font-size:7px;line-height:2.2;padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid #ffffff08;';
-  defs.innerHTML = '<div style="color:#2a2a4a;letter-spacing:2px;margin-bottom:2px;">DEFAULT</div>' +
-    ['VCO → VCF → VCA → OUT','ADSR → VCA ENV','LFO → VCF CUT'].map(s=>`<div>${s}</div>`).join('');
-  body.appendChild(defs);
+  // ── Build module-level edge list ──────────────────────────────────────────
+  // VCA→OUT has no visual cable (wireDefault() wires it directly), so it's
+  // a synthetic default entry. All other defaults come through cables[].
+  const allRaw = [
+    {from:'vca-out', to:'⟳OUT', color:'#cc00ff', def:true},
+    ...cables.map(c => ({
+      from: c.fromId, to: c.toId, color: c.color,
+      def: _DEFAULT_PAIRS.has(c.fromId + '→' + c.toId),
+    })),
+  ];
 
-  if (cables.length === 0) {
-    const em = document.createElement('div');
-    em.style.cssText = 'color:#1a1a32;font-size:7px;font-style:italic;';
-    em.textContent = '— no extra cables —';
-    body.appendChild(em);
+  // Convert pp-IDs → module names; deduplicate; drop self-loops
+  const edgeMap = new Map(); // key → edge (user cables override defaults)
+  for (const e of allRaw) {
+    const mf = _ppMod(e.from), mt = _ppMod(e.to);
+    if (mf === mt) continue;
+    const key = mf + '→' + mt;
+    if (!edgeMap.has(key) || !e.def) edgeMap.set(key, {from:mf, to:mt, color:e.color, def:e.def});
+  }
+  const modEdges = [...edgeMap.values()];
+
+  // ── Collect nodes ─────────────────────────────────────────────────────────
+  const allNodes = [...new Set(modEdges.flatMap(e=>[e.from,e.to]))];
+  if (!allNodes.length) {
+    body.innerHTML = '<div style="color:#1e1e3a;font-size:7px;font-style:italic;padding:2px;">No connections.</div>';
     return;
   }
 
-  // Build lookup: toId → cable (each input has at most one cable)
-  const allToIds = new Set(cables.map(c => c.toId));
-  const rendered = new Set();
-
-  // Chain starts = cables whose fromId is not anyone else's toId
-  cables.filter(c => !allToIds.has(c.fromId)).forEach(startCable => {
-    const chain = []; let cur = startCable;
-    while (cur && !rendered.has(cur.toId)) {
-      rendered.add(cur.toId); chain.push(cur);
-      cur = cables.find(c => c.fromId === cur.toId && !rendered.has(c.toId));
+  // ── Topological level assignment (longest-path BFS) ───────────────────────
+  const adj   = new Map(allNodes.map(n=>[n,[]]));
+  const indeg = new Map(allNodes.map(n=>[n,0]));
+  for (const e of modEdges) {
+    adj.get(e.from).push(e.to);
+    indeg.set(e.to, indeg.get(e.to)+1);
+  }
+  const origIndeg = new Map(indeg); // save for role colouring
+  const lvl = new Map(allNodes.map(n=>[n,0]));
+  const q = allNodes.filter(n=>indeg.get(n)===0); let qi=0;
+  while (qi < q.length) {
+    const n = q[qi++];
+    for (const m of adj.get(n)) {
+      lvl.set(m, Math.max(lvl.get(m), lvl.get(n)+1));
+      indeg.set(m, indeg.get(m)-1);
+      if (indeg.get(m)===0) q.push(m);
     }
-    renderFlowChain(body, chain);
-  });
-  // Remaining (mid-chain starts, e.g. LFO → VCF CV)
-  cables.filter(c => !rendered.has(c.toId)).forEach(c => renderFlowChain(body, [c]));
-}
+  }
 
-function renderFlowChain(container, chain) {
-  if (!chain.length) return;
-  const row = document.createElement('div'); row.className = 'flow-chain';
-  const col = chain[0].color;
-  const mkNode = id => {
-    const n = document.createElement('span'); n.className = 'flow-node';
-    n.style.cssText = `border-color:${col}44;color:${col};`;
-    n.textContent = FLOW_NAMES[id] || id; return n;
-  };
-  const mkArr = () => {
-    const a = document.createElement('span'); a.className = 'flow-arr';
-    a.style.color = col + '77'; a.textContent = '→'; return a;
-  };
-  row.appendChild(mkNode(chain[0].fromId));
-  chain.forEach(c => { row.appendChild(mkArr()); row.appendChild(mkNode(c.toId)); });
-  container.appendChild(row);
+  // ── Column layout ─────────────────────────────────────────────────────────
+  const byLvl = [];
+  for (const n of allNodes) {
+    const l = lvl.get(n); if (!byLvl[l]) byLvl[l]=[];
+    byLvl[l].push(n);
+  }
+  const numCols = byLvl.length;
+  const bodyW   = body.clientWidth || 226;
+  const NW = 40, NH = 18, ROW_H = 26, PAD_Y = 8;
+  const COL_W = Math.max(NW + 10, Math.floor(bodyW / numCols));
+  const maxRows = Math.max(...byLvl.map(c=>c.length));
+  const svgW = numCols * COL_W, svgH = maxRows * ROW_H + PAD_Y * 2;
+
+  const pos = new Map();
+  byLvl.forEach((col, ci) => {
+    const colTop = (svgH - col.length * ROW_H) / 2 + ROW_H / 2;
+    col.forEach((n, ri) => pos.set(n, {cx: ci*COL_W + COL_W/2, cy: colTop + ri*ROW_H}));
+  });
+
+  // ── SVG ───────────────────────────────────────────────────────────────────
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', svgW); svg.setAttribute('height', svgH);
+  svg.style.cssText = 'display:block;overflow:visible;';
+
+  // Edges (drawn behind nodes)
+  for (const e of modEdges) {
+    const a = pos.get(e.from), b = pos.get(e.to);
+    if (!a || !b) continue;
+    const x1=a.cx+NW/2, y1=a.cy, x2=b.cx-NW/2, y2=b.cy, dx=(x2-x1)*0.45;
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke', e.color + (e.def ? '28' : '90'));
+    path.setAttribute('stroke-width', e.def ? '1' : '1.5');
+    if (e.def) path.setAttribute('stroke-dasharray','3 2');
+    svg.appendChild(path);
+    // Arrowhead dot at destination
+    const dot = document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',x2); dot.setAttribute('cy',y2); dot.setAttribute('r','2');
+    dot.setAttribute('fill', e.color + (e.def ? '28' : '90'));
+    svg.appendChild(dot);
+  }
+
+  // Nodes
+  for (const n of allNodes) {
+    const p = pos.get(n); if (!p) continue;
+    // Role-based colour: source=cyan, sink=orange, processing=dim purple
+    const isSource = origIndeg.get(n) === 0;
+    const isSink   = !adj.get(n)?.length || n === 'OUT';
+    const col = isSink ? '#ff7700' : isSource ? '#00aaff' : '#aa66dd';
+    const x = p.cx-NW/2, y = p.cy-NH/2;
+    const g = document.createElementNS(NS,'g');
+    const rect = document.createElementNS(NS,'rect');
+    rect.setAttribute('x',x); rect.setAttribute('y',y);
+    rect.setAttribute('width',NW); rect.setAttribute('height',NH);
+    rect.setAttribute('rx','2'); rect.setAttribute('ry','2');
+    rect.setAttribute('fill', col+'12'); rect.setAttribute('stroke', col+'55');
+    rect.setAttribute('stroke-width','1');
+    const text = document.createElementNS(NS,'text');
+    text.setAttribute('x',p.cx); text.setAttribute('y',p.cy+4);
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-size','7'); text.setAttribute('fill', col+'ee');
+    text.setAttribute('font-family','monospace');
+    text.textContent = n.length > 6 ? n.substring(0,6) : n;
+    g.appendChild(rect); g.appendChild(text);
+    svg.appendChild(g);
+  }
+
+  // Legend strip (10px tall, below graph)
+  const leg = document.createElementNS(NS,'text');
+  leg.setAttribute('x',0); leg.setAttribute('y',svgH+10);
+  leg.setAttribute('font-size','6'); leg.setAttribute('fill','#ffffff20');
+  leg.setAttribute('font-family','monospace');
+  leg.textContent = '╌ default  ─ cable  ◆ source  ◇ process  ◈ output';
+  svg.setAttribute('height', svgH+14);
+  svg.appendChild(leg);
+
+  body.appendChild(svg);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -8984,7 +9383,7 @@ function makeLimiter() {
   const postGain = ctx.createGain(); postGain.gain.value = 0.65;
   shaper.curve = buildCurve(1.5);
   preGain.connect(shaper); shaper.connect(postGain);
-  const m = { inlet: preGain, outlet: postGain, threshVal: 1.5, ceilVal: 0.65 };
+  const m = { inlet: preGain, outlet: postGain, _shaper: shaper, threshVal: 1.5, ceilVal: 0.65 };
   m.setThresh = v => { m.threshVal = v; preGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); shaper.curve = buildCurve(v); };
   m.setCeil   = v => { m.ceilVal   = v; postGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
   return m;
@@ -9018,20 +9417,26 @@ function makeRingMod() {
 }
 
 function makeFMOp() {
-  const carrier = ctx.createOscillator(); carrier.type = 'sine'; carrier.frequency.value = 220;
-  const modOsc  = ctx.createOscillator(); modOsc.type  = 'sine'; modOsc.frequency.value  = 440;
+  // Carrier: PolyBLEP (anti-aliased; matters when wave type is sawtooth/square)
+  const carrier = new AudioWorkletNode(ctx, 'poly-blep-osc', {
+    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+  });
+  carrier.frequency = carrier.parameters.get('frequency');
+  carrier.frequency.value = 220;
+  // Modulator: sine OscillatorNode (pure sine — no aliasing, output not heard directly)
+  const modOsc  = ctx.createOscillator(); modOsc.type = 'sine'; modOsc.frequency.value = 440;
   const modIdx  = ctx.createGain(); modIdx.gain.value = 100;
   const cvIn    = ctx.createGain();
   const outlet  = ctx.createGain();
   modOsc.connect(modIdx); modIdx.connect(carrier.frequency);
   cvIn.connect(carrier.frequency);
   carrier.connect(outlet);
-  carrier.start(); modOsc.start();
+  modOsc.start();
   const m = { carrier, modOsc, modIdx, cvIn, outlet, baseFreq:220, ratioVal:2, indexVal:100, waveType:'sine' };
   m.setFreq  = v => { m.baseFreq=v; carrier.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); modOsc.frequency.setTargetAtTime(v*m.ratioVal, ctx.currentTime, 0.01); };
   m.setRatio = v => { m.ratioVal=v; modOsc.frequency.setTargetAtTime(m.baseFreq*v, ctx.currentTime, 0.01); };
   m.setIndex = v => { m.indexVal=v; modIdx.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setWave  = v => { m.waveType=v; try{carrier.type=v;}catch(e){} };
+  m.setWave  = v => { m.waveType=v; carrier.port.postMessage({ type: v }); };
   mods.fmop = m; return m;
 }
 
@@ -11796,7 +12201,7 @@ async function init() {
   analyserNode.connect(ctx.destination);
 
   // Load AudioWorklets (both use data URLs — safe on file:// and http://)
-  await Promise.all([loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet(), loadLogicWorklet(), loadSpectralWorklet()]);
+  await Promise.all([loadPolyBlepOscWorklet(), loadVcfTptWorklet(), loadLadderFilterWorklet(), loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet(), loadLogicWorklet(), loadSpectralWorklet()]);
 
   makeVCO(); makeVCO2(); makeNoise(); makeMixer();
   makeLFO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
