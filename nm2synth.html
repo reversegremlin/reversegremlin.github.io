@@ -8509,7 +8509,6 @@ function makeCrusher() {
   const dryGain = ctx.createGain(); dryGain.gain.value = 0;
   const wetGain = ctx.createGain(); wetGain.gain.value = 1;
   const m = { inlet, outlet, bits: 8, rate: 1, mixVal: 1 };
-  const hasWorklet = typeof AudioWorkletNode !== 'undefined' && !!ctx.audioWorklet;
   let proc = null;
   let bitsParam = null;
   let rateParam = null;
@@ -8526,35 +8525,7 @@ function makeCrusher() {
     inlet.connect(proc);
     proc.connect(wetGain);
   };
-  if (hasWorklet) {
-    setupWorklet();
-  } else {
-    proc = ctx.createScriptProcessor(512, 2, 2);
-    bitsParam = { setValueAtTime: (v) => { m.bits = v; } };
-    rateParam = { setValueAtTime: (v) => { m.rate = v; } };
-    let heldL = 0, heldR = 0, heldCount = 0;
-    proc.onaudioprocess = e => {
-      const inL  = e.inputBuffer.getChannelData(0);
-      const inR  = e.inputBuffer.getChannelData(1);
-      const outL = e.outputBuffer.getChannelData(0);
-      const outR = e.outputBuffer.getChannelData(1);
-      const step = Math.pow(2, -(m.bits - 1));
-      const r = Math.max(1, Math.round(m.rate));
-      for (let i = 0; i < inL.length; i++) {
-        if (heldCount % r === 0) {
-          heldL = Math.round(inL[i] / step) * step;
-          heldR = Math.round(inR[i] / step) * step;
-        }
-        heldCount++;
-        outL[i] = heldL;
-        outR[i] = heldR;
-      }
-    };
-    inlet.connect(proc);
-    proc.connect(wetGain);
-    const keepAlive = ctx.createGain(); keepAlive.gain.value = 0;
-    proc.connect(keepAlive); keepAlive.connect(ctx.destination);
-  }
+  setupWorklet();
   wetGain.connect(outlet);
   inlet.connect(dryGain);
   dryGain.connect(outlet);
