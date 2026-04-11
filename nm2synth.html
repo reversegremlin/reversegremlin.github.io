@@ -1594,36 +1594,37 @@ function makeADSR(instanceId = 1) {
   m.on = (vel=1) => {
     m.gateOn = true;
     const t = ctx.currentTime, p = src.offset;
+    // cancelScheduledValues removes future events; setTargetAtTime picks up
+    // from whatever the ongoing curve evaluates to at t — no snap to 0.
     p.cancelScheduledValues(t);
-    p.setValueAtTime(p.value, t);
-    p.linearRampToValueAtTime(vel, t + m.A);
+    p.setTargetAtTime(vel, t, m.A / 3);
     p.setTargetAtTime(m.S * vel, t + m.A, m.D / 4);
   };
   m.onAt = (t, vel=1) => {
     m.gateOn = true;
     const p = src.offset;
-    // Hold at the interpolated value at t (handles re-trigger during decay/release),
-    // then ramp to peak and decay to sustain.
-    p.cancelAndHoldAtTime(t);
-    p.linearRampToValueAtTime(vel, t + m.A);
+    // Do NOT use cancelAndHoldAtTime — it is buggy on mobile WebKit when called
+    // during an ongoing setTargetAtTime (snaps to 0 instead of interpolating).
+    // cancelScheduledValues removes events at t or later; the previous release
+    // setTargetAtTime (started before t) stays in the queue and provides the
+    // correct starting value for the new attack setTargetAtTime at t.
+    p.cancelScheduledValues(t);
+    p.setTargetAtTime(vel, t, m.A / 3);
     p.setTargetAtTime(m.S * vel, t + m.A, m.D / 4);
   };
   m.off = () => {
     m.gateOn = false;
     const t = ctx.currentTime, p = src.offset;
-    // cancelAndHoldAtTime evaluates the automation curve at t and holds it there,
-    // so a release starting mid-attack begins from the actual ramp value, not 0.
-    p.cancelAndHoldAtTime(t);
+    p.cancelScheduledValues(t);
     p.setTargetAtTime(0, t, m.R / 4);
   };
   m.offAt = (t) => {
     m.gateOn = false;
     const p = src.offset;
-    // When onAt and offAt are called synchronously in the same fireTick, p.value
-    // is 0 (the audio clock hasn't reached the scheduled future time t yet).
-    // cancelAndHoldAtTime holds the interpolated ramp value at time t instead of
-    // snapping to the stale p.value, preserving the attack before the release.
-    p.cancelAndHoldAtTime(t);
+    // cancelScheduledValues(t) removes decay event (at t+A) while leaving the
+    // attack setTargetAtTime (started before t) — the release then picks up
+    // from the attack's correct interpolated value at t. No cancelAndHoldAtTime needed.
+    p.cancelScheduledValues(t);
     p.setTargetAtTime(0, t, m.R / 4);
   };
   m.cleanup = () => { try { src.stop(); src.disconnect(); } catch(e){} };
@@ -1660,11 +1661,7 @@ function makeSeq() {
   });
   m.setBPM = v => { m.bpm = Math.round(v); };
   m.fireTick = (stepTime) => {
-    // Guard: if stepTime is in the past (suspended context, very late callback),
-    // fall forward to now + minimal lookahead to avoid instant-snap envelope ticks.
-    const t = (stepTime != null && stepTime > ctx.currentTime)
-      ? stepTime
-      : ctx.currentTime + 0.01;
+    const t = stepTime ?? ctx.currentTime;
     const sc = m.stepCount;
     if (m.direction === 'fwd') {
       m.step = (m.step + 1) % sc;
@@ -12238,9 +12235,6 @@ const nm2Mobile = {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
   ctx = new AudioContext();
-  // iOS Safari may start the context suspended even inside a click handler.
-  // Resume it explicitly so ctx.currentTime advances before the sequencer starts.
-  if (ctx.state === 'suspended') await ctx.resume();
   masterOut = ctx.createGain(); masterOut.gain.value=0.35;
   analyserNode = ctx.createAnalyser(); analyserNode.fftSize=2048;
   // Signal chain: masterOut → limiter → analyserNode → destination
