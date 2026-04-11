@@ -1441,10 +1441,11 @@ function makeVCO(instanceId = 1) {
   m.setOct = v => { m.oct=v; m.sync(); };
   m.setCoarse = v => { m.coarse=v; m.sync(); };
   m.setFine = v => { m.fine=v; m.sync(); };
-  m.setPitchCV = semi => {
+  m.setPitchCV = (semi, atTime) => {
+    const t0 = atTime ?? ctx.currentTime;
     const f = m.freq() * Math.pow(2, semi/12);
-    osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.003);
-    subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.003);
+    osc.frequency.setTargetAtTime(f, t0, 0.003);
+    subOsc.frequency.setTargetAtTime(f/2, t0, 0.003);
   };
   m.cleanup = () => {
     try { osc.disconnect(); subOsc.disconnect(); } catch(e){}
@@ -1521,11 +1522,12 @@ function makeVCF(instanceId = 1) {
     m.driveVal = v;
     driveParam.setValueAtTime(v, ctx.currentTime);
   };
-  m.trackNote = semi => {
+  m.trackNote = (semi, atTime) => {
     if (!m.kbTrack) return;
+    const t0 = atTime ?? ctx.currentTime;
     const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi/12)));
-    cutoffParam.setTargetAtTime(f, ctx.currentTime, 0.01);
-    displayFilt.frequency.setTargetAtTime(f, ctx.currentTime, 0.01);
+    cutoffParam.setTargetAtTime(f, t0, 0.01);
+    displayFilt.frequency.setTargetAtTime(f, t0, 0.01);
   };
   m.setKbTrack = on => {
     m.kbTrack = on;
@@ -1567,10 +1569,11 @@ function makeLadder() {
     m.driveVal = v;
     worklet.parameters.get('drive').setTargetAtTime(v, ctx.currentTime, 0.01);
   };
-  m.trackNote = semi => {
+  m.trackNote = (semi, atTime) => {
     if (!m.kbTrack) return;
+    const t0 = atTime ?? ctx.currentTime;
     const f = Math.min(20000, Math.max(20, m.cutoff * Math.pow(2, semi / 12)));
-    worklet.parameters.get('cutoff').setTargetAtTime(f, ctx.currentTime, 0.01);
+    worklet.parameters.get('cutoff').setTargetAtTime(f, t0, 0.01);
   };
   m.setKbTrack = on => {
     m.kbTrack = on;
@@ -1689,12 +1692,12 @@ function makeSeq() {
       if (mods.quant?.active) {
         pitch = mods.quant.randMode ? mods.quant.randomNote() : mods.quant.quantizeSemi(pitch);
       }
-      mods.vco.setPitchCV(pitch);
-      mods.vco2?.setPitchCV(pitch);
-      mods.chord?.trigger(pitch);
-      mods.vcf?.trackNote(pitch);
-      mods.ladder?.trackNote(pitch);
-      mods.res?.trackNote(pitch);
+      mods.vco.setPitchCV(pitch, t);
+      mods.vco2?.setPitchCV(pitch, t);
+      mods.chord?.trigger(pitch, t);
+      mods.vcf?.trackNote(pitch, t);
+      mods.ladder?.trackNote(pitch, t);
+      mods.res?.trackNote(pitch, t);
       if (mods.quant?.active) {
         const lbl = document.getElementById('quant-note-lbl');
         if (lbl) lbl.textContent = ROOT_NAMES[((pitch % 12) + 12) % 12] || '—';
@@ -2375,10 +2378,11 @@ function makeVCO2() {
   m.setOct    = v => { m.oct=v;    m.syncFreq(); };
   m.setCoarse = v => { m.coarse=v; m.syncFreq(); };
   m.setDetune = v => { m.detune=v; m.syncFreq(); };
-  m.setPitchCV = semi => {
+  m.setPitchCV = (semi, atTime) => {
+    const t0 = atTime ?? ctx.currentTime;
     const f = m.freq() * Math.pow(2, semi/12);
-    osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.003);
-    if (syncWorkletNode) syncWorkletNode.parameters.get('freq2').setTargetAtTime(f, ctx.currentTime, 0.003);
+    osc.frequency.setTargetAtTime(f, t0, 0.003);
+    if (syncWorkletNode) syncWorkletNode.parameters.get('freq2').setTargetAtTime(f, t0, 0.003);
   };
   m.setHardSync = on => {
     m.hardSync = on;
@@ -2699,19 +2703,20 @@ function makeChord() {
   };
   m.setLevel = v => { m.levelVal=v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.02); };
   m.setWave  = t => { m.waveType=t; voices.forEach(v=>{ v.osc.port.postMessage({ type: t }); }); };
-  m.updateFreqs = () => {
+  m.updateFreqs = (atTime) => {
+    const t0 = atTime ?? ctx.currentTime;
     const spread = m.spreadVal;
     const detunings = [-spread/2, 0, spread/2]; // cents per voice
     voices.forEach((v, i) => {
       const semi   = m.currentSemi + (m.intervals[i] || 0);
       const detune = detunings[i] / 100; // cents → semitones
       const f = 440 * Math.pow(2, (semi + detune) / 12);
-      v.osc.frequency.setTargetAtTime(f, ctx.currentTime, 0.004);
+      v.osc.frequency.setTargetAtTime(f, t0, 0.004);
     });
   };
-  m.trigger = semi => {
+  m.trigger = (semi, atTime) => {
     m.currentSemi = semi;
-    m.updateFreqs();
+    m.updateFreqs(atTime);
   };
   mods.chord = m; return m;
 }
