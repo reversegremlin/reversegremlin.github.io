@@ -197,6 +197,18 @@ body.a11y-large{
 .module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:var(--accent-soft);text-shadow:0 0 8px color-mix(in srgb,var(--accent-soft) 28%, transparent);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border-soft);}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
 .module.bypassed .module-label{color:var(--text-dim);}
+/* ── Focus mode: collapsed inactive modules ── */
+.nm-focused-out{padding-bottom:7px!important;opacity:.38;cursor:pointer;min-width:0!important;transition:opacity .12s,border-color .12s;}
+.nm-focused-out:hover{opacity:.7!important;border-color:var(--border-bright)!important;}
+.nm-focused-out>.module-label{margin-bottom:0!important;border-bottom:none!important;padding-bottom:3px!important;font-size:var(--fs-xs)!important;letter-spacing:1px!important;}
+.nm-focused-out>*:not(.module-label):not(.screw){display:none!important;}
+/* ── View bar (focus + zoom) ── */
+#nm-view-bar{display:flex;align-items:center;gap:7px;padding:0 18px 10px;flex-wrap:wrap;}
+#nm-view-bar .btn{font-size:var(--fs-xs);padding:2px 8px;letter-spacing:1px;}
+#nm-zoom-slider{-webkit-appearance:none;appearance:none;height:3px;width:80px;background:var(--border-soft);border-radius:2px;outline:none;cursor:pointer;accent-color:var(--accent);flex-shrink:0;}
+#nm-zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--accent);cursor:pointer;}
+#nm-zoom-val{font-size:var(--fs-xs);letter-spacing:2px;color:var(--text-muted);min-width:34px;font-family:var(--font-mono);}
+.nm-vbar-sep{color:var(--border-soft);padding:0 2px;user-select:none;}
 /* ── Edit mode ── */
 /* keep edit mode high-visibility in both themes */
 #edit-mode-btn.on{background:color-mix(in srgb,var(--accent-warm) 16%, transparent);border-color:var(--accent-warm);color:var(--accent-warm);box-shadow:0 0 8px color-mix(in srgb,var(--accent-warm) 28%, transparent);}
@@ -928,6 +940,14 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 
 <div id="rack-wrap">
   <div id="rack-title">◈ nm² modsynth ◈</div>
+  <div id="nm-view-bar">
+    <button id="nm-focus-btn" class="btn">⊡ FOCUS</button>
+    <span class="nm-vbar-sep">│</span>
+    <button id="nm-zoom-out" class="btn" style="padding:2px 9px;font-size:13px;line-height:1;">−</button>
+    <input id="nm-zoom-slider" type="range" min="50" max="100" step="5" value="100">
+    <button id="nm-zoom-in" class="btn" style="padding:2px 9px;font-size:13px;line-height:1;">+</button>
+    <span id="nm-zoom-val">100%</span>
+  </div>
   <div id="rack"></div>
 </div>
 
@@ -12740,6 +12760,68 @@ const nm2Tutorial = {
     this._overlay = null;
   },
 };
+
+// ── View Controls: Focus Mode + Rack Zoom ─────────────────────────────────
+{
+  // Core voice-path modules always visible in focus mode even if not user-cabled
+  const _ALWAYS_VIS = new Set(['mod-vco','mod-vcf','mod-vca','mod-adsr','mod-lfo','mod-seq']);
+  let _focusOn = false;
+
+  function _activePanels() {
+    const s = new Set(_ALWAYS_VIS);
+    cables.forEach(c => {
+      [c.fromId, c.toId].forEach(id => {
+        const m = ppMap[id]?.el.closest('.module');
+        if (m) s.add(m.id);
+      });
+    });
+    return s;
+  }
+
+  function setFocusMode(on) {
+    _focusOn = on;
+    const active = on ? _activePanels() : null;
+    document.querySelectorAll('#rack .module').forEach(m =>
+      m.classList.toggle('nm-focused-out', on && !active.has(m.id)));
+    const btn = document.getElementById('nm-focus-btn');
+    btn.classList.toggle('on', on);
+    btn.textContent = on ? '⊞ UNFOCUS' : '⊡ FOCUS';
+    markCablesDirty();
+  }
+
+  // Click a focused-out module to expand it inline
+  document.getElementById('rack').addEventListener('click', e => {
+    if (!_focusOn) return;
+    const m = e.target.closest('.nm-focused-out');
+    if (m) { m.classList.remove('nm-focused-out'); markCablesDirty(); }
+  }, true);
+
+  document.getElementById('nm-focus-btn').addEventListener('click', () => setFocusMode(!_focusOn));
+
+  // ── Zoom ──────────────────────────────────────────────────────────────────
+  let _zoom = Math.min(1, Math.max(0.5, parseFloat(localStorage.getItem('nm2-rack-zoom') || '1')));
+
+  function applyRackZoom(v) {
+    _zoom = Math.min(1, Math.max(0.5, v));
+    document.getElementById('rack').style.zoom = _zoom < 1 ? _zoom : '';
+    const pct = Math.round(_zoom * 100);
+    document.getElementById('nm-zoom-val').textContent = pct + '%';
+    document.getElementById('nm-zoom-slider').value = pct;
+    localStorage.setItem('nm2-rack-zoom', _zoom);
+    markCablesDirty();
+  }
+
+  document.getElementById('nm-zoom-out').addEventListener('click', () => applyRackZoom(_zoom - 0.05));
+  document.getElementById('nm-zoom-in').addEventListener('click', () => applyRackZoom(_zoom + 0.05));
+  document.getElementById('nm-zoom-slider').addEventListener('input', e => applyRackZoom(+e.target.value / 100));
+
+  // Restore saved zoom on load (set DOM immediately, cables update after init)
+  if (_zoom < 1) {
+    document.getElementById('rack').style.zoom = _zoom;
+    document.getElementById('nm-zoom-val').textContent = Math.round(_zoom * 100) + '%';
+    document.getElementById('nm-zoom-slider').value = Math.round(_zoom * 100);
+  }
+}
 
 document.getElementById('start').addEventListener('click',()=>{
   document.getElementById('start').style.display='none';
