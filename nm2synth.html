@@ -828,6 +828,9 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 .nm2-tut-next{background:none;border:1.5px solid var(--accent-cyan);color:var(--accent-cyan);padding:6px 18px;border-radius:6px;cursor:pointer;font-family:var(--font-ui);font-size:13px;letter-spacing:.06em;min-height:36px;}
 .nm2-tut-complete{position:fixed;inset:0;z-index:995;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.78);color:var(--text-main);font-size:15px;line-height:1.6;text-align:center;padding:32px 24px;opacity:0;transition:opacity 200ms;pointer-events:none;}
 </style>
+<!-- Engine bridge: replaced by Vite build plugin with the TypeScript engine adapter.
+     In file:// mode this is empty — init() falls back to inline module factories. -->
+<script type="module" id="nm2-bridge"></script>
 </head>
 <body>
 
@@ -12257,8 +12260,18 @@ async function init() {
   }
   await Promise.all([loadPolyBlepOscWorklet(), loadVcfTptWorklet(), loadLadderFilterWorklet(), loadSyncWorklet(), loadMicrocosmWorklet(), loadPinkNoiseWorklet(), loadSlewWorklet(), loadBitCrusherWorklet(), loadLogicWorklet(), loadSpectralWorklet()]);
 
-  makeVCO(); makeVCO2(); makeNoise(); makeMixer();
-  makeLFO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
+  // ── Voice path: engine bridge (Vite build) or inline factories (file://) ──
+  // window._nm2bridge is set by the engine-monolith-adapter module injected at
+  // build time.  In file:// mode the placeholder script is empty, _nm2bridge is
+  // undefined, and we fall back to the inline makeVCO/makeVCF/etc. factories.
+  if (typeof window._nm2bridge === 'function') {
+    const em = await window._nm2bridge(ctx);
+    mods.vco = em.vco; mods.vcf = em.vcf; mods.ladder = em.ladder;
+    mods.adsr = em.adsr; mods.vca = em.vca;
+  } else {
+    makeVCO(); makeVCF(); makeLadder(); makeADSR(); makeVCA();
+  }
+  makeVCO2(); makeLFO(); makeNoise(); makeMixer();
   makeDelay(); makeReverb(); makeClkDiv(); makeSeq();
   makeSandH(); makeLFO2(); makeAttenuverter(); makeSlew(); makeChaos();
   makeChorus(); makePanner(); makeTape(); makePhaser(); makeWavefolder();
