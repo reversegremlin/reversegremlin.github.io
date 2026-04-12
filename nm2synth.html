@@ -197,7 +197,7 @@ body.a11y-large{
 .module-label{text-align:center;font-size:var(--fs-md);font-weight:bold;letter-spacing:var(--ls-mod);color:var(--accent-soft);text-shadow:0 0 8px color-mix(in srgb,var(--accent-soft) 28%, transparent);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border-soft);}
 .module.bypassed{opacity:.45;filter:grayscale(.6);}
 .module.bypassed .module-label{color:var(--text-dim);}
-/* ── Stage mode (full-viewport no-scroll performance view) ── */
+/* ── Stage mode ── */
 #nm-stage-hdr{display:none;position:fixed;top:0;left:0;right:0;height:30px;z-index:10001;background:var(--bg-toolbar);border-bottom:1px solid var(--border-bright);align-items:center;gap:6px;padding:0 10px;backdrop-filter:blur(14px);}
 #nm-stage-hdr .btn{font-size:var(--fs-xs);padding:2px 8px;letter-spacing:1px;}
 #nm-stage-title{font-size:var(--fs-xs);letter-spacing:4px;color:var(--accent-soft);flex:1;}
@@ -208,6 +208,24 @@ body.nm-stage #nm-view-bar{display:none!important;}
 body.nm-stage #toolbar,body.nm-stage #loopstation,body.nm-stage #site-footer{display:none!important;}
 body.nm-stage{overflow:hidden;}
 body.nm-stage .module-remove-btn{display:none!important;}
+/* ── Stage picker overlay ── */
+#nm-stage-picker{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+#nm-spc-box{background:var(--bg-toolbar);border:1px solid var(--border-bright);border-radius:8px;width:min(440px,92vw);max-height:82vh;display:flex;flex-direction:column;padding:16px;gap:10px;box-shadow:0 24px 80px rgba(0,0,0,0.9);}
+#nm-spc-hdr{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+#nm-spc-title{font-size:var(--fs-sm);letter-spacing:4px;color:var(--accent-soft);}
+#nm-spc-sub{font-size:var(--fs-xs);color:var(--text-dim);letter-spacing:1px;}
+#nm-spc-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+#nm-spc-launch{background:color-mix(in srgb,var(--accent) 22%,transparent);border-color:var(--accent);color:var(--accent);font-weight:700;letter-spacing:2px;}
+#nm-spc-launch:hover{background:var(--accent);color:#000;}
+#nm-spc-list{list-style:none;margin:0;padding:2px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:3px;min-height:0;}
+#nm-spc-list li{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg-mod);border:1px solid var(--border-soft);border-radius:4px;user-select:none;}
+#nm-spc-list li.spc-checked{border-color:color-mix(in srgb,var(--accent) 38%,transparent);}
+#nm-spc-list li.spc-dragging{opacity:0.25;}
+#nm-spc-list li.spc-over-top{border-top:2px solid var(--accent);}
+#nm-spc-list li.spc-over-bot{border-bottom:2px solid var(--accent);}
+.nm-spc-drag{cursor:grab;color:var(--text-dim);font-size:13px;padding:0 2px;line-height:1;}
+.nm-spc-chk{width:13px;height:13px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;}
+.nm-spc-name{font-size:var(--fs-xs);letter-spacing:2px;flex:1;}
 /* ── View bar (stage + zoom) ── */
 #nm-view-bar{display:flex;align-items:center;gap:7px;padding:0 18px 10px;flex-wrap:wrap;}
 #nm-view-bar .btn{font-size:var(--fs-xs);padding:2px 8px;letter-spacing:1px;}
@@ -947,7 +965,8 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 <div id="nm-stage-hdr">
   <span id="nm-stage-title">◈ nm²</span>
   <button id="nm-arrange-btn" class="btn">⠿ ARRANGE</button>
-  <button id="nm-stage-exit" class="btn">✕ EXIT STAGE</button>
+  <button id="nm-spc-editcfg" class="btn">⚙ EDIT</button>
+  <button id="nm-stage-exit" class="btn">✕ EXIT</button>
 </div>
 
 <div id="rack-wrap">
@@ -12775,24 +12794,130 @@ const nm2Tutorial = {
 
 // ── View Controls: Stage Mode + Rack Zoom ─────────────────────────────────
 {
+  const STAGE_CFG_KEY = 'nm2-stage-cfg';
   let _stageOn = false;
   let _stageArrangeOn = false;
+  let _stageOrigOrder = []; // rack module IDs in DOM order before entering stage
 
-  // Auto-zoom rack to fill the stage viewport (called after layout settles)
+  function _loadStageCfg() {
+    try { return JSON.parse(localStorage.getItem(STAGE_CFG_KEY) || 'null'); } catch { return null; }
+  }
+  function _saveStageCfg(ids) { localStorage.setItem(STAGE_CFG_KEY, JSON.stringify(ids)); }
+
+  // ── Stage picker ─────────────────────────────────────────────────────────
+  function _openStagePicker() {
+    if (document.getElementById('nm-stage-picker')) return;
+    const rack = document.getElementById('rack');
+    const allMods = [...rack.querySelectorAll(':scope > .module')];
+    const saved = _loadStageCfg();
+    const checkedSet = new Set(saved || allMods.map(m => m.id));
+    // Saved modules first (in saved order), then unchecked ones appended
+    let ordered = allMods;
+    if (saved) {
+      const byId = Object.fromEntries(allMods.map(m => [m.id, m]));
+      ordered = [
+        ...saved.filter(id => byId[id]).map(id => byId[id]),
+        ...allMods.filter(m => !saved.includes(m.id))
+      ];
+    }
+    const overlay = document.createElement('div');
+    overlay.id = 'nm-stage-picker';
+    overlay.innerHTML = `<div id="nm-spc-box">
+  <div id="nm-spc-hdr"><span id="nm-spc-title">◈ STAGE CONFIG</span><span id="nm-spc-sub">check · drag to reorder · launch</span></div>
+  <div id="nm-spc-actions">
+    <button class="btn" id="nm-spc-all">ALL</button>
+    <button class="btn" id="nm-spc-none">NONE</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="nm-spc-cancel">CANCEL</button>
+    <button class="btn" id="nm-spc-launch">⊡ LAUNCH STAGE</button>
+  </div>
+  <ul id="nm-spc-list"></ul>
+</div>`;
+    document.body.appendChild(overlay);
+    const ul = overlay.querySelector('#nm-spc-list');
+    ordered.forEach(mod => {
+      const name = mod.querySelector('.module-label')?.textContent?.trim() || mod.id.replace('mod-','').toUpperCase();
+      const li = document.createElement('li');
+      li.dataset.modId = mod.id;
+      li.draggable = true;
+      const chk = checkedSet.has(mod.id);
+      if (chk) li.classList.add('spc-checked');
+      li.innerHTML = `<span class="nm-spc-drag" title="drag to reorder">⠿</span><input class="nm-spc-chk" type="checkbox" ${chk ? 'checked' : ''}><span class="nm-spc-name">${name}</span>`;
+      li.querySelector('.nm-spc-chk').addEventListener('change', e => li.classList.toggle('spc-checked', e.target.checked));
+      ul.appendChild(li);
+    });
+    // HTML5 drag-to-reorder
+    let _dragItem = null;
+    ul.addEventListener('dragstart', e => {
+      _dragItem = e.target.closest('li');
+      if (_dragItem) { _dragItem.classList.add('spc-dragging'); e.dataTransfer.effectAllowed = 'move'; }
+    });
+    ul.addEventListener('dragend', () => {
+      ul.querySelectorAll('li').forEach(l => l.classList.remove('spc-dragging','spc-over-top','spc-over-bot'));
+      _dragItem = null;
+    });
+    ul.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!_dragItem) return;
+      const t = e.target.closest('li');
+      ul.querySelectorAll('li').forEach(l => l.classList.remove('spc-over-top','spc-over-bot'));
+      if (t && t !== _dragItem) t.classList.add(e.clientY > t.getBoundingClientRect().top + t.getBoundingClientRect().height/2 ? 'spc-over-bot' : 'spc-over-top');
+    });
+    ul.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!_dragItem) return;
+      const t = e.target.closest('li');
+      ul.querySelectorAll('li').forEach(l => l.classList.remove('spc-over-top','spc-over-bot'));
+      if (t && t !== _dragItem) ul.insertBefore(_dragItem, e.clientY > t.getBoundingClientRect().top + t.getBoundingClientRect().height/2 ? t.nextSibling : t);
+    });
+    overlay.querySelector('#nm-spc-all').addEventListener('click', () =>
+      ul.querySelectorAll('.nm-spc-chk').forEach(c => { c.checked = true; c.closest('li').classList.add('spc-checked'); }));
+    overlay.querySelector('#nm-spc-none').addEventListener('click', () =>
+      ul.querySelectorAll('.nm-spc-chk').forEach(c => { c.checked = false; c.closest('li').classList.remove('spc-checked'); }));
+    overlay.querySelector('#nm-spc-cancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#nm-spc-launch').addEventListener('click', () => {
+      const checkedIds = [...ul.querySelectorAll('li')]
+        .filter(li => li.querySelector('.nm-spc-chk').checked).map(li => li.dataset.modId);
+      if (!checkedIds.length) return;
+      _saveStageCfg(checkedIds);
+      overlay.remove();
+      if (_stageOn) {
+        // Already in stage: restore rack, then re-apply new config without toggling CSS class
+        const r = document.getElementById('rack');
+        r.querySelectorAll(':scope > .module').forEach(m => { m.style.display = ''; });
+        for (const id of _stageOrigOrder) { const el = document.getElementById(id); if (el) r.appendChild(el); }
+        _stageOrigOrder = [...r.querySelectorAll(':scope > .module')].map(m => m.id);
+        const vis = new Set(checkedIds);
+        r.querySelectorAll(':scope > .module').forEach(m => { m.style.display = vis.has(m.id) ? '' : 'none'; });
+        for (const id of checkedIds) { const el = document.getElementById(id); if (el) r.appendChild(el); }
+        _fitStage();
+      } else {
+        _enterStage(checkedIds);
+      }
+    });
+    // Click backdrop to close
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  // ── Stage enter/exit ──────────────────────────────────────────────────────
   function _fitStage() {
     const rack = document.getElementById('rack');
-    rack.style.zoom = ''; // reset to measure natural size
-    // Two rAFs: first triggers layout recalc, second reads stable measurements
+    rack.style.zoom = '';
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const availW = window.innerWidth - 16;
-      const availH = window.innerHeight - 30 - 16; // stage header (30) + padding (8×2)
+      const availH = window.innerHeight - 30 - 16;
       const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 1);
       rack.style.zoom = z < 0.99 ? z : '';
       markCablesDirty();
     }));
   }
 
-  function _enterStage() {
+  function _enterStage(visibleIds) {
+    const rack = document.getElementById('rack');
+    _stageOrigOrder = [...rack.querySelectorAll(':scope > .module')].map(m => m.id);
+    const vis = new Set(visibleIds);
+    rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = vis.has(m.id) ? '' : 'none'; });
+    for (const id of visibleIds) { const el = document.getElementById(id); if (el) rack.appendChild(el); }
     _stageOn = true;
     document.body.classList.add('nm-stage');
     document.getElementById('nm-stage-btn').classList.add('on');
@@ -12800,11 +12925,21 @@ const nm2Tutorial = {
   }
 
   function _exitStage() {
+    if (!_stageOn) return;
+    // Save current visible stage order so picker remembers it
+    const rack = document.getElementById('rack');
+    const stageOrder = [...rack.querySelectorAll(':scope > .module')]
+      .filter(m => m.style.display !== 'none').map(m => m.id);
+    if (stageOrder.length) _saveStageCfg(stageOrder);
     _stageOn = false;
     document.body.classList.remove('nm-stage');
-    // Exit arrange mode if active
-    if (_stageArrangeOn) _setArrange(false);
-    // Restore slider-controlled zoom
+    // Exit arrange if active
+    if (_stageArrangeOn) { _stageArrangeOn = false; editMode = false; document.body.classList.remove('edit-mode'); const ab = document.getElementById('nm-arrange-btn'); ab.classList.remove('on'); ab.textContent = '⠿ ARRANGE'; }
+    // Restore all modules + original order
+    rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = ''; });
+    for (const id of _stageOrigOrder) { const el = document.getElementById(id); if (el) rack.appendChild(el); }
+    _stageOrigOrder = [];
+    syncRackOrder();
     document.getElementById('rack').style.zoom = _zoom < 1 ? _zoom : '';
     document.getElementById('nm-stage-btn').classList.remove('on');
     markCablesDirty();
@@ -12812,22 +12947,33 @@ const nm2Tutorial = {
 
   function _setArrange(on) {
     _stageArrangeOn = on;
+    editMode = on; // drive the drag handler's global flag
     document.body.classList.toggle('edit-mode', on);
     const btn = document.getElementById('nm-arrange-btn');
     btn.classList.toggle('on', on);
     btn.textContent = on ? '⠿ DONE' : '⠿ ARRANGE';
+    if (!on) {
+      // Save new stage order after drag-rearrange
+      const rack = document.getElementById('rack');
+      const order = [...rack.querySelectorAll(':scope > .module')]
+        .filter(m => m.style.display !== 'none').map(m => m.id);
+      if (order.length) _saveStageCfg(order);
+      _fitStage();
+    }
   }
 
-  document.getElementById('nm-stage-btn').addEventListener('click', () => _stageOn ? _exitStage() : _enterStage());
+  document.getElementById('nm-stage-btn').addEventListener('click', () => {
+    if (_stageOn) _exitStage(); else _openStagePicker();
+  });
   document.getElementById('nm-stage-exit').addEventListener('click', _exitStage);
   document.getElementById('nm-arrange-btn').addEventListener('click', () => _setArrange(!_stageArrangeOn));
+  document.getElementById('nm-spc-editcfg').addEventListener('click', _openStagePicker);
 
-  // Escape exits stage mode (fires before the existing cable-cancel handler)
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && _stageOn) _exitStage();
+    // Escape exits stage (but not if picker is open — picker handles its own close)
+    if (e.key === 'Escape' && _stageOn && !document.getElementById('nm-stage-picker')) _exitStage();
   }, true);
 
-  // Re-fit when window resizes while in stage
   window.addEventListener('resize', () => { if (_stageOn) _fitStage(); });
 
   // ── Zoom (normal rack view) ────────────────────────────────────────────────
@@ -12847,7 +12993,6 @@ const nm2Tutorial = {
   document.getElementById('nm-zoom-in').addEventListener('click', () => applyRackZoom(_zoom + 0.05));
   document.getElementById('nm-zoom-slider').addEventListener('input', e => applyRackZoom(+e.target.value / 100));
 
-  // Restore saved zoom on load
   if (_zoom < 1) {
     document.getElementById('rack').style.zoom = _zoom;
     document.getElementById('nm-zoom-val').textContent = Math.round(_zoom * 100) + '%';
