@@ -813,6 +813,10 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 .patch-toast.toast-info{border-color:#0088ff55;color:#88ccff;}
 .patch-toast.toast-tip{border-color:#ffcc0055;color:#ffcc88;}
 .patch-toast.toast-warn{border-color:#ff660055;color:#ffaa66;}
+.tut-ask{pointer-events:all;padding:8px 14px;}
+.tut-ask-yes,.tut-ask-no{background:none;border:1px solid currentColor;color:inherit;font-family:var(--font-ui);font-size:var(--fs-sm);letter-spacing:.4px;padding:3px 9px;border-radius:2px;cursor:pointer;margin-left:9px;}
+.tut-ask-yes{border-color:var(--accent-cyan);color:var(--accent-cyan);}
+.tut-ask-no{opacity:.5;}
 
 /* ── Mobile tutorial overlay ──
    z-index 835: above workspace (auto/0), below all sheets (840+).
@@ -12397,15 +12401,25 @@ async function init() {
 
   setStatus('nm² modsynth v1.0.1 — POWERED ON');
 
-  // First-launch: auto-open tutorial picker
+  // First-launch: ask if they want the tutorial (don't auto-open it)
+  // Skip on mobile (mobile overlay tutorial handles onboarding instead)
   // Skip if loading a shared patch (recipient should land on the patch, not the tutorial)
-  // Skip panel open on mobile (mobile overlay tutorial handles onboarding instead)
-  if (!localStorage.getItem('nm2-tut-seen') && !window.location.hash.startsWith('#patch=')) {
-    localStorage.setItem('nm2-tut-seen', '1');
-    if (!window.matchMedia('(max-width:640px)').matches) {
+  if (!localStorage.getItem('nm2-tut-seen') && !window.location.hash.startsWith('#patch=') && !window.matchMedia('(max-width:640px)').matches) {
+    const _tutAsk = document.createElement('div');
+    _tutAsk.className = 'patch-toast tut-ask toast-info visible';
+    _tutAsk.innerHTML = 'New to nm²? &nbsp;<button class="tut-ask-yes">Take the tutorial</button><button class="tut-ask-no">Skip</button>';
+    document.body.appendChild(_tutAsk);
+    const _tutAskTimer = setTimeout(() => { _tutAsk.remove(); localStorage.setItem('nm2-tut-seen','1'); }, 9000);
+    _tutAsk.querySelector('.tut-ask-yes').addEventListener('click', () => {
+      clearTimeout(_tutAskTimer); _tutAsk.remove();
+      localStorage.setItem('nm2-tut-seen','1');
       tutShowPicker();
       document.getElementById('tut-panel').classList.add('open');
-    }
+    });
+    _tutAsk.querySelector('.tut-ask-no').addEventListener('click', () => {
+      clearTimeout(_tutAskTimer); _tutAsk.remove();
+      localStorage.setItem('nm2-tut-seen','1');
+    });
   }
 
   // Load patch from URL hash if present: nm2synth.html#patch=<base64>
