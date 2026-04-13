@@ -1289,6 +1289,11 @@ const TIPS = {
   'mc-scat':   'Scatter — how far back in the buffer grains are read. Low = grains from near the present (coherent). High = grains scattered up to 2 seconds into the past (temporal blur).',
   'mc-pitch':  'Pitch — playback speed of each grain. 1.0 = original pitch. 2.0 = octave up. 0.5 = octave down. In SMEAR mode this controls the time-stretch ratio (low = extreme slow motion). In CRYST/SHIM the root grain uses this pitch; harmonics are fixed above it.',
   'mc-dnsty':  'Density — grains spawned per second. Low (2–6) = sparse distinct blips. Medium (10–20) = full grain cloud. High (30–40) = dense continuous wash. Higher density smooths the texture but is more CPU intensive.',
+  'mc-pos':    'Position — scrubs where in the buffer grains are read from. Center = just behind the live write head. Sweep it slowly to scan backwards through captured audio. In FILE mode, scans through the loaded sample file. In DRUNK mode, sets the starting wander position.',
+  'mc-sprd':   'Stereo Spread — scatters each grain independently across the stereo field. 0 = mono. Full = grains fly randomly across the full width. Most beautiful in CLOUD and CRYST modes — harmonic layers separate and the texture opens up spatially. One of the most transformative controls.',
+  'mc-dtune':  'Detune — adds random pitch variation to each individual grain. Low values (0–0.1) create organic chorus-like detuning that makes the texture sound alive. High values (0.3–0.5) create a wide pitch cloud spanning nearly an octave. In CLOUD mode, detuning on top of the harmonic ratios sounds like a full string section.',
+  'micr0c0sm-mode-cloud': 'CLOUD — Harmonic cloud. Each grain event simultaneously spawns 5 grains at just-intonation intervals: root, major third (×1.25), fifth (×1.5), minor seventh (×1.667), and octave (×2). Creates a rich overtone haze. Add DETUNE for organic microtuning on each harmonic — the magic combination for ambient pads.',
+  'micr0c0sm-mode-drunk': 'DRUNK — Stochastic wander. The grain read position random-walks through the buffer each event, step size controlled by SCAT. Creates an ever-evolving, non-repeating texture that slowly drifts through captured audio. Pair with HOLD for infinite generative drift over a frozen moment. Works with FILE mode too.',
 
   // ── Chord module ──────────────────────────────────────────────────────────
   'mod-chord':    'CHORD — plays a 3-voice chord that tracks the sequencer pitch and MIDI notes automatically. Each step that fires on the sequencer also triggers the chord at the same pitch. Patch CHORD OUT into the Mixer or VCF alongside VCO1 to blend chord voices with your lead oscillator. This is the foundation of lush ambient pads and harmonic drones.',
@@ -2007,6 +2012,8 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
       {name:'pitch',    defaultValue:1.0,  minValue:0.25, maxValue:4.0, automationRate:'k-rate'},
       {name:'density',  defaultValue:12,   minValue:2,    maxValue:40,  automationRate:'k-rate'},
       {name:'position', defaultValue:0.5,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
+      {name:'spread',   defaultValue:0.5,  minValue:0,    maxValue:1,   automationRate:'k-rate'},
+      {name:'pitchRnd', defaultValue:0,    minValue:0,    maxValue:0.5, automationRate:'k-rate'},
     ];
   }
   constructor() {
@@ -2022,17 +2029,22 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
     this.glitchLen = Math.floor(sampleRate * 0.08);
     this.glitchPhase = 0;
     this.glitchTimer = 0;
+    this.glitchPanL = 0.7071;
+    this.glitchPanR = 0.7071;
     this.fileBuf = null;
     this.fileMode = false;
     this.glitchIsFile = false;
+    this.drunkPos = 0.5;
     this.port.onmessage = ({data}) => {
-      if (data.mode    !== undefined) this.mode = data.mode;
+      if (data.mode !== undefined) { this.mode = data.mode; if (data.mode === 'drunk') this.drunkPos = 0.5; }
       if (data.freeze  !== undefined) this.freeze = data.freeze;
       if (data.fileBuffer !== undefined) this.fileBuf = data.fileBuffer;
       if (data.fileMode   !== undefined) { this.fileMode = data.fileMode; if (!data.fileMode) this.glitchIsFile = false; }
     };
   }
   hann(t) { return 0.5 * (1 - Math.cos(6.2832 * t)); }
+  // Equal-power stereo pan: panVal -1 (full left) to +1 (full right)
+  panLR(pv) { const a = (pv + 1) * 0.7854; return [Math.cos(a), Math.sin(a)]; }
   readBuf(pos) {
     const sz = this.bufSize;
     const ip = Math.floor(pos);
@@ -2048,49 +2060,59 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
     const f = pos - Math.floor(pos);
     return this.fileBuf[i] * (1-f) + this.fileBuf[j] * f;
   }
-  spawnGrain(grainSamp, scatter, pitchRatio, position, reverse) {
+  spawnGrain(grainSamp, scatter, pitchRatio, position, reverse, spread, pitchRnd) {
+    const dp = pitchRnd > 0 ? pitchRatio * Math.pow(2, (Math.random()-0.5)*2*pitchRnd) : pitchRatio;
+    const pv = spread > 0 ? (Math.random()*2-1)*spread : 0;
+    const [panL, panR] = this.panLR(pv);
     if (this.fileMode && this.fileBuf && !reverse) {
       const fLen = this.fileBuf.length;
       const center = Math.floor(position * fLen);
-      const spread = Math.floor(scatter * fLen * 0.3);
-      const jitter = spread > 0 ? Math.floor((Math.random()-0.5)*2*spread) : 0;
+      const spr = Math.floor(scatter * fLen * 0.3);
+      const jitter = spr > 0 ? Math.floor((Math.random()-0.5)*2*spr) : 0;
       const startPos = Math.max(0, Math.min(fLen - grainSamp - 1, center + jitter));
-      return { pos: startPos, len: grainSamp, played: 0, speed: pitchRatio, file: true };
-    } else {
-      const back = Math.floor(sampleRate * scatter * 2) + grainSamp;
-      const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(sampleRate * scatter * 0.5)));
-      const anchor = ((this.writeHead - back - jitter) % this.bufSize + this.bufSize) % this.bufSize;
-      if (reverse) return { pos: anchor + grainSamp, len: grainSamp, played: 0, speed: -pitchRatio };
-      return { pos: anchor, len: grainSamp, played: 0, speed: pitchRatio };
+      return {pos:startPos, len:grainSamp, played:0, speed:dp, file:true, panL, panR};
     }
+    const back = Math.floor(sampleRate * scatter * 2) + grainSamp;
+    const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(sampleRate * scatter * 0.5)));
+    const anchor = ((this.writeHead - back - jitter) % this.bufSize + this.bufSize) % this.bufSize;
+    if (reverse) return {pos:anchor + grainSamp, len:grainSamp, played:0, speed:-dp, panL, panR};
+    return {pos:anchor, len:grainSamp, played:0, speed:dp, panL, panR};
   }
   process(inputs, outputs, params) {
-    const inp = inputs[0] && inputs[0][0];
-    const out = outputs[0][0];
-    const n = out.length;
+    const inp  = inputs[0] && inputs[0][0];
+    const outL = outputs[0][0];
+    const outR = outputs[0][1] || outputs[0][0];
+    const n = outL.length;
     const blend    = params.blend[0];
     const grainSz  = params.grainSz[0];
     const scatter  = params.scatter[0];
     const pitch    = params.pitch[0];
     const density  = params.density[0];
     const position = params.position[0];
+    const spread   = params.spread[0];
+    const pitchRnd = params.pitchRnd[0];
+    // Just-intonation ratios for CLOUD: root, maj3, 5th, min7, octave
+    const CLOUD_RATIOS = [1, 1.25, 1.5, 1.667, 2.0];
     for (let i = 0; i < n; i++) {
       const dry = inp ? inp[i] : 0;
       if (!this.freeze) {
         this.buf[this.writeHead] = dry;
         this.writeHead = (this.writeHead + 1) % this.bufSize;
       }
-      let wet = 0;
+      let wetL = 0, wetR = 0;
       if (this.mode === 'glitch') {
+        // GLTCH: stutter micro-loops; each new slice gets a fresh stereo position
         this.glitchTimer++;
         if (this.glitchTimer > Math.floor(sampleRate * 0.4)) {
           this.glitchTimer = 0;
           this.glitchLen = Math.floor(sampleRate * (0.04 + Math.random() * 0.12));
+          const pv = spread > 0 ? (Math.random()*2-1)*spread : 0;
+          [this.glitchPanL, this.glitchPanR] = this.panLR(pv);
           if (this.fileMode && this.fileBuf) {
             const fLen = this.fileBuf.length;
             const center = Math.floor(position * fLen);
-            const spread = Math.floor(0.25 * fLen);
-            const off = Math.floor((Math.random()-0.5)*2*spread);
+            const spr = Math.floor(0.25 * fLen);
+            const off = Math.floor((Math.random()-0.5)*2*spr);
             this.glitchStart = Math.max(0, Math.min(fLen - this.glitchLen - 1, center + off));
             this.glitchIsFile = true;
           } else {
@@ -2100,32 +2122,59 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
           }
           this.glitchPhase = 0;
         }
-        if (this.glitchIsFile && this.fileBuf) {
-          wet = this.fileBuf[Math.min(this.fileBuf.length-1, this.glitchStart + this.glitchPhase)] || 0;
-        } else {
-          wet = this.buf[(this.glitchStart + this.glitchPhase) % this.bufSize];
-        }
-        wet *= this.hann(this.glitchPhase / this.glitchLen);
+        const gw = ((this.glitchIsFile && this.fileBuf)
+          ? (this.fileBuf[Math.min(this.fileBuf.length-1, this.glitchStart + this.glitchPhase)] || 0)
+          : this.buf[(this.glitchStart + this.glitchPhase) % this.bufSize])
+          * this.hann(this.glitchPhase / this.glitchLen);
+        wetL = gw * this.glitchPanL; wetR = gw * this.glitchPanR;
         this.glitchPhase = (this.glitchPhase + 1) % this.glitchLen;
       } else {
-        const grainSamp = this.mode === 'smear'
+        // All granular modes
+        const isSmear = this.mode === 'smear';
+        const isCryst = this.mode === 'crystal';
+        const isCloud = this.mode === 'cloud';
+        const isDrunk = this.mode === 'drunk';
+        const grainSamp = isSmear
           ? Math.floor(sampleRate * Math.min(0.5, grainSz * 4))
           : Math.floor(sampleRate * grainSz);
-        const pitchRatio = this.mode === 'smear' ? pitch * 0.35 : pitch;
-        const maxGrains = this.mode === 'crystal' ? 30 : 32;
+        const pitchRatio = isSmear ? pitch * 0.35 : pitch;
+        const maxGrains = isCryst ? 30 : isCloud ? 40 : 32;
         if (this.nextGrainSamp <= 0) {
           if (this.grains.length < maxGrains) {
             if (this.mode === 'shimmer') {
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitch * 1.4983, position, false));
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitch * 2,      position, false));
-            } else if (this.mode === 'crystal') {
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio,          position, false));
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio * 1.4983, position, false));
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio * 2,      position, false));
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitch * 1.4983, position, false, spread, pitchRnd));
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitch * 2,      position, false, spread, pitchRnd));
+            } else if (isCryst) {
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio,          position, false, spread, pitchRnd));
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio * 1.4983, position, false, spread, pitchRnd));
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio * 2,      position, false, spread, pitchRnd));
             } else if (this.mode === 'reverse') {
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio, position, true));
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio, position, true, spread, pitchRnd));
+            } else if (isCloud) {
+              // Harmonic cloud: 5 just-intonation grains per event, each independently panned
+              for (let r = 0; r < CLOUD_RATIOS.length; r++)
+                this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio * CLOUD_RATIOS[r], position, false, spread, pitchRnd));
+            } else if (isDrunk) {
+              // Random-walk position through buffer; step size scales with scatter
+              this.drunkPos = Math.max(0, Math.min(1, this.drunkPos + (Math.random()-0.5) * scatter * 0.08));
+              const pv = spread > 0 ? (Math.random()*2-1)*spread : 0;
+              const [panL, panR] = this.panLR(pv);
+              const dp = pitchRnd > 0 ? pitchRatio * Math.pow(2, (Math.random()-0.5)*2*pitchRnd) : pitchRatio;
+              if (this.fileMode && this.fileBuf) {
+                const fLen = this.fileBuf.length;
+                const center = Math.floor(this.drunkPos * fLen);
+                const jitter = Math.floor((Math.random()-0.5) * sampleRate * 0.015);
+                const startPos = Math.max(0, Math.min(fLen - grainSamp - 1, center + jitter));
+                this.grains.push({pos:startPos, len:grainSamp, played:0, speed:dp, file:true, panL, panR});
+              } else {
+                const anchor = Math.floor(this.drunkPos * this.bufSize);
+                const jitter = Math.floor((Math.random()-0.5) * sampleRate * 0.015);
+                const safeAnchor = ((anchor + jitter) % this.bufSize + this.bufSize) % this.bufSize;
+                this.grains.push({pos:safeAnchor, len:grainSamp, played:0, speed:dp, panL, panR});
+              }
             } else {
-              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio, position, false));
+              // granular, smear
+              this.grains.push(this.spawnGrain(grainSamp, scatter, pitchRatio, position, false, spread, pitchRnd));
             }
           }
           this.nextGrainSamp = (sampleRate / density) * (0.75 + Math.random() * 0.5);
@@ -2142,15 +2191,19 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
           } else {
             sample = this.readBuf(readPos);
           }
-          wet += sample * this.hann(t);
+          const w = sample * this.hann(t);
+          wetL += w * g.panL;
+          wetR += w * g.panR;
           g.played++;
           alive.push(g);
         }
         this.grains = alive;
-        const grainMul = this.mode === 'crystal' ? 3 : this.mode === 'shimmer' ? 2 : 1;
-        wet /= Math.sqrt(Math.max(1, density * grainSz * grainMul));
+        const grainMul = isCryst ? 3 : this.mode === 'shimmer' ? 2 : isCloud ? 5 : 1;
+        const norm = Math.sqrt(Math.max(1, density * grainSz * grainMul));
+        wetL /= norm; wetR /= norm;
       }
-      out[i] = wet * blend; // wet-only send: dry passes through VCA→master default path
+      outL[i] = wetL * blend;
+      outR[i] = wetR * blend;
     }
     return true;
   }
@@ -3143,21 +3196,25 @@ function makeWavefolder(instanceId = 1) {
 function makeMicr0c0sm() {
   const inlet  = ctx.createGain(); inlet.gain.value = 1;
   const node   = new AudioWorkletNode(ctx, 'micr0c0sm', {
-    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1]
+    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2]
   });
   const outlet = ctx.createGain(); outlet.gain.value = 1;
   inlet.connect(node); node.connect(outlet);
   const p = node.parameters;
   const m = { inlet, node, outlet,
     blendVal:0.7, grainSzVal:0.12, scatterVal:0.3, pitchVal:1.0, densityVal:12,
+    spreadVal:0.5, pitchRndVal:0, posVal:0.5,
     mode:'granular', frozen:false, fileMode:false };
-  m.setBlend   = v => { m.blendVal=v;    p.get('blend').setTargetAtTime(v, ctx.currentTime, 0.05); };
-  m.setGrainSz = v => { m.grainSzVal=v; p.get('grainSz').setTargetAtTime(v, ctx.currentTime, 0.05); };
-  m.setScatter = v => { m.scatterVal=v; p.get('scatter').setTargetAtTime(v, ctx.currentTime, 0.05); };
-  m.setPitch   = v => { m.pitchVal=v;   p.get('pitch').setTargetAtTime(v, ctx.currentTime, 0.05); };
-  m.setDensity = v => { m.densityVal=v; p.get('density').setTargetAtTime(v, ctx.currentTime, 0.05); };
-  m.setMode    = md => { m.mode=md; node.port.postMessage({mode:md}); };
-  m.setFreeze  = on => { m.frozen=on;   node.port.postMessage({freeze:on}); };
+  m.setBlend    = v => { m.blendVal=v;    p.get('blend').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setGrainSz  = v => { m.grainSzVal=v; p.get('grainSz').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setScatter  = v => { m.scatterVal=v; p.get('scatter').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setPitch    = v => { m.pitchVal=v;   p.get('pitch').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setDensity  = v => { m.densityVal=v; p.get('density').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setSpread   = v => { m.spreadVal=v;  p.get('spread').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setPitchRnd = v => { m.pitchRndVal=v; p.get('pitchRnd').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setPosition = v => { m.posVal=v;     p.get('position').setTargetAtTime(v, ctx.currentTime, 0.05); };
+  m.setMode     = md => { m.mode=md; node.port.postMessage({mode:md}); };
+  m.setFreeze   = on => { m.frozen=on;   node.port.postMessage({freeze:on}); };
   m.setFileBuffer = audioBuffer => {
     if (!audioBuffer) return;
     const ch = audioBuffer.getChannelData(0);
@@ -3171,7 +3228,7 @@ function makeMicr0c0sm() {
       p.get('position').value = mods.sampler.posVal;
     }
   };
-  m.syncFilePos = v => { if (m.fileMode) p.get('position').value = v; };
+  m.syncFilePos = v => { if (m.fileMode) { m.posVal=v; p.get('position').value = v; sk('mc-pos', v); } };
   mods.micr0c0sm = m; return m;
 }
 
@@ -5308,9 +5365,9 @@ function buildWavefolderPanel(instanceId = 1) {
 
 function buildMicr0c0smPanel() {
   const d = document.createElement('div');
-  // Mode buttons — two rows of three
-  const allModes = [['GRAN','granular'],['GLTCH','glitch'],['SHIM','shimmer'],
-                    ['REVRS','reverse'],['CRYST','crystal'],['SMEAR','smear']];
+  // Mode buttons — two rows of four
+  const allModes = [['GRAN','granular'],['GLTCH','glitch'],['SHIM','shimmer'],['REVRS','reverse'],
+                    ['CRYST','crystal'],['SMEAR','smear'],['CLOUD','cloud'],['DRNK','drunk']];
   const modeRow1 = document.createElement('div'); modeRow1.className = 'wbtns';
   const modeRow2 = document.createElement('div'); modeRow2.className = 'wbtns';
   modeRow2.style.marginTop = '2px';
@@ -5326,7 +5383,7 @@ function buildMicr0c0smPanel() {
     });
     const tip = TIPS[`micr0c0sm-mode-${mode}`];
     if(tip){b.addEventListener('mouseenter',e=>showTip(tip,e));b.addEventListener('mousemove',moveTip);b.addEventListener('mouseleave',hideTip);}
-    (idx < 3 ? modeRow1 : modeRow2).appendChild(b);
+    (idx < 4 ? modeRow1 : modeRow2).appendChild(b);
   });
   // Register both rows together under one key for applyConfig sync
   const modeRowWrap = document.createElement('div');
@@ -5376,7 +5433,12 @@ function buildMicr0c0smPanel() {
   const row2 = document.createElement('div'); row2.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;';
   row2.appendChild(mkKnob({id:'mc-pitch', label:'PITCH', min:0.25, max:4.0, val:1.0,  tip:TIPS['mc-pitch'],  onChange:v=>mods.micr0c0sm.setPitch(v)}));
   row2.appendChild(mkKnob({id:'mc-dnsty', label:'DNSTY', min:2,    max:40,  val:12,   tip:TIPS['mc-dnsty'],  onChange:v=>mods.micr0c0sm.setDensity(v)}));
+  row2.appendChild(mkKnob({id:'mc-pos',   label:'POS',   min:0,    max:1,   val:0.5,  tip:TIPS['mc-pos'],    onChange:v=>mods.micr0c0sm.setPosition(v)}));
   d.appendChild(row2);
+  const row3 = document.createElement('div'); row3.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;';
+  row3.appendChild(mkKnob({id:'mc-sprd',  label:'SPRD',  min:0,    max:1,   val:0.5,  tip:TIPS['mc-sprd'],   onChange:v=>mods.micr0c0sm.setSpread(v)}));
+  row3.appendChild(mkKnob({id:'mc-dtune', label:'DTUNE', min:0,    max:0.5, val:0,    tip:TIPS['mc-dtune'],  onChange:v=>mods.micr0c0sm.setPitchRnd(v)}));
+  d.appendChild(row3);
   d.appendChild(document.createElement('hr'));
   d.appendChild(mkPP('micr0c0sm-in',  'ai', 'IN',  'in'));
   d.appendChild(mkPP('micr0c0sm-out', 'ao', 'OUT', 'out'));
@@ -6050,7 +6112,7 @@ function getConfig() {
     wavefolder:{fold:mods.wavefolder.foldVal,symm:mods.wavefolder.symmVal},
     chord:    {name:mods.chord.chordName,spread:mods.chord.spreadVal,level:mods.chord.levelVal,wave:mods.chord.waveType},
     quant:    {active:mods.quant.active,randMode:mods.quant.randMode,scale:mods.quant.scaleName,root:mods.quant.root},
-    micr0c0sm:{blend:mods.micr0c0sm.blendVal,grainSz:mods.micr0c0sm.grainSzVal,scatter:mods.micr0c0sm.scatterVal,pitch:mods.micr0c0sm.pitchVal,density:mods.micr0c0sm.densityVal,mode:mods.micr0c0sm.mode,fileMode:mods.micr0c0sm.fileMode},
+    micr0c0sm:{blend:mods.micr0c0sm.blendVal,grainSz:mods.micr0c0sm.grainSzVal,scatter:mods.micr0c0sm.scatterVal,pitch:mods.micr0c0sm.pitchVal,density:mods.micr0c0sm.densityVal,pos:mods.micr0c0sm.posVal,spread:mods.micr0c0sm.spreadVal,pitchRnd:mods.micr0c0sm.pitchRndVal,mode:mods.micr0c0sm.mode,fileMode:mods.micr0c0sm.fileMode,frozen:mods.micr0c0sm.frozen},
     stutter: {slice:mods.stutter.sliceVal,repeat:mods.stutter.repeatVal,mix:mods.stutter.mixVal,active:mods.stutter.activeVal},
     mic:     {level:mods.mic.levelVal},
     miclooper: {levelIn:mods.miclooper.levelInVal, levelOut:mods.miclooper.levelOutVal},
@@ -6148,6 +6210,18 @@ function applyConfig(cfg) {
         if(b.textContent.includes('FILE')) b.classList.toggle('on', !!mc.fileMode);
       });
     }
+    if(mc.frozen !== undefined){
+      mods.micr0c0sm.setFreeze(!!mc.frozen);
+      document.querySelectorAll('#mod-micr0c0sm .btn').forEach(b => {
+        if(b.textContent.includes('HOLD')||b.textContent.includes('HELD')){
+          b.classList.toggle('on', !!mc.frozen);
+          b.textContent = mc.frozen ? '◈ HELD' : '◈ HOLD';
+        }
+      });
+    }
+    if(mc.pos      !== undefined){ mods.micr0c0sm.setPosition(mc.pos);    sk('mc-pos',   mc.pos); }
+    if(mc.spread   !== undefined){ mods.micr0c0sm.setSpread(mc.spread);   sk('mc-sprd',  mc.spread); }
+    if(mc.pitchRnd !== undefined){ mods.micr0c0sm.setPitchRnd(mc.pitchRnd); sk('mc-dtune', mc.pitchRnd); }
   }}
   if(cfg.delay){ mods.delay.setTime(cfg.delay.time); sk('delay-time',cfg.delay.time); mods.delay.setFeedback(cfg.delay.fb); sk('delay-fb',cfg.delay.fb); mods.delay.setMix(cfg.delay.mix); sk('delay-mix',cfg.delay.mix); if(cfg.delay.drive!=null){mods.delay.setDrive(cfg.delay.drive);sk('delay-drive',cfg.delay.drive);} }
   if(cfg.seq){
