@@ -1274,8 +1274,8 @@ const TIPS = {
 
   // ── micr0c0sm ─────────────────────────────────────────────────────────────
   'mod-micr0c0sm': 'micr0c0sm — Granular effects processor. Captures incoming audio into a 4-second circular buffer and mangles it with overlapping Hann-windowed grains. Six modes: GRAN = cloud; GLTCH = stutter loops; SHIM = fifth+octave shimmer; REVRS = reverse grains; CRYST = harmonic crystal chord; SMEAR = temporal blur. HOLD freezes the buffer for infinite sustain.',
-  'micr0c0sm-in':  'micr0c0sm Audio In — patch from VCA OUT or anywhere in your signal chain. The module records a rolling 4-second loop of whatever arrives here. HOLD freezes this captured moment for infinite granular sustain.',
-  'micr0c0sm-out': 'micr0c0sm Audio Out — the processed granular/glitch output. Chain into Reverb IN for a granular→reverb texture (one of the most beautiful combinations in electronic music).',
+  'micr0c0sm-in':  'micr0c0sm Audio In — patch from VCA OUT or any source. Works like reverb: just patch in and the granular texture automatically mixes into master. The module records a rolling 4-second loop of whatever arrives here. HOLD freezes this captured moment for infinite granular sustain.',
+  'micr0c0sm-out': 'micr0c0sm Audio Out — already auto-wired to master like reverb/delay. Optionally patch this to Reverb IN for a granular→reverb texture (one of the most beautiful combinations in electronic music).',
   'micr0c0sm-mode-granular': 'GRAN — Granular mode. Overlapping Hann-windowed grains continuously read scattered positions from the circular buffer, creating a lush, blurry cloud of sound.',
   'micr0c0sm-mode-glitch':   'GLTCH — Glitch mode. Automatically cycles through short frozen slices of the buffer, creating a stutter/cascade loop effect.',
   'micr0c0sm-mode-shimmer':  'SHIM — Shimmer mode. Each grain event spawns two simultaneous grains — one at a perfect fifth (×1.498) and one an octave up (×2). Creates a rich crystalline shimmer. Pair with long reverb.',
@@ -1284,7 +1284,7 @@ const TIPS = {
   'micr0c0sm-mode-smear':    'SMEAR — Temporal smear. Forces extra-large grains at 35% pitch speed, creating a thick time-stretched blur cloud. PITCH controls the stretch ratio — low = extreme slow motion. Pair with HOLD for infinite smear drones.',
   'micr0c0sm-hold': 'HOLD — Freezes the recording buffer. New audio stops writing in; grains loop forever over whatever was captured at the moment of freeze. Hold a chord, freeze it, and watch it sustain infinitely. Press again to unfreeze.',
   'micr0c0sm-file': 'FILE — Full-file granular mode. Uses the loaded SAMPLER buffer directly as the grain source instead of the 4-second rolling capture. Grain positions scatter around the SAMPLER POSITION knob — scrub POSITION live to scan through the entire file. Works with all modes. Load a long recording in SAMPLER first.',
-  'mc-blend':  'Blend — 0 = dry only, 1 = granular only. Most musical range is 0.5–0.85. Try HOLD at full blend for a pure granular drone from any sound.',
+  'mc-blend':  'Wet — granular send level into master. Works like reverb: just patch something into micr0c0sm IN and turn this up. 0 = silent, 1 = full granular texture on top of your dry signal. Try HOLD at full wet for a pure frozen granular drone.',
   'mc-size':   'Grain Size — length of each grain (0.02–0.5 s). Very short = buzzy, grainy texture. Long = smooth cloud. In SMEAR mode the engine forces 4× your size setting for the blur to work. Most timbral parameter in granular synthesis.',
   'mc-scat':   'Scatter — how far back in the buffer grains are read. Low = grains from near the present (coherent). High = grains scattered up to 2 seconds into the past (temporal blur).',
   'mc-pitch':  'Pitch — playback speed of each grain. 1.0 = original pitch. 2.0 = octave up. 0.5 = octave down. In SMEAR mode this controls the time-stretch ratio (low = extreme slow motion). In CRYST/SHIM the root grain uses this pitch; harmonics are fixed above it.',
@@ -2150,7 +2150,7 @@ class Micr0c0smProcessor extends AudioWorkletProcessor {
         const grainMul = this.mode === 'crystal' ? 3 : this.mode === 'shimmer' ? 2 : 1;
         wet /= Math.sqrt(Math.max(1, density * grainSz * grainMul));
       }
-      out[i] = dry * (1 - blend) + wet * blend;
+      out[i] = wet * blend; // wet-only send: dry passes through VCA→master default path
     }
     return true;
   }
@@ -3199,6 +3199,8 @@ function wireDefault() {
   mods.sampler.outlet.connect(masterOut);
   // Pad sampler → master (always audible; patch padsampler-out for effects routing)
   mods.padsampler.outlet.connect(masterOut);
+  // micr0c0sm → master (send effect: patch micr0c0sm-in to activate granular texture)
+  mods.micr0c0sm.outlet.connect(masterOut);
   // Flanger → master (send effect: patch flanger-ai to activate)
   mods.flanger.outlet.connect(masterOut);
   // Stutter → master (send effect: wet-only outlet, patch stutter-ai to activate)
@@ -3991,7 +3993,6 @@ const SEND_INPUTS = {
 // IN without also patching their OUT means the processed signal goes nowhere.
 const INLINE_SILENT = {
   'fold-in':      { out: 'fold-out',      name: 'WVFLDR' },
-  'micr0c0sm-in': { out: 'micr0c0sm-out', name: 'micr0c0sm' },
   'mix-a-in':     { out: 'mix-out',       name: 'MIXER' },
   'mix-b-in':     { out: 'mix-out',       name: 'MIXER' },
   'mix-c-in':     { out: 'mix-out',       name: 'MIXER' },
@@ -5368,7 +5369,7 @@ function buildMicr0c0smPanel() {
   d.appendChild(holdFileRow);
   // Knob rows
   const row1 = document.createElement('div'); row1.style.cssText = 'display:flex;gap:2px;flex-wrap:wrap;';
-  row1.appendChild(mkKnob({id:'mc-blend', label:'BLEND', min:0,    max:1,   val:0.7,  tip:TIPS['mc-blend'],  onChange:v=>mods.micr0c0sm.setBlend(v)}));
+  row1.appendChild(mkKnob({id:'mc-blend', label:'WET',   min:0,    max:1,   val:0.7,  tip:TIPS['mc-blend'],  onChange:v=>mods.micr0c0sm.setBlend(v)}));
   row1.appendChild(mkKnob({id:'mc-size',  label:'SIZE',  min:0.02, max:0.5, val:0.12, tip:TIPS['mc-size'],   onChange:v=>mods.micr0c0sm.setGrainSz(v)}));
   row1.appendChild(mkKnob({id:'mc-scat',  label:'SCAT',  min:0,    max:1,   val:0.3,  tip:TIPS['mc-scat'],   onChange:v=>mods.micr0c0sm.setScatter(v)}));
   d.appendChild(row1);
