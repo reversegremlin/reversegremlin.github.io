@@ -209,6 +209,7 @@ body.nm-stage #toolbar,body.nm-stage #loopstation,body.nm-stage #site-footer{dis
 body.nm-stage{overflow:hidden;}
 body.nm-stage .module-remove-btn{display:none!important;}
 body.nm-stage #cables{z-index:10001;}
+body.nm-stage .rack-group{display:none!important;}
 /* ── Stage picker overlay ── */
 #nm-stage-picker{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
 #nm-spc-box{background:var(--bg-toolbar);border:1px solid var(--border-bright);border-radius:8px;width:min(440px,92vw);max-height:82vh;display:flex;flex-direction:column;padding:16px;gap:10px;box-shadow:0 24px 80px rgba(0,0,0,0.9);}
@@ -12799,11 +12800,23 @@ const nm2Tutorial = {
   let _stageOn = false;
   let _stageArrangeOn = false;
   let _stageOrigOrder = []; // rack module IDs in DOM order before entering stage
+  let _stageVisSet = null;        // Set of visible module element IDs while in stage
+  let _stageCableFilterFn = null; // draw-loop fn that hides cables to hidden modules
 
   function _loadStageCfg() {
     try { return JSON.parse(localStorage.getItem(STAGE_CFG_KEY) || 'null'); } catch { return null; }
   }
   function _saveStageCfg(ids) { localStorage.setItem(STAGE_CFG_KEY, JSON.stringify(ids)); }
+
+  // Runs each frame while in stage: hides cable paths whose endpoints touch a hidden module
+  function _applyStageCableFilter() {
+    if (!_stageVisSet) return;
+    cables.forEach(c => {
+      const fMod = ppMap[c.fromId]?.el?.closest('.module');
+      const tMod = ppMap[c.toId]?.el?.closest('.module');
+      c.el.style.display = (_stageVisSet.has(fMod?.id) && _stageVisSet.has(tMod?.id)) ? '' : 'none';
+    });
+  }
 
   // ── Stage picker ─────────────────────────────────────────────────────────
   function _openStagePicker() {
@@ -12883,13 +12896,13 @@ const nm2Tutorial = {
       _saveStageCfg(checkedIds);
       overlay.remove();
       if (_stageOn) {
-        // Already in stage: restore rack, then re-apply new config without toggling CSS class
+        // Already in stage: restore rack, apply new config without toggling CSS class
         const r = document.getElementById('rack');
         r.querySelectorAll(':scope > .module').forEach(m => { m.style.display = ''; });
         for (const id of _stageOrigOrder) { const el = document.getElementById(id); if (el) r.appendChild(el); }
         _stageOrigOrder = [...r.querySelectorAll(':scope > .module')].map(m => m.id);
-        const vis = new Set(checkedIds);
-        r.querySelectorAll(':scope > .module').forEach(m => { m.style.display = vis.has(m.id) ? '' : 'none'; });
+        _stageVisSet = new Set(checkedIds);
+        r.querySelectorAll(':scope > .module').forEach(m => { m.style.display = _stageVisSet.has(m.id) ? '' : 'none'; });
         for (const id of checkedIds) { const el = document.getElementById(id); if (el) r.appendChild(el); }
         _fitStage();
       } else {
@@ -12916,30 +12929,33 @@ const nm2Tutorial = {
   function _enterStage(visibleIds) {
     const rack = document.getElementById('rack');
     _stageOrigOrder = [...rack.querySelectorAll(':scope > .module')].map(m => m.id);
-    const vis = new Set(visibleIds);
-    rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = vis.has(m.id) ? '' : 'none'; });
+    _stageVisSet = new Set(visibleIds);
+    rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = _stageVisSet.has(m.id) ? '' : 'none'; });
     for (const id of visibleIds) { const el = document.getElementById(id); if (el) rack.appendChild(el); }
     _stageOn = true;
     document.body.classList.add('nm-stage');
     document.getElementById('nm-stage-btn').classList.add('on');
+    // Register per-frame cable filter (hides cables that connect to hidden modules)
+    if (!_stageCableFilterFn) { _stageCableFilterFn = _applyStageCableFilter; registerDraw(_stageCableFilterFn); }
     _fitStage();
   }
 
   function _exitStage() {
     if (!_stageOn) return;
-    // Save current visible stage order so picker remembers it
     const rack = document.getElementById('rack');
     const stageOrder = [...rack.querySelectorAll(':scope > .module')]
       .filter(m => m.style.display !== 'none').map(m => m.id);
     if (stageOrder.length) _saveStageCfg(stageOrder);
     _stageOn = false;
     document.body.classList.remove('nm-stage');
-    // Exit arrange if active
     if (_stageArrangeOn) { _stageArrangeOn = false; editMode = false; document.body.classList.remove('edit-mode'); const ab = document.getElementById('nm-arrange-btn'); ab.classList.remove('on'); ab.textContent = '⠿ ARRANGE'; }
-    // Restore all modules + original order
     rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = ''; });
     for (const id of _stageOrigOrder) { const el = document.getElementById(id); if (el) rack.appendChild(el); }
     _stageOrigOrder = [];
+    _stageVisSet = null;
+    // Unregister cable filter and restore all cable visibility
+    if (_stageCableFilterFn) { unregisterDraw(_stageCableFilterFn); _stageCableFilterFn = null; }
+    cables.forEach(c => { c.el.style.display = ''; });
     syncRackOrder();
     document.getElementById('rack').style.zoom = _zoom < 1 ? _zoom : '';
     document.getElementById('nm-stage-btn').classList.remove('on');
