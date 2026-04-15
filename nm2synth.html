@@ -13103,15 +13103,15 @@ const nm2Tutorial = {
           for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < N) rH = Math.max(rH, hs[i]); }
           lH += rH;
         }
-        const z = Math.min(availW / lW, availH / lH, 1);
+        const z = Math.min(availW / lW, availH / lH, 2.5);
         if (z > bestZoom) { bestZoom = z; bestRackW = lW; }
       }
 
       if (bestRackW !== null) rack.style.width = bestRackW + 'px';
       // One more rAF to let flex re-wrap at the new width before measuring & zooming
       requestAnimationFrame(() => {
-        const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 1);
-        rack.style.zoom = z < 0.99 ? z : '';
+        const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 2.5);
+        rack.style.zoom = z;
         markCablesDirty();
       });
     });
@@ -13150,7 +13150,7 @@ const nm2Tutorial = {
     syncRackOrder();
     const rack2 = document.getElementById('rack');
     rack2.style.width = '';
-    rack2.style.zoom = _zoom < 1 ? _zoom : '';
+    rack2.style.zoom = _zoom < 1 ? String(_zoom) : '';
     document.getElementById('nm-stage-btn').classList.remove('on');
     markCablesDirty();
   }
