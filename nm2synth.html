@@ -13088,7 +13088,7 @@ const nm2Tutorial = {
       const ws = mods.map(m => m.offsetWidth);
       const hs = mods.map(m => m.offsetHeight);
 
-      let bestZoom = -1, bestRackW = null;
+      let bestScore = -1, bestRackW = null;
       for (let cols = 1; cols <= N; cols++) {
         const rows = Math.ceil(N / cols);
         let lW = PAD * 2 + GAP * (cols - 1);
@@ -13103,8 +13103,10 @@ const nm2Tutorial = {
           for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < N) rH = Math.max(rH, hs[i]); }
           lH += rH;
         }
-        const z = Math.min(availW / lW, availH / lH, 2.5);
-        if (z > bestZoom) { bestZoom = z; bestRackW = lW; }
+        const z = Math.min(availW / lW, availH / lH); // no cap — allow upscale
+        // Score = fraction of screen area covered after scaling; maximise this
+        const score = Math.min(lW * z, availW) * Math.min(lH * z, availH);
+        if (score > bestScore) { bestScore = score; bestRackW = lW; }
       }
 
       if (bestRackW !== null) rack.style.width = bestRackW + 'px';
