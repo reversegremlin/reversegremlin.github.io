@@ -12553,7 +12553,6 @@ async function init() {
   // Initialize multi-instance tracking
   DUPLICATABLE_TYPES.forEach(type => { moduleInstances[type] = [1]; instanceCounters[type] = 1; });
   syncRackOrder();
-  drawDefaultCables();
   buildLoopStation();
 
   // Start visualizations
@@ -12605,15 +12604,22 @@ async function init() {
     });
   }
 
-  // Load patch from URL hash if present: nm2synth.html#patch=<base64>
+  // Load patch from URL hash, or auto-open with Harmonic Garden
   const hashMatch = window.location.hash.match(/^#patch=(.+)$/);
   if (hashMatch) {
     try {
       applyConfig(decodePatch(hashMatch[1]));
       setStatus('Patch loaded from share link ✓');
     } catch {
+      drawDefaultCables(); // fallback if hash decode fails
       setStatus('Could not load patch from link — invalid or corrupted.');
     }
+  } else if (!navigator.webdriver) {
+    // Auto-load opening preset — applyConfig draws default cables internally
+    // Skip in Playwright (navigator.webdriver === true) so tests see bare default state
+    applyConfig(FACTORY_PRESETS[0].cfg);
+  } else {
+    drawDefaultCables();
   }
 }
 
