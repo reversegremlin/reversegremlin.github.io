@@ -202,7 +202,8 @@ body.a11y-large{
 #nm-stage-hdr .btn{font-size:var(--fs-xs);padding:2px 8px;letter-spacing:1px;}
 #nm-stage-title{font-size:var(--fs-xs);letter-spacing:4px;color:var(--accent-soft);flex:1;}
 body.nm-stage #nm-stage-hdr{display:flex;}
-body.nm-stage #rack-wrap{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:10000;overflow:hidden;padding:8px;background:var(--bg-page);display:flex;align-items:center;justify-content:center;}
+body.nm-stage #rack-wrap{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:10000;overflow:hidden;background:var(--bg-page);}
+body.nm-stage #rack{position:absolute;top:0;left:0;transform-origin:top left;}
 body.nm-stage #rack-title{display:none;}
 body.nm-stage #nm-view-bar{display:none!important;}
 body.nm-stage #toolbar,body.nm-stage #loopstation,body.nm-stage #site-footer{display:none!important;}
@@ -13072,22 +13073,26 @@ const nm2Tutorial = {
   }
 
   // ── Stage enter/exit ──────────────────────────────────────────────────────
-  // Brute-force the column count (1…N) and pick whichever packs largest into the viewport
+  // Scale the rack to fill the viewport using transform (not zoom, which has flex-centering issues).
+  // getBoundingClientRect() is transform-aware, so cables reposition correctly.
   function _fitStage() {
     const rack = document.getElementById('rack');
+    rack.style.transform = '';
+    rack.style.width = '';
     rack.style.zoom = '';
-    rack.style.width = ''; // reset so offsetWidth/Height are natural
     requestAnimationFrame(() => {
       const mods = [...rack.querySelectorAll(':scope > .module')]
         .filter(m => m.style.display !== 'none');
       if (!mods.length) { requestAnimationFrame(() => markCablesDirty()); return; }
 
-      const availW = window.innerWidth  - 16;  // rack-wrap: 8px pad × 2
-      const availH = window.innerHeight - 46;  // 30px hdr + 8px pad × 2
+      // Full viewport minus stage header; rack-wrap has no padding now
+      const wrapW = window.innerWidth;
+      const wrapH = window.innerHeight - 30; // 30px header
       const GAP = 16, PAD = 18, N = mods.length;
       const ws = mods.map(m => m.offsetWidth);
       const hs = mods.map(m => m.offsetHeight);
 
+      // Find column count that maximises width coverage (then height as tiebreak)
       let bestScore = -1, bestRackW = null;
       for (let cols = 1; cols <= N; cols++) {
         const rows = Math.ceil(N / cols);
@@ -13103,20 +13108,23 @@ const nm2Tutorial = {
           for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < N) rH = Math.max(rH, hs[i]); }
           lH += rH;
         }
-        const z = Math.min(availW / lW, availH / lH, 4); // cap at 4× upscale
-        const usedW = Math.min(lW * z, availW);
-        const usedH = Math.min(lH * z, availH);
-        // Strongly prioritise filling width (wide screens have side gutters otherwise)
+        const z = Math.min(wrapW / lW, wrapH / lH, 4);
+        const usedW = Math.min(lW * z, wrapW);
+        const usedH = Math.min(lH * z, wrapH);
         const score = usedW * 10000 + usedH;
         if (score > bestScore) { bestScore = score; bestRackW = lW; }
       }
 
-      if (bestRackW !== null) rack.style.width = bestRackW + 'px';
-      // One more rAF to let flex re-wrap at the new width before measuring & zooming
+      rack.style.width = (bestRackW || wrapW) + 'px';
+      // One rAF for flex to reflow at new width, then scale and centre
       requestAnimationFrame(() => {
-        const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 4);
-        rack.style.zoom = z;
-        markCablesDirty();
+        const nW = rack.scrollWidth;
+        const nH = rack.scrollHeight;
+        const z  = Math.min(wrapW / nW, wrapH / nH, 4);
+        const ox = (wrapW - nW * z) / 2;
+        const oy = (wrapH - nH * z) / 2;
+        rack.style.transform = `translate(${ox}px,${oy}px) scale(${z})`;
+        requestAnimationFrame(() => markCablesDirty());
       });
     });
   }
@@ -13153,6 +13161,7 @@ const nm2Tutorial = {
     cables.forEach(c => { c.el.style.display = ''; });
     syncRackOrder();
     const rack2 = document.getElementById('rack');
+    rack2.style.transform = '';
     rack2.style.width = '';
     rack2.style.zoom = _zoom < 1 ? String(_zoom) : '';
     document.getElementById('nm-stage-btn').classList.remove('on');
