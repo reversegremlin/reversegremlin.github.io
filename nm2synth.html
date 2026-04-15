@@ -210,6 +210,11 @@ body.nm-stage{overflow:hidden;}
 body.nm-stage .module-remove-btn{display:none!important;}
 body.nm-stage #cables{z-index:10001;}
 body.nm-stage .rack-group{display:none!important;}
+/* ── Per-module stage pin ── */
+.nm-stage-pin{float:right;font-size:9px;line-height:inherit;cursor:pointer;color:var(--text-dim);opacity:0;transition:color .2s,opacity .2s,text-shadow .2s;user-select:none;padding:0 2px;letter-spacing:0;}
+.module:hover .nm-stage-pin{opacity:1;}
+.nm-stage-pin.nm-sp-on{opacity:1;color:var(--accent);text-shadow:0 0 7px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 35%,transparent);}
+body.nm-stage .nm-stage-pin{display:none!important;}
 /* ── Stage picker overlay ── */
 #nm-stage-picker{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
 #nm-spc-box{background:var(--bg-toolbar);border:1px solid var(--border-bright);border-radius:8px;width:min(440px,92vw);max-height:82vh;display:flex;flex-direction:column;padding:16px;gap:10px;box-shadow:0 24px 80px rgba(0,0,0,0.9);}
@@ -4601,6 +4606,12 @@ function panel(type, instanceIdOrLabel, labelOrContent, content_) {
   handle.textContent = '⠿ ';
   lbl.appendChild(handle);
   lbl.appendChild(document.createTextNode(instanceId === 1 ? label : `${label} #${instanceId}`));
+  const stagePin = document.createElement('span');
+  stagePin.className = 'nm-stage-pin';
+  stagePin.textContent = '⊡';
+  stagePin.title = 'Toggle in Stage mode';
+  stagePin.addEventListener('click', e => { e.stopPropagation(); if (typeof _nmToggleStagePin === 'function') _nmToggleStagePin(p.id); });
+  lbl.appendChild(stagePin);
   const tip = TIPS[`mod-${type}`];
   let collapsed = false;
   const getHint = () => collapsed ? 'DBL-CLICK TO EXPAND' : 'DBL-CLICK TO COLLAPSE  ·  EDIT MODE TO DRAG';
@@ -12906,7 +12917,38 @@ const nm2Tutorial = {
   function _loadStageCfg() {
     try { return JSON.parse(localStorage.getItem(STAGE_CFG_KEY) || 'null'); } catch { return null; }
   }
-  function _saveStageCfg(ids) { localStorage.setItem(STAGE_CFG_KEY, JSON.stringify(ids)); }
+  function _saveStageCfg(ids) { localStorage.setItem(STAGE_CFG_KEY, JSON.stringify(ids)); _updateStagePins(); }
+
+  // Reflect saved stage config on module-label pin badges
+  function _updateStagePins() {
+    const rack = document.getElementById('rack');
+    if (!rack) return;
+    const saved = _loadStageCfg();
+    const stagedSet = saved ? new Set(saved) : null; // null = no explicit config
+    rack.querySelectorAll(':scope > .module').forEach(modEl => {
+      const pin = modEl.querySelector('.nm-stage-pin');
+      if (!pin) return;
+      const inStage = !stagedSet || stagedSet.has(modEl.id);
+      pin.classList.toggle('nm-sp-on', inStage);
+      pin.title = inStage ? 'In Stage — click to exclude' : 'Excluded from Stage — click to include';
+      pin.textContent = inStage ? '⊡' : '◻';
+    });
+  }
+
+  // Expose so init().then() can call after rack is populated
+  window._nmUpdateStagePins = _updateStagePins;
+
+  // Toggle a single module in/out of the saved stage config
+  window._nmToggleStagePin = function(modId) {
+    const rack = document.getElementById('rack');
+    const allMods = [...rack.querySelectorAll(':scope > .module')].map(m => m.id);
+    const saved = _loadStageCfg() || allMods; // default: all modules
+    const set = new Set(saved);
+    if (set.has(modId)) { set.delete(modId); } else { set.add(modId); }
+    // Preserve order: keep saved order, append newly added
+    const newOrder = [...saved.filter(id => set.has(id)), ...[...set].filter(id => !saved.includes(id))];
+    _saveStageCfg(newOrder);
+  };
 
   // Runs each frame while in stage: hides cable paths whose endpoints touch a hidden module
   function _applyStageCableFilter() {
@@ -12924,8 +12966,24 @@ const nm2Tutorial = {
     const rack = document.getElementById('rack');
     const allMods = [...rack.querySelectorAll(':scope > .module')];
     const saved = _loadStageCfg();
-    const checkedSet = new Set(saved || allMods.map(m => m.id));
-    // Saved modules first (in saved order), then unchecked ones appended
+
+    // Auto-detect modules involved in active cables
+    const connectedMods = new Set();
+    cables.forEach(c => {
+      const fMod = ppMap[c.fromId]?.el?.closest('.module');
+      const tMod = ppMap[c.toId]?.el?.closest('.module');
+      if (fMod) connectedMods.add(fMod.id);
+      if (tMod) connectedMods.add(tMod.id);
+    });
+    // Sequencer auto-includes if currently playing
+    if (mods.seq?.playing) connectedMods.add('mod-seq');
+
+    // Merge: saved pinned modules + cable-detected; fall back to all if empty
+    const merged = [...new Set([...(saved || []), ...connectedMods])]
+      .filter(id => allMods.some(m => m.id === id));
+    const checkedSet = new Set(merged.length ? merged : allMods.map(m => m.id));
+
+    // Saved modules first (in saved order), then remaining appended
     let ordered = allMods;
     if (saved) {
       const byId = Object.fromEntries(allMods.map(m => [m.id, m]));
@@ -12937,7 +12995,7 @@ const nm2Tutorial = {
     const overlay = document.createElement('div');
     overlay.id = 'nm-stage-picker';
     overlay.innerHTML = `<div id="nm-spc-box">
-  <div id="nm-spc-hdr"><span id="nm-spc-title">◈ STAGE CONFIG</span><span id="nm-spc-sub">check · drag to reorder · launch</span></div>
+  <div id="nm-spc-hdr"><span id="nm-spc-title">◈ STAGE CONFIG</span><span id="nm-spc-sub">${connectedMods.size ? 'auto-selected from active patch · ' : ''}check · drag to reorder · launch</span></div>
   <div id="nm-spc-actions">
     <button class="btn" id="nm-spc-all">ALL</button>
     <button class="btn" id="nm-spc-none">NONE</button>
@@ -13156,6 +13214,7 @@ document.getElementById('start').addEventListener('click',()=>{
   document.getElementById('start').style.display='none';
   init().then(()=>{
     nm2Mobile.init();
+    if (typeof window._nmUpdateStagePins === 'function') window._nmUpdateStagePins();
     if (!window.location.hash.startsWith('#patch=') && nm2Tutorial.shouldShow()) nm2Tutorial.start();
   });
 });
