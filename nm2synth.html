@@ -6700,6 +6700,25 @@ const FULL_AMBIENT_TRACK_SCENES = [
 ];
 
 const FACTORY_PRESETS = [
+  { name:'Harmonic Garden', desc:'Sparse sine notes bloom into fractal harmonic clouds. VCA feeds micr0c0sm CLOUD mode — each note spawns 5 just-intonation voices scattered wide in stereo, then into cathedral reverb for an infinite halo. Starts quietly; the texture grows with each bar. Press PLAY.', cfg:{v:1,
+    vco:{type:'sine',oct:3,coarse:0,fine:0}, vco2:{type:'sine',oct:3,coarse:0,detune:5},
+    lfo:{type:'sine',rate:0.05,depth:220}, lfo2:{type:'triangle',rate:0.031,depth:110},
+    adsr:{A:2.4,D:0.6,S:0.86,R:7}, vcf:{cutoff:4800,res:0.9,ftype:'lowpass'}, vca:{gain:0.65},
+    reverb:{size:9,decay:0.94,mix:0.86}, delay:{time:0.5,fb:0.48,mix:0.34},
+    chorus:{rate:0.16,depth:0.26,width:0.94,mix:0.5},
+    tape:{drive:1.3,wow:0.09,mix:0.18}, phaser:{rate:0.06,depth:0.2,mix:0.18},
+    noise:{type:'white',level:0}, mixer:{a:0.6,b:0,c:0},
+    seq:{bpm:72,direction:'fwd',stepCount:16,steps:Array.from({length:16},(_,i)=>({
+      on:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0][i]===1,
+      pitch:[0,0,0,0,7,0,0,0,5,0,0,0,3,0,0,0][i],
+      prob:1
+    }))},
+    att:{att:1,offset:0}, wavefolder:{fold:1.1,symm:0}, panner:{rate:0.05,depth:0.32},
+    micr0c0sm:{blend:0.78,grainSz:0.24,scatter:0.44,pitch:1,density:16,pos:0.5,spread:0.88,pitchRnd:0.06,mode:'cloud',fileMode:false,frozen:false},
+    chord:{name:'min7',spread:7,level:0.42,wave:'sine'}, quant:{active:false,randMode:false,scale:'dorian',root:9},
+    sidechain:{attack:0.01,release:0.3,amount:1}, arp:{chord:'min7',dir:'up',rateMul:1,octaves:1,root:0},
+    cables:[{fromId:'vca-out',toId:'micr0c0sm-in',color:'#cc44ff'},{fromId:'micr0c0sm-out',toId:'reverb-in',color:'#00ffff'},{fromId:'vca-out',toId:'delay-in',color:'#88aaff'},{fromId:'lfo2-out',toId:'vcf-cv',color:'#00ff88'}]
+  }},
   { name:'Ambient Drone', desc:'Slow evolving filter sweep — two detuned saws + huge reverb', cfg:{v:1,
     vco:{type:'sawtooth',oct:2,coarse:0,fine:0}, vco2:{type:'sawtooth',oct:2,coarse:0,detune:12},
     lfo:{type:'sine',rate:0.12,depth:900}, lfo2:{type:'triangle',rate:0.057,depth:500},
