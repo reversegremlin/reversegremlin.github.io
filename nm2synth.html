@@ -13103,16 +13103,18 @@ const nm2Tutorial = {
           for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < N) rH = Math.max(rH, hs[i]); }
           lH += rH;
         }
-        const z = Math.min(availW / lW, availH / lH); // no cap — allow upscale
-        // Score = fraction of screen area covered after scaling; maximise this
-        const score = Math.min(lW * z, availW) * Math.min(lH * z, availH);
+        const z = Math.min(availW / lW, availH / lH, 4); // cap at 4× upscale
+        const usedW = Math.min(lW * z, availW);
+        const usedH = Math.min(lH * z, availH);
+        // Strongly prioritise filling width (wide screens have side gutters otherwise)
+        const score = usedW * 10000 + usedH;
         if (score > bestScore) { bestScore = score; bestRackW = lW; }
       }
 
       if (bestRackW !== null) rack.style.width = bestRackW + 'px';
       // One more rAF to let flex re-wrap at the new width before measuring & zooming
       requestAnimationFrame(() => {
-        const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 2.5);
+        const z = Math.min(availW / rack.scrollWidth, availH / rack.scrollHeight, 4);
         rack.style.zoom = z;
         markCablesDirty();
       });
