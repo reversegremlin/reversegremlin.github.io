@@ -203,7 +203,7 @@ body.a11y-large{
 #nm-stage-title{font-size:var(--fs-xs);letter-spacing:4px;color:var(--accent-soft);flex:1;}
 body.nm-stage #nm-stage-hdr{display:flex;}
 body.nm-stage #rack-wrap{position:fixed;top:30px;left:0;right:0;bottom:0;z-index:10000;overflow:hidden;background:var(--bg-page);}
-body.nm-stage #rack{position:absolute;top:0;left:0;transform-origin:top left;}
+body.nm-stage #rack{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;}
 body.nm-stage #rack-title{display:none;}
 body.nm-stage #nm-view-bar{display:none!important;}
 body.nm-stage #toolbar,body.nm-stage #loopstation,body.nm-stage #site-footer{display:none!important;}
@@ -216,6 +216,7 @@ body.nm-stage .rack-group{display:none!important;}
 .module:hover .nm-stage-pin{opacity:1;}
 .nm-stage-pin.nm-sp-on{opacity:1;color:var(--accent);text-shadow:0 0 7px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 35%,transparent);}
 body.nm-stage .nm-stage-pin{display:none!important;}
+body.nm-stage #nm-arrange-btn{display:none!important;}
 /* ── Stage picker overlay ── */
 #nm-stage-picker{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
 #nm-spc-box{background:var(--bg-toolbar);border:1px solid var(--border-bright);border-radius:8px;width:min(440px,92vw);max-height:82vh;display:flex;flex-direction:column;padding:16px;gap:10px;box-shadow:0 24px 80px rgba(0,0,0,0.9);}
@@ -12911,7 +12912,8 @@ const nm2Tutorial = {
   const STAGE_CFG_KEY = 'nm2-stage-cfg';
   let _stageOn = false;
   let _stageArrangeOn = false;
-  let _stageOrigOrder = []; // rack module IDs in DOM order before entering stage
+  let _stageOrigOrder    = []; // rack module IDs in DOM order before entering stage
+  let _stageOrigChildren = []; // full rack child list (modules + rack-group dividers)
   let _stageVisSet = null;        // Set of visible module element IDs while in stage
   let _stageCableFilterFn = null; // draw-loop fn that hides cables to hidden modules
 
@@ -13077,60 +13079,145 @@ const nm2Tutorial = {
   // getBoundingClientRect() is transform-aware, so cables reposition correctly.
   function _fitStage() {
     const rack = document.getElementById('rack');
+    // Full reset — restore natural flex layout so we can read natural dimensions
     rack.style.transform = '';
     rack.style.width = '';
+    rack.style.height = '';
+    rack.style.display = '';
+    rack.style.alignItems = 'flex-start'; // prevent flex height-stretching during measure
     rack.style.zoom = '';
+    [...rack.querySelectorAll(':scope > .module')].forEach(m => {
+      m.style.position = '';
+      m.style.left = '';
+      m.style.top = '';
+      m.style.transform = '';
+      m.style.transformOrigin = '';
+    });
     requestAnimationFrame(() => {
-      const mods = [...rack.querySelectorAll(':scope > .module')]
+      const allMods = [...rack.querySelectorAll(':scope > .module')]
         .filter(m => m.style.display !== 'none');
-      if (!mods.length) { requestAnimationFrame(() => markCablesDirty()); return; }
+      if (!allMods.length) { rack.style.alignItems = ''; requestAnimationFrame(() => markCablesDirty()); return; }
 
-      // Full viewport minus stage header; rack-wrap has no padding now
-      const wrapW = window.innerWidth;
-      const wrapH = window.innerHeight - 30; // 30px header
-      const GAP = 16, PAD = 18, N = mods.length;
-      const ws = mods.map(m => m.offsetWidth);
-      const hs = mods.map(m => m.offsetHeight);
+      const availW = window.innerWidth;
+      const availH = window.innerHeight - 30;
+      const GAP = 10, PAD = 12;
 
-      // Find column count that maximises width coverage (then height as tiebreak)
-      let bestScore = -1, bestRackW = null;
-      for (let cols = 1; cols <= N; cols++) {
-        const rows = Math.ceil(N / cols);
-        let lW = PAD * 2 + GAP * (cols - 1);
-        let lH = PAD * 2 + GAP * (rows - 1);
-        for (let c = 0; c < cols; c++) {
-          let cW = 0;
-          for (let r = 0; r < rows; r++) { const i = r * cols + c; if (i < N) cW = Math.max(cW, ws[i]); }
-          lW += cW;
-        }
-        for (let r = 0; r < rows; r++) {
-          let rH = 0;
-          for (let c = 0; c < cols; c++) { const i = r * cols + c; if (i < N) rH = Math.max(rH, hs[i]); }
-          lH += rH;
-        }
-        const z = Math.min(wrapW / lW, wrapH / lH, 4);
-        const usedW = Math.min(lW * z, wrapW);
-        const usedH = Math.min(lH * z, wrapH);
-        const score = usedW * 10000 + usedH;
-        if (score > bestScore) { bestScore = score; bestRackW = lW; }
+      // Snapshot natural dimensions NOW (in flex + align-items:flex-start).
+      // After switching rack to display:block, m.offsetWidth would expand to parent width.
+      // Use this map for ALL subsequent dimension lookups.
+      const W = new Map(allMods.map(m => [m, m.offsetWidth]));
+      const H = new Map(allMods.map(m => [m, m.offsetHeight]));
+
+      // Detect tall outlier: tallest must be ≥1.25× second-tallest
+      const allH = allMods.map(m => H.get(m));
+      const sortedH = [...allH].sort((a, b) => b - a);
+      const hasOutlier = sortedH.length >= 2 && sortedH[0] >= sortedH[1] * 1.25;
+      const tallThreshold = hasOutlier ? sortedH[0] * 0.85 : Infinity;
+      const tallMods = allMods.filter(m => H.get(m) >= tallThreshold);
+      const regMods  = allMods.filter(m => H.get(m) <  tallThreshold);
+
+      // Switch rack to fixed-size canvas matching the viewport; no rack-level transform
+      rack.style.alignItems = '';
+      rack.style.display = 'block';
+      rack.style.width  = availW + 'px';
+      rack.style.height = availH + 'px';
+
+      // Place a module into a tile: top-aligned vertically (uniform row baseline),
+      // horizontally centred within the column.
+      function placeTile(m, tileX, tileY, tileW, tileH) {
+        const nw = W.get(m), nh = H.get(m);
+        const s = Math.min(tileW / nw, tileH / nh, 4);
+        const rw = nw * s;
+        m.style.position = 'absolute';
+        m.style.left = (tileX + (tileW - rw) / 2) + 'px';
+        m.style.top  = tileY + 'px';
+        m.style.transform = `scale(${s})`;
+        m.style.transformOrigin = 'top left';
       }
 
-      rack.style.width = (bestRackW || wrapW) + 'px';
-      // One rAF for flex to reflow at new width, then scale and centre
-      requestAnimationFrame(() => {
-        const nW = rack.scrollWidth;
-        const nH = rack.scrollHeight;
-        const z  = Math.min(wrapW / nW, wrapH / nH, 4);
-        const ox = (wrapW - nW * z) / 2;
-        const oy = (wrapH - nH * z) / 2;
-        rack.style.transform = `translate(${ox}px,${oy}px) scale(${z})`;
-        requestAnimationFrame(() => markCablesDirty());
-      });
+      // Score: total rendered pixel area across a set of modules for a given cell size
+      function scoreGrid(mods, cellW, cellH) {
+        if (cellW <= 0 || cellH <= 0) return -1;
+        return mods.reduce((sum, m) => {
+          const s = Math.min(cellW / W.get(m), cellH / H.get(m), 4);
+          return sum + W.get(m) * s * H.get(m) * s;
+        }, 0);
+      }
+
+      if (tallMods.length > 0 && regMods.length > 0) {
+        // ── Sequencer column LEFT (scaled to fill full height) + tile grid RIGHT ──
+
+        // Scale tall module(s) to fill the full available height
+        const seqNatW = Math.max(...tallMods.map(m => W.get(m)));
+        const seqNatH = tallMods.reduce((s, m) => s + H.get(m), 0) + GAP * (tallMods.length - 1);
+        const seqScale = (availH - 2 * PAD) / seqNatH;
+        const seqColW  = Math.ceil(seqNatW * seqScale) + 2 * PAD;
+
+        // Left column: tall modules stacked, scaled by seqScale
+        let tCursor = PAD;
+        tallMods.forEach(m => {
+          const nw = W.get(m), nh = H.get(m);
+          m.style.position = 'absolute';
+          m.style.left = (PAD + (seqNatW * seqScale - nw * seqScale) / 2) + 'px';
+          m.style.top  = tCursor + 'px';
+          m.style.transform = `scale(${seqScale})`;
+          m.style.transformOrigin = 'top left';
+          tCursor += nh * seqScale + GAP;
+        });
+
+        // Right section: tile grid for regular modules
+        const rightX = seqColW + GAP;
+        const rightW = availW - rightX - PAD;
+        const rightH = availH - 2 * PAD;
+        const nReg = regMods.length;
+
+        let bestScore = -1, bestCols = 1;
+        for (let cols = 1; cols <= nReg; cols++) {
+          const rows  = Math.ceil(nReg / cols);
+          const cellW = (rightW - GAP * (cols - 1)) / cols;
+          const cellH = (rightH - GAP * (rows - 1)) / rows;
+          const score = scoreGrid(regMods, cellW, cellH);
+          if (score > bestScore) { bestScore = score; bestCols = cols; }
+        }
+        const bestRows = Math.ceil(nReg / bestCols);
+        const cellW = (rightW - GAP * (bestCols - 1)) / bestCols;
+        const cellH = (rightH - GAP * (bestRows - 1)) / bestRows;
+
+        regMods.forEach((m, ri) => {
+          const col = ri % bestCols, row = Math.floor(ri / bestCols);
+          placeTile(m, rightX + col * (cellW + GAP), PAD + row * (cellH + GAP), cellW, cellH);
+        });
+
+      } else {
+        // ── No tall outlier: uniform tile grid across all modules ──
+        const N = allMods.length;
+        const innerW = availW - 2 * PAD, innerH = availH - 2 * PAD;
+        let bestScore = -1, bestCols = 1;
+        for (let cols = 1; cols <= N; cols++) {
+          const rows  = Math.ceil(N / cols);
+          const cellW = (innerW - GAP * (cols - 1)) / cols;
+          const cellH = (innerH - GAP * (rows - 1)) / rows;
+          const score = scoreGrid(allMods, cellW, cellH);
+          if (score > bestScore) { bestScore = score; bestCols = cols; }
+        }
+        const bestRows = Math.ceil(N / bestCols);
+        const cellW = (innerW - GAP * (bestCols - 1)) / bestCols;
+        const cellH = (innerH - GAP * (bestRows - 1)) / bestRows;
+
+        allMods.forEach((m, i) => {
+          const col = i % bestCols, row = Math.floor(i / bestCols);
+          placeTile(m, PAD + col * (cellW + GAP), PAD + row * (cellH + GAP), cellW, cellH);
+        });
+      }
+
+      requestAnimationFrame(() => markCablesDirty());
     });
   }
 
   function _enterStage(visibleIds) {
     const rack = document.getElementById('rack');
+    // Snapshot the full child list BEFORE any moves (modules + .rack-group dividers)
+    _stageOrigChildren = [...rack.children];
     _stageOrigOrder = [...rack.querySelectorAll(':scope > .module')].map(m => m.id);
     _stageVisSet = new Set(visibleIds);
     rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = _stageVisSet.has(m.id) ? '' : 'none'; });
@@ -13153,8 +13240,10 @@ const nm2Tutorial = {
     document.body.classList.remove('nm-stage');
     if (_stageArrangeOn) { _stageArrangeOn = false; editMode = false; document.body.classList.remove('edit-mode'); const ab = document.getElementById('nm-arrange-btn'); ab.classList.remove('on'); ab.textContent = '⠿ ARRANGE'; }
     rack.querySelectorAll(':scope > .module').forEach(m => { m.style.display = ''; });
-    for (const id of _stageOrigOrder) { const el = document.getElementById(id); if (el) rack.appendChild(el); }
-    _stageOrigOrder = [];
+    // Restore full original child order — moves both modules AND .rack-group dividers back
+    _stageOrigChildren.forEach(el => rack.appendChild(el));
+    _stageOrigOrder    = [];
+    _stageOrigChildren = [];
     _stageVisSet = null;
     // Unregister cable filter and restore all cable visibility
     if (_stageCableFilterFn) { unregisterDraw(_stageCableFilterFn); _stageCableFilterFn = null; }
@@ -13163,7 +13252,17 @@ const nm2Tutorial = {
     const rack2 = document.getElementById('rack');
     rack2.style.transform = '';
     rack2.style.width = '';
+    rack2.style.height = '';
+    rack2.style.display = '';
+    rack2.style.alignItems = '';
     rack2.style.zoom = _zoom < 1 ? String(_zoom) : '';
+    rack2.querySelectorAll(':scope > .module').forEach(m => {
+      m.style.position = '';
+      m.style.left = '';
+      m.style.top = '';
+      m.style.transform = '';
+      m.style.transformOrigin = '';
+    });
     document.getElementById('nm-stage-btn').classList.remove('on');
     markCablesDirty();
   }
