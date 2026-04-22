@@ -4310,19 +4310,22 @@ function probePoint(id) {
 }
 
 function addCable(fromId, toId, color) {
-  // Audio inputs (ai) allow multiple connections — sources sum, matching real modular behaviour.
+  // Audio inputs (ai) and Audio outputs (ao) allow multiple connections.
+  // Sources sum at inputs, and outputs can drive multiple inputs.
   // CV/gate inputs (ci, gi) allow only one connection at a time (new cable replaces old).
   // Never add an exact duplicate regardless of type.
   const dstCls = ppMap[toId]?.cls;
+  const srcCls = ppMap[fromId]?.cls;
   const isDup  = cables.some(c=>c.fromId===fromId && c.toId===toId);
   if (isDup) return; // silently ignore exact duplicates
-  const existing = (dstCls === 'ai') ? null : cables.find(c=>c.toId===toId);
+  // Audio inputs (ai), Audio outputs (ao), and CV outputs (co) allow multiple connections.
+  const existing = (dstCls === 'ai' || srcCls === 'ao' || srcCls === 'co') ? null : cables.find(c=>c.toId===toId);
   const replacedFrom  = existing?.fromId  ?? null;
   const replacedColor = existing?.color   ?? null;
   if (existing) { const prev = ignoreUndo; ignoreUndo = true; delCable(existing); ignoreUndo = prev; }
   // Derive colors from patch-point types — color param kept for undo compat but ignored
-  const srcColor = PP_COLOR[ppMap[fromId]?.cls] || '#ff00ff';
-  const dstColor = PP_COLOR[ppMap[toId]?.cls]   || '#ff00ff';
+  const srcColor = PP_COLOR[srcCls] || '#ff00ff';
+  const dstColor = PP_COLOR[dstCls] || '#ff00ff';
   color = srcColor; // store src color for legacy undo
   // Create per-cable linearGradient in SVG defs
   const gradId = 'cg_' + (fromId + '_' + toId).replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -4346,9 +4349,9 @@ function addCable(fromId, toId, color) {
   const cable = {fromId,toId,color,el,gradEl,gradId};
   cables.push(cable);
   logEvent('cable_add', { from: fromId, to: toId });
-  ppMap[fromId].el.classList.add('linked');
-  ppMap[toId].el.classList.add('linked');
-  moveCable(cable);
+  if (ppMap[fromId]?.el) ppMap[fromId].el.classList.add('linked');
+  if (ppMap[toId]?.el) ppMap[toId].el.classList.add('linked');
+  try { moveCable(cable); } catch(e) {}
   connectAudio(fromId,toId);
   buildFlowDiagram();
   pushUndo({ label: `cable ${fromId} → ${toId}`, undo: () => {
@@ -6356,14 +6359,20 @@ function applyConfig(cfg) {
   }
   // Restore cables — always re-add the 4 default chain cables first, then preset extras
   // (delCable above disconnects them from the audio graph too, so they must be re-established)
+  // We use a longer timeout (200ms) to ensure DOM is settled, especially during mobile activation
   setTimeout(()=>{
     const DEF = [['vco-out','vcf-in','#ff6600'],['vcf-out','vca-in','#ff00ff'],['adsr-out','vca-env','#ffff00'],['lfo-out','vcf-cv','#00ffff']];
     DEF.forEach(([f,t,c])=>addCable(f,t,c));
     if(cfg.cables) { ignoreUndo=true; cfg.cables.forEach(c=>addCable(c.fromId,c.toId,c.color)); ignoreUndo=false; }
     // Restore rack order after cables (modules may have been added above)
     if (cfg.rackOrder && cfg.rackOrder.length) applyRackOrder(cfg.rackOrder);
-    updateCables();
-  }, 80);
+    if (nm2Mobile?.active) {
+      nm2Mobile.refreshCardPPs();
+      requestAnimationFrame(() => nm2Mobile._refreshSpine());
+    } else {
+      updateCables();
+    }
+  }, 200);
   setStatus('Patch loaded ✓');
 }
 
@@ -6607,7 +6616,7 @@ function loadPreset() {
     if (p.trackScript !== undefined) setTrackScript(p.trackScript, true);
     const el=document.getElementById('notes-area'); if(el) el.value=p.notes||'';
     setStatus(`Preset "${name}" loaded ✓`);
-    setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name}); },150);
+    setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name}); },300);
   }
 }
 
@@ -7260,7 +7269,7 @@ function openFactoryPicker() {
     card.innerHTML = `<div style="color:var(--accent);font-size:13px;letter-spacing:3px;margin-bottom:6px;">${String(i+1).padStart(2,'0')} ${p.name}</div><div style="color:var(--text-dim);font-size:11px;line-height:1.6;">${p.desc}</div>`;
     card.addEventListener('click', () => {
       if(!ctx){ setStatus('Power on first.'); overlay.remove(); return; }
-      _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },150);
+      _sessionSuppress=true; applyConfig(p.cfg); if (p.scenes) applySceneSet(p.scenes); if (p.trackScript !== undefined) setTrackScript(p.trackScript); setTimeout(()=>{ _sessionSuppress=false; logEvent('preset_load',{name:p.name}); },300);
       applyPatchHints(p.hints);
       // Auto-start the sequencer so the preset is immediately audible
       if (!mods.seq.playing) {
@@ -12618,6 +12627,7 @@ async function init() {
   }
 
   // Load patch from URL hash, or auto-open with Harmonic Garden
+  window.FACTORY_PRESETS = FACTORY_PRESETS;
   const hashMatch = window.location.hash.match(/^#patch=(.+)$/);
   if (hashMatch) {
     try {
