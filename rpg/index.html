@@ -1224,6 +1224,21 @@ canvas { display: block; }
   flex-shrink: 0;
   height: 54px;
 }
+.ws-header-meta {
+  flex-shrink: 0;
+}
+.ws-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.ws-dice-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
 .ws-title {
   font-size: 1.05rem; color: var(--gold);
   letter-spacing: 0.18em; text-transform: uppercase;
@@ -1236,6 +1251,7 @@ canvas { display: block; }
 #ws-wave-canvas {
   flex: 1; height: 36px;
   background: #060302; border: 1px solid var(--border);
+  min-width: 64px;
 }
 
 .ws-body-wrap {
@@ -1512,6 +1528,46 @@ canvas { display: block; }
 @media (max-width: 700px) {
   .ws-panel { width: 160px; }
   .ws-modules { padding: 0.5rem; gap: 4px; }
+  .ws-header {
+    gap: 0.45rem;
+    padding: 0.45rem 0.55rem;
+  }
+  .ws-header-meta {
+    min-width: 0;
+  }
+  .ws-title {
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+  }
+  .ws-subtitle {
+    display: none;
+  }
+  .ws-header-actions {
+    gap: 0.28rem;
+  }
+  .ws-dice-tools {
+    gap: 0.12rem;
+  }
+  .ws-autopatch-btn,
+  .ws-chaos-btn {
+    padding-inline: 0.58rem;
+    font-size: 0.62rem;
+  }
+  .ws-madman-btn {
+    padding: 0.35rem 0.5rem;
+    gap: 0.32rem;
+  }
+  .ws-madman-name,
+  .ws-madman-sub {
+    display: none;
+  }
+  .ws-d20-stage {
+    width: 58px;
+    height: 58px;
+  }
+  #ws-wave-canvas {
+    min-width: 28px;
+  }
 }
 
 /* ── Connectable jack pulse (when a jack is selected) ─── */
@@ -1579,6 +1635,51 @@ canvas { display: block; }
   color: #ff6a86;
   text-transform: uppercase;
   text-shadow: 0 0 6px #cc224466;
+}
+.ws-madman-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid #6e5840;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,220,160,0.12), transparent 55%),
+    linear-gradient(180deg, rgba(34,22,18,0.95), rgba(10,7,6,0.96));
+  color: #e6d2b0;
+  font: 600 0.66rem/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+.ws-madman-btn:hover {
+  transform: translateY(-1px);
+  border-color: #c9a84c;
+  color: #fff1d2;
+  box-shadow: 0 0 14px rgba(201,168,76,0.18);
+}
+.ws-madman-btn:active { transform: translateY(0); }
+.ws-madman-skull {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  color: #c9a84c;
+  filter: drop-shadow(0 0 6px rgba(201,168,76,0.22));
+}
+.ws-madman-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08rem;
+}
+.ws-madman-name {
+  color: inherit;
+}
+.ws-madman-sub {
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  color: #9a8572;
 }
 
 /* ── Chaos Roll button ─────────────────────────────────── */
@@ -1967,19 +2068,30 @@ canvas { display: block; }
   <div class="ws-layout">
     <div class="ws-header">
       <button class="btn btn-sm btn-secondary" onclick="Workshop.close()">← Map</button>
-      <div>
+      <div class="ws-header-meta">
         <div class="ws-title">The Composer's Workshop</div>
         <div class="ws-subtitle">Moogham · Sliders · Dice · Cables · Keys</div>
       </div>
-      <div style="display:flex;gap:0.4rem;align-items:center;flex-shrink:0;">
+      <div class="ws-header-actions">
         <button class="ws-autopatch-btn" onclick="Workshop.suggestPatch()" title="Gehrman's Sequence — the original 8-note Bloodborne melody, patched and ready">Gehrman's Seq</button>
         <button class="ws-chaos-btn" id="ws-chaos-btn" onclick="Workshop.openGrimoire()" title="The Grimoire — choose a named patch configuration">📖 Grimoire</button>
-        <button id="ws-d20-btn" class="ws-d20-btn" onclick="Workshop.rollD20()" title="Roll the d20 — random patch from your mastered modules">
-          <span class="ws-d20-stage">
-            <span class="ws-d20-badge">d20</span>
-            <canvas id="ws-d20-canvas" class="ws-d20-canvas" width="58" height="58" aria-hidden="true"></canvas>
-          </span>
-        </button>
+        <div class="ws-dice-tools">
+          <button id="ws-madman-btn" class="ws-madman-btn" onclick="Workshop.unlockAll()" title="Madman's Knowledge — unlock every workshop module">
+            <svg class="ws-madman-skull" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 2.5c-4.66 0-8.43 3.63-8.43 8.12 0 2.89 1.57 5.41 3.93 6.86v2.13c0 .46.38.84.84.84h1.55v1.05c0 .55.44 1 1 1h2.22c.55 0 1-.45 1-1v-1.05h1.55c.46 0 .84-.38.84-.84v-2.13c2.36-1.45 3.93-3.97 3.93-6.86C20.43 6.13 16.66 2.5 12 2.5Zm-3.1 7.35c.74 0 1.34.63 1.34 1.41s-.6 1.41-1.34 1.41-1.34-.63-1.34-1.41.6-1.41 1.34-1.41Zm2.03 6.98H9.48v-1.92h1.45v1.92Zm3.59 0h-1.45v-1.92h1.45v1.92Zm.58-4.11c-.67.73-1.72 1.16-3.1 1.16s-2.43-.43-3.1-1.16c-.26-.28-.25-.72.03-.98.28-.26.72-.25.98.03.38.41 1.09.72 2.08.72s1.7-.31 2.08-.72c.26-.28.7-.29.98-.03.28.26.29.7.03.98Zm0-.05c-.74 0-1.34-.63-1.34-1.41s.6-1.41 1.34-1.41 1.34.63 1.34 1.41-.6 1.41-1.34 1.41Z"/>
+            </svg>
+            <span class="ws-madman-label">
+              <span class="ws-madman-name">Madman's Knowledge</span>
+              <span class="ws-madman-sub">Unlock All</span>
+            </span>
+          </button>
+          <button id="ws-d20-btn" class="ws-d20-btn" onclick="Workshop.rollD20()" title="Roll the d20 — random patch from your mastered modules">
+            <span class="ws-d20-stage">
+              <span class="ws-d20-badge">d20</span>
+              <canvas id="ws-d20-canvas" class="ws-d20-canvas" width="58" height="58" aria-hidden="true"></canvas>
+            </span>
+          </button>
+        </div>
       </div>
       <canvas id="ws-wave-canvas"></canvas>
     </div>
@@ -4796,6 +4908,23 @@ const State = {
     this.save();
   },
 
+  unlockAllModules() {
+    let newlyMastered = 0;
+    QUESTS.forEach(q => {
+      if (q.isFinale) return;
+      if (!this.progress[q.id]) newlyMastered++;
+      this.progress[q.id] = true;
+      q.complete = true;
+      q.locked = false;
+      if (!this.questParams[q.id]) this.questParams[q.id] = {};
+    });
+    const finaleQuest = QUESTS.find(q => q.isFinale);
+    if (finaleQuest) finaleQuest.locked = false;
+    this.pendingUnlock = null;
+    this.save();
+    return newlyMastered;
+  },
+
   masterCount() {
     return Object.keys(this.progress).filter(id => {
       const q = QUESTS.find(q => q.id === id);
@@ -6841,6 +6970,22 @@ const Workshop = (() => {
     UI.show('screen-map');
   }
 
+  function unlockAll() {
+    const allBaseCount = QUESTS.filter(q => !q.isFinale).length;
+    if (State.masterCount() >= allBaseCount) {
+      _setHint(null, null, false, '☠ Madman\'s Knowledge is already complete. Every module is unlocked.');
+      return;
+    }
+    const proceed = window.confirm('Invoke Madman\'s Knowledge and unlock every workshop module?');
+    if (!proceed) return;
+    const unlockedNow = State.unlockAllModules();
+    _buildModules();
+    _buildSignalStrip();
+    _setHint(null, null, false, unlockedNow > 0
+      ? '☠ Madman\'s Knowledge devours the veil. Every module is now unlocked.'
+      : '☠ The workshop already remembers every module.');
+  }
+
   function _buildOpeningHint() {
     const mastered = QUESTS.filter(q => State.progress[q.id]).map(q => q.id);
     const hasSeq = mastered.includes('seq');
@@ -8237,7 +8382,7 @@ const Workshop = (() => {
     if (_waveRaf) { cancelAnimationFrame(_waveRaf); _waveRaf = null; }
   }
 
-  return { open, close, suggestPatch, masterRandom, rollD20, openGrimoire, closeGrimoire };
+  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire };
 })();
 
 /* ============================================================
