@@ -3066,14 +3066,16 @@ const BGMusic = (() => {
    ============================================================ */
 const Audio = (() => {
   let ctx, masterGain, analyser, vco, vcf, vcfGain, envGain, reverb, reverbGain, delay, delayGain, delayFB, directGain;
+  let vcfInGain, reverbInGain, delayInGain, chorusInGain, phaserInGain, formantInGain;
   let chorusDelay, chorusLFO, chorusLFOGain, chorusGain;
   let phaserFilters, phaserLFO, phaserLFOGain, phaserGain;
   let formantBands, formantGain;
-  let _foldShaper;
+  let _foldShaper, _foldInGain, _foldOutGain;
   let _noiseGain, _noiseSrc;
-  let _rmOsc, _rmOutGain;
+  let _rmOsc, _rmOutGain, _rmInGain, _rmMult;
   let _drunkTimer = null, _drunkFreq = 220;
   let _scOsc, _scOscGain;
+  let _patchRoutes = new Map();
   let worklotsLoaded = false;
   let noteOn = false;
 
@@ -3094,6 +3096,53 @@ const Audio = (() => {
     return buf;
   }
 
+  function _patchSourceNode(id) {
+    return {
+      'vco-out': envGain,
+      'vcf-out': vcfGain,
+      'ladder-out': vcfGain,
+      'reverb-out': reverbGain,
+      'delay-out': delayGain,
+      'chorus-out': chorusGain,
+      'phaser-out': phaserGain,
+      'formant-out': formantGain,
+      'noise-out': _noiseGain,
+      'fold-out': _foldOutGain,
+      'ring-out': _rmOutGain,
+    }[id] || null;
+  }
+
+  function _patchTargetNode(id) {
+    return {
+      'vcf-in': vcfInGain,
+      'ladder-in': vcfInGain,
+      'reverb-in': reverbInGain,
+      'delay-in': delayInGain,
+      'chorus-in': chorusInGain,
+      'phaser-in': phaserInGain,
+      'formant-in': formantInGain,
+      'fold-in': _foldInGain,
+      'ring-in': _rmInGain,
+    }[id] || null;
+  }
+
+  function clearPatchRoutes() {
+    for (const [routeKey, { source, target }] of Array.from(_patchRoutes.entries())) {
+      try { source?.disconnect(target); } catch(e) {}
+      _patchRoutes.delete(routeKey);
+    }
+  }
+
+  function connectPatchRoute(routeKey) {
+    const [fromId, toId] = routeKey.split('→');
+    const source = _patchSourceNode(fromId);
+    const target = _patchTargetNode(toId);
+    if (!source || !target) return false;
+    try { source.connect(target); } catch(e) { return false; }
+    _patchRoutes.set(routeKey, { source, target });
+    return true;
+  }
+
   async function init() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') await ctx.resume();
@@ -3110,13 +3159,17 @@ const Audio = (() => {
 
     // Reverb
     reverb = ctx.createConvolver(); reverb.buffer = makeIR(2.5);
+    reverbInGain = ctx.createGain();
     reverbGain = ctx.createGain(); reverbGain.gain.value = 0;
+    reverbInGain.connect(reverb);
     reverb.connect(reverbGain); reverbGain.connect(masterGain);
 
     // Delay
     delay = ctx.createDelay(2.0); delay.delayTime.value = 0.375;
     delayFB = ctx.createGain(); delayFB.gain.value = 0.3;
+    delayInGain = ctx.createGain();
     delayGain = ctx.createGain(); delayGain.gain.value = 0;
+    delayInGain.connect(delay);
     delay.connect(delayFB); delayFB.connect(delay);
     delay.connect(delayGain); delayGain.connect(masterGain);
 
@@ -3132,6 +3185,7 @@ const Audio = (() => {
     vcf = new AudioWorkletNode(ctx, 'vcf-tpt');
     vcf.parameters.get('cutoff').value = 800;
     vcf.parameters.get('resonance').value = 2;
+    vcfInGain = ctx.createGain();
     vcfGain = ctx.createGain(); vcfGain.gain.value = 0; // VCF bypassed by default
 
     // Routing: vco → envGain → (direct to master + vcf path)
@@ -3141,15 +3195,12 @@ const Audio = (() => {
     envGain.connect(directGain);   // direct (pre-filter) path — used when VCF not unlocked
     directGain.connect(masterGain);
 
-    envGain.connect(vcf);          // VCF path
+    vcfInGain.connect(vcf);        // VCF path
     vcf.connect(vcfGain);
     vcfGain.connect(masterGain);
 
-    // Reverb & delay send from envGain
-    envGain.connect(reverb);
-    envGain.connect(delay);
-
     // ── Chorus (LFO-modulated short delay) ──────────────────────
+    chorusInGain = ctx.createGain();
     chorusDelay = ctx.createDelay(0.05);
     chorusDelay.delayTime.value = 0.02;
     chorusLFO = ctx.createOscillator();
@@ -3162,11 +3213,12 @@ const Audio = (() => {
     chorusLFO.start();
     chorusGain = ctx.createGain();
     chorusGain.gain.value = 0;
-    envGain.connect(chorusDelay);
+    chorusInGain.connect(chorusDelay);
     chorusDelay.connect(chorusGain);
     chorusGain.connect(masterGain);
 
     // ── Phaser (4-stage all-pass sweep) ─────────────────────────
+    phaserInGain = ctx.createGain();
     phaserFilters = [];
     for (let i = 0; i < 4; i++) {
       const ap = ctx.createBiquadFilter();
@@ -3186,11 +3238,12 @@ const Audio = (() => {
     phaserLFO.start();
     phaserGain = ctx.createGain();
     phaserGain.gain.value = 0;
-    envGain.connect(phaserFilters[0]);
+    phaserInGain.connect(phaserFilters[0]);
     phaserFilters[3].connect(phaserGain);
     phaserGain.connect(masterGain);
 
     // ── Formant (3 resonant band-pass peaks — vowel emulation) ──
+    formantInGain = ctx.createGain();
     formantBands = [];
     formantGain = ctx.createGain();
     formantGain.gain.value = 0;
@@ -3200,7 +3253,7 @@ const Audio = (() => {
       bp.type = 'bandpass';
       bp.frequency.value = FORMANT_INIT[i];
       bp.Q.value = 8;
-      envGain.connect(bp);
+      formantInGain.connect(bp);
       bp.connect(formantGain);
       formantBands.push(bp);
     }
@@ -3383,12 +3436,7 @@ const Audio = (() => {
     if (_rmOutGain)  { _rmOutGain.gain.cancelScheduledValues(0);  _rmOutGain.gain.setTargetAtTime(0, t, 0.02); }
     if (_scOscGain)  { _scOscGain.gain.cancelScheduledValues(0);  _scOscGain.gain.setTargetAtTime(0, t, 0.02); }
     if (_noiseSrc)   { try { _noiseSrc.stop(); } catch(e) {} _noiseSrc = null; }
-    // Wavefolder is a WaveShaper — has no gain to zero out, must be fully disconnected.
-    if (_foldShaper) {
-      try { envGain.disconnect(_foldShaper); } catch(e) {}
-      try { _foldShaper.disconnect(); } catch(e) {}
-      _foldShaper = null;
-    }
+    clearPatchRoutes();
     // 7. Disconnect any effect-chain routes
     unchainReverbToDelay();
     unchainDelayToReverb();
@@ -3398,6 +3446,8 @@ const Audio = (() => {
     unchainFormantToReverb();
     unchainFormantToDelay();
 
+    if (_foldShaper) _foldShaper.disconnect();
+
     stopDrunkWalk();
   }
 
@@ -3405,6 +3455,7 @@ const Audio = (() => {
   function resetRouting() {
     if (!ctx) return;
     const t = ctx.currentTime;
+    clearPatchRoutes();
     // Same cancelScheduledValues(0) fix — wipe all history before re-assigning
     if (directGain) { directGain.gain.cancelScheduledValues(0); directGain.gain.setTargetAtTime(1, t, 0.04); }
     if (vcfGain)    { vcfGain.gain.cancelScheduledValues(0);    vcfGain.gain.setTargetAtTime(0, t, 0.04); }
@@ -3731,13 +3782,17 @@ const Audio = (() => {
 
   // ── WAVEFOLDER (WaveShaper folding curve) ────────────────────
   function setFold(amount) {
-    if (!ctx || !envGain || !masterGain) return;
+    if (!ctx || !masterGain) return;
     _ensureRunning();
     if (!_foldShaper) {
+      _foldInGain = ctx.createGain();
+      _foldOutGain = ctx.createGain();
+      _foldOutGain.gain.value = 1;
       _foldShaper = ctx.createWaveShaper();
       _foldShaper.oversample = '4x';
-      envGain.connect(_foldShaper);
-      _foldShaper.connect(masterGain);
+      _foldInGain.connect(_foldShaper);
+      _foldShaper.connect(_foldOutGain);
+      _foldOutGain.connect(masterGain);
     }
     const n = 256, curve = new Float32Array(n);
     const a = Math.max(1, Math.min(8, amount));
@@ -3786,15 +3841,16 @@ const Audio = (() => {
 
   // ── RING MODULATOR (carrier × VCO multiplication) ────────────
   function setRingMod(ratio, mix) {
-    if (!ctx || !envGain) return;
+    if (!ctx) return;
     _ensureRunning();
     if (!_rmOsc) {
-      const rmMult = ctx.createGain(); rmMult.gain.value = 0;
+      _rmInGain = ctx.createGain();
+      _rmMult = ctx.createGain(); _rmMult.gain.value = 0;
       _rmOsc = ctx.createOscillator(); _rmOsc.type = 'sine';
-      _rmOsc.connect(rmMult.gain);  // osc modulates the gain param
-      envGain.connect(rmMult);      // audio through the multiplier
+      _rmOsc.connect(_rmMult.gain); // osc modulates the gain param
+      _rmInGain.connect(_rmMult);   // audio through the multiplier
       _rmOutGain = ctx.createGain(); _rmOutGain.gain.value = 0;
-      rmMult.connect(_rmOutGain);
+      _rmMult.connect(_rmOutGain);
       _rmOutGain.connect(masterGain);
       _rmOsc.start();
     }
@@ -3887,6 +3943,7 @@ const Audio = (() => {
            setChorus, setPhaser, setFormant, setTuringPattern,
            setFold, setNoise, setRingMod, setDrunkWalk, stopDrunkWalk,
            setStutter, setEuclid, setSidechain,
+           clearPatchRoutes, connectPatchRoute,
            chainReverbToDelay, unchainReverbToDelay,
            chainDelayToReverb, unchainDelayToReverb,
            chainChorusToReverb, unchainChorusToReverb,
@@ -6557,13 +6614,13 @@ const WS_PARAMS = {
   filtertype:    { label:'Type',     tip:'Lowpass = keeps lows, cuts highs. Highpass = keeps highs, cuts lows. Bandpass = keeps a narrow band in the middle.',
                    choices:['lowpass','highpass','bandpass'], def:0, fmt:(i,ch)=>ch[i], fn:(i,ch)=>{ Audio.enableVCF(true); Audio.setFilterType(ch[i]); } },
   attack:        { label:'Attack',   tip:'How long the note takes to reach full volume after you press a key. Short = snappy. Long = swells in slowly.',
-                   min:0.003,max:1.5,  step:0.003,def:0.01, fmt:v=>`${(v*1000).toFixed(0)} ms`,  fn:v=>{ Audio.setAttack(v); _refreshAdsrViz(); } },
+                   min:0.003,max:1.5,  step:0.003,def:0.01, fmt:v=>`${(v*1000).toFixed(0)} ms`,  fn:v=>{ Audio.setAttack(v); Workshop.refreshAdsrViz(); } },
   decay:         { label:'Decay',    tip:'After hitting peak volume, how long before it settles to the sustain level. Short = punchy. Long = gradual.',
-                   min:0.01, max:2.0,  step:0.01, def:0.1,  fmt:v=>`${(v*1000).toFixed(0)} ms`,  fn:v=>{ Audio.setDecay(v); _refreshAdsrViz(); } },
+                   min:0.01, max:2.0,  step:0.01, def:0.1,  fmt:v=>`${(v*1000).toFixed(0)} ms`,  fn:v=>{ Audio.setDecay(v); Workshop.refreshAdsrViz(); } },
   sustain:       { label:'Sustain',  tip:'The volume level held while you keep a key pressed. 0% = totally percussive. 100% = full organ sustain.',
-                   min:0,    max:1,    step:0.01, def:0.75, fmt:v=>`${Math.round(v*100)}%`,       fn:v=>{ Audio.setSustain(v); _refreshAdsrViz(); } },
+                   min:0,    max:1,    step:0.01, def:0.75, fmt:v=>`${Math.round(v*100)}%`,       fn:v=>{ Audio.setSustain(v); Workshop.refreshAdsrViz(); } },
   release:       { label:'Release',  tip:'How long the note takes to fade away after you release a key. Short = cuts off clean. Long = lingers in the air.',
-                   min:0.01, max:4.0,  step:0.01, def:0.5,  fmt:v=>`${v.toFixed(2)} s`,          fn:v=>{ Audio.setRelease(v); _refreshAdsrViz(); } },
+                   min:0.01, max:4.0,  step:0.01, def:0.5,  fmt:v=>`${v.toFixed(2)} s`,          fn:v=>{ Audio.setRelease(v); Workshop.refreshAdsrViz(); } },
   lfo_rate:      { label:'Rate',     tip:'How fast the LFO oscillates. Below 1Hz = slow drift. Above 5Hz = fast tremolo/vibrato.',
                    min:0.1,  max:15,   step:0.1,  def:1,    fmt:v=>`${v.toFixed(1)} Hz`,          fn:v=>Audio.setLFORate(v) },
   lfo_depth:     { label:'Depth',    tip:'How far the LFO moves its target. 0% = no effect. 100% = maximum wobble. Start small — a little goes a long way.',
@@ -6825,6 +6882,60 @@ const VALID_ROUTES = {
   },
 };
 
+const _ROUTE_SOURCE_LABELS = {
+  'vco-out': 'VCO',
+  'vcf-out': 'Filter',
+  'ladder-out': 'Ladder',
+  'noise-out': 'Noise',
+  'chorus-out': 'Chorus',
+  'phaser-out': 'Phaser',
+  'formant-out': 'Formant',
+  'delay-out': 'Delay',
+  'reverb-out': 'Reverb',
+  'fold-out': 'Wavefolder',
+  'ring-out': 'Ring Mod',
+};
+
+const _ROUTE_SOURCE_TEXT = {
+  'vco-out': 'the raw oscillator',
+  'vcf-out': 'the filtered signal',
+  'ladder-out': 'the ladder-filtered signal',
+  'noise-out': 'the noise source',
+  'chorus-out': 'the chorused signal',
+  'phaser-out': 'the phase-shifted signal',
+  'formant-out': 'the vowel-shaped signal',
+  'delay-out': 'the delayed signal',
+  'reverb-out': 'the reverberant signal',
+  'fold-out': 'the wavefolded signal',
+  'ring-out': 'the ring-modulated signal',
+};
+
+const _ROUTE_TARGETS = {
+  'vcf-in':     { label: 'Filter',     desc: source => `Routes ${source} into the filter so cutoff and resonance shape the tone.` },
+  'ladder-in':  { label: 'Ladder',     desc: source => `Routes ${source} into the Ladder filter for warmer, driven filtering.` },
+  'reverb-in':  { label: 'Reverb',     desc: source => `Sends ${source} into reverb so the space follows that tone color.` },
+  'delay-in':   { label: 'Delay',      desc: source => `Sends ${source} into delay so the echoes inherit that source character.` },
+  'chorus-in':  { label: 'Chorus',     desc: source => `Sends ${source} into chorus for shimmer and width.` },
+  'phaser-in':  { label: 'Phaser',     desc: source => `Sends ${source} into phaser for sweeping spectral motion.` },
+  'formant-in': { label: 'Formant',    desc: source => `Sends ${source} into the formant filter for vocal resonance.` },
+  'tape-in':    { label: 'Tape',       desc: source => `Runs ${source} through tape-style saturation and flutter.` },
+  'fold-in':    { label: 'Wavefolder', desc: source => `Runs ${source} through the wavefolder for added harmonics.` },
+  'ring-in':    { label: 'Ring Mod',   desc: source => `Routes ${source} into ring modulation for metallic sidebands.` },
+};
+
+for (const [fromId, sourceLabel] of Object.entries(_ROUTE_SOURCE_LABELS)) {
+  for (const [toId, target] of Object.entries(_ROUTE_TARGETS)) {
+    const routeKey = `${fromId}→${toId}`;
+    if (VALID_ROUTES[routeKey]) continue;
+    if ((fromId === 'vcf-out' || fromId === 'ladder-out') && (toId === 'vcf-in' || toId === 'ladder-in')) continue;
+    if ((fromId === 'reverb-out' || fromId === 'delay-out' || fromId === 'chorus-out' || fromId === 'phaser-out' || fromId === 'formant-out') && toId === 'vcf-in') continue;
+    VALID_ROUTES[routeKey] = {
+      label: `${sourceLabel} → ${target.label}`,
+      desc: target.desc(_ROUTE_SOURCE_TEXT[fromId]),
+    };
+  }
+}
+
 // Jack definitions per module: which output/input jacks each panel exposes
 const JACK_DEFS = {
   vco:    [{ id:'vco-out',      dir:'out', label:'OUT',  tip:'Oscillator signal out' },
@@ -6848,14 +6959,47 @@ const JACK_DEFS = {
                { id:'formant-out',  dir:'out', label:'OUT',  tip:'Vowel-filtered output — chain to reverb or delay' }],
   turing:     [],
   tape:       [{ id:'tape-in',      dir:'in',  label:'IN',   tip:'Audio in — adds tape saturation and flutter' }],
-  wavefolder: [{ id:'fold-in',      dir:'in',  label:'IN',   tip:'Audio in — adds wavefolder harmonics' }],
+  wavefolder: [{ id:'fold-in',      dir:'in',  label:'IN',   tip:'Audio in — adds wavefolder harmonics' },
+               { id:'fold-out',     dir:'out', label:'OUT',  tip:'Wavefolder output — route folded harmonics onward' }],
   noise:      [{ id:'noise-out',    dir:'out', label:'OUT',  tip:'Noise output — patch to VCF IN for shaped noise' }],
-  ringmod:    [{ id:'ring-in',      dir:'in',  label:'IN',   tip:'Audio in — ring modulates against carrier' }],
+  ringmod:    [{ id:'ring-in',      dir:'in',  label:'IN',   tip:'Audio in — ring modulates against carrier' },
+               { id:'ring-out',     dir:'out', label:'OUT',  tip:'Ring modulator output — route metallic sidebands onward' }],
   drunk:      [],
   stutter:    [],
   euclid:     [],
   sidechain:  [],
 };
+
+const JACK_MODULE_PREFIX = {
+  vco: 'vco',
+  vcf: 'vcf',
+  adsr: 'adsr',
+  lfo: 'lfo',
+  reverb: 'reverb',
+  delay: 'delay',
+  seq: 'seq',
+  ladder: 'ladder',
+  chorus: 'chorus',
+  phaser: 'phaser',
+  formant: 'formant',
+  turing: 'turing',
+  tape: 'tape',
+  wavefolder: 'fold',
+  noise: 'noise',
+  ringmod: 'ring',
+  drunk: 'drunk',
+  stutter: 'stutter',
+  euclid: 'euclid',
+  sidechain: 'sc',
+};
+
+const JACK_PREFIX_TO_MODULE = Object.fromEntries(
+  Object.entries(JACK_MODULE_PREFIX).map(([moduleId, prefix]) => [prefix, moduleId])
+);
+
+function _jackModuleId(jackId) {
+  return JACK_PREFIX_TO_MODULE[jackId.split('-')[0]] || jackId.split('-')[0];
+}
 
 // Which jacks are compatible with a given jack (derived from VALID_ROUTES)
 function _getCompatibleJacks(jackId) {
@@ -7072,18 +7216,24 @@ const Workshop = (() => {
     return d[id] || id;
   }
 
+  function _hasModuleConnection(moduleId) {
+    return [..._connections.keys()].some(routeKey =>
+      routeKey.split('→').some(jackId => _jackModuleId(jackId) === moduleId)
+    );
+  }
+
   function _updateSignalStrip() {
     const mastered = new Set(QUESTS.filter(q => State.progress[q.id]).map(q => q.id));
     // VCO always lit (it's the source)
     _litSigNode('vco', true);
     // VCF lit when patched
-    _litSigNode('vcf', _connections.has('vco-out→vcf-in'));
+    _litSigNode('vcf', _hasModuleConnection('vcf'));
     // LFO lit when running
     _litSigNode('lfo', _lfoRunning);
     // Effects lit when patched
-    _litSigNode('reverb', _connections.has('vco-out→reverb-in') || _connections.has('vcf-out→reverb-in'));
-    _litSigNode('delay',  _connections.has('vco-out→delay-in')  || _connections.has('vcf-out→delay-in'));
-    _litSigNode('ladder', _connections.has('vco-out→ladder-in'));
+    _litSigNode('reverb', _hasModuleConnection('reverb'));
+    _litSigNode('delay',  _hasModuleConnection('delay'));
+    _litSigNode('ladder', _hasModuleConnection('ladder'));
     // SEQ lit when running
     _litSigNode('seq', _seqRunning);
     // ADSR always lit (always active on keyboard)
@@ -8180,35 +8330,210 @@ const Workshop = (() => {
     }
   }
 
+  function _buildRouteState() {
+    const state = {
+      lfoTarget: null,
+      filterEnabled: false,
+      drive: 1,
+      reverbMix: 0,
+      delayMix: 0,
+      chorusMix: 0,
+      phaserMix: 0,
+      formantMix: 0,
+      foldAmount: 1,
+      ringMix: 0,
+      ringRatio: 2.2,
+      chainReverbToDelay: false,
+      chainDelayToReverb: false,
+      chainChorusToReverb: false,
+      chainPhaserToReverb: false,
+      chainPhaserToDelay: false,
+      chainFormantToReverb: false,
+      chainFormantToDelay: false,
+      tapeFlutter: false,
+    };
+
+    for (const routeKey of _connections.keys()) {
+      const [fromId, toId] = routeKey.split('→');
+      if (routeKey === 'lfo-out→vco-freq-in') {
+        state.lfoTarget = 'vco';
+        continue;
+      }
+      if (routeKey === 'lfo-out→vcf-in') {
+        state.lfoTarget = 'vcf';
+        state.filterEnabled = true;
+        continue;
+      }
+      if (routeKey === 'reverb-out→delay-in') {
+        state.reverbMix = Math.max(state.reverbMix, 0.35);
+        state.delayMix = Math.max(state.delayMix, 0.38);
+        state.chainReverbToDelay = true;
+        continue;
+      }
+      if (routeKey === 'delay-out→reverb-in') {
+        state.delayMix = Math.max(state.delayMix, 0.38);
+        state.reverbMix = Math.max(state.reverbMix, 0.35);
+        state.chainDelayToReverb = true;
+        continue;
+      }
+      if (routeKey === 'chorus-out→reverb-in') {
+        state.chorusMix = Math.max(state.chorusMix, 0.4);
+        state.reverbMix = Math.max(state.reverbMix, 0.35);
+        state.chainChorusToReverb = true;
+        continue;
+      }
+      if (routeKey === 'phaser-out→reverb-in') {
+        state.phaserMix = Math.max(state.phaserMix, 0.5);
+        state.reverbMix = Math.max(state.reverbMix, 0.35);
+        state.chainPhaserToReverb = true;
+        continue;
+      }
+      if (routeKey === 'phaser-out→delay-in') {
+        state.phaserMix = Math.max(state.phaserMix, 0.5);
+        state.delayMix = Math.max(state.delayMix, 0.38);
+        state.chainPhaserToDelay = true;
+        continue;
+      }
+      if (routeKey === 'formant-out→reverb-in') {
+        state.formantMix = Math.max(state.formantMix, 0.5);
+        state.reverbMix = Math.max(state.reverbMix, 0.35);
+        state.chainFormantToReverb = true;
+        continue;
+      }
+      if (routeKey === 'formant-out→delay-in') {
+        state.formantMix = Math.max(state.formantMix, 0.5);
+        state.delayMix = Math.max(state.delayMix, 0.38);
+        state.chainFormantToDelay = true;
+        continue;
+      }
+
+      if (fromId === 'vcf-out' || fromId === 'ladder-out') state.filterEnabled = true;
+      if (toId === 'vcf-in' || toId === 'ladder-in') state.filterEnabled = true;
+      if (toId === 'ladder-in' || fromId === 'ladder-out') state.drive = Math.max(state.drive, 2.2);
+      if (toId === 'reverb-in') state.reverbMix = Math.max(state.reverbMix, 0.35);
+      if (toId === 'delay-in') state.delayMix = Math.max(state.delayMix, 0.38);
+      if (toId === 'chorus-in') state.chorusMix = Math.max(state.chorusMix, 0.4);
+      if (toId === 'phaser-in') state.phaserMix = Math.max(state.phaserMix, 0.5);
+      if (toId === 'formant-in') state.formantMix = Math.max(state.formantMix, 0.5);
+      if (toId === 'fold-in') state.foldAmount = Math.max(state.foldAmount, 3);
+      if (toId === 'ring-in') state.ringMix = Math.max(state.ringMix, 0.5);
+      if (toId === 'tape-in') {
+        state.drive = Math.max(state.drive, 2.5);
+        state.tapeFlutter = true;
+      }
+    }
+
+    return state;
+  }
+
+  function _syncModuleStatuses() {
+    QUESTS.filter(q => State.progress[q.id]).forEach(({ id: moduleId }) => {
+      if (moduleId === 'vco' || moduleId === 'adsr') {
+        _setStatusDot(moduleId, 'pulsing');
+        return;
+      }
+      if (moduleId === 'seq' || moduleId === 'turing') {
+        _setStatusDot(moduleId, _seqRunning ? 'pulsing' : 'idle');
+        return;
+      }
+      if (moduleId === 'lfo') {
+        _setStatusDot(moduleId, _lfoRunning ? 'pulsing' : (_hasModuleConnection('lfo') ? 'active' : 'idle'));
+        return;
+      }
+      _setStatusDot(moduleId, _hasModuleConnection(moduleId) ? 'active' : 'idle');
+    });
+  }
+
+  function _applyConnections() {
+    if (!Audio.isReady()) return;
+
+    const state = _buildRouteState();
+    const manualLfoEnabled = _lfoRunning && !state.lfoTarget;
+    const lfoRateSlider = document.querySelector('input[data-key="lfo_rate"]');
+    const lfoDepthSlider = document.querySelector('input[data-key="lfo_depth"]');
+    const manualLfoTarget = _connections.has('lfo-out→vcf-in') ? 'vcf'
+      : _connections.has('lfo-out→vco-freq-in') ? 'vco'
+      : 'vco';
+
+    Audio.setLFOTarget('none');
+    Audio.stopLFO();
+    Audio.enableVCF(false);
+    Audio.setReverb(0);
+    Audio.setDelay(0);
+    Audio.setChorus(0);
+    Audio.setPhaser(0);
+    Audio.setFormant(0);
+    Audio.setDrive(1);
+    Audio.setFold(1);
+    Audio.setRingMod(undefined, 0);
+    Audio.clearPatchRoutes();
+    Audio.unchainReverbToDelay();
+    Audio.unchainDelayToReverb();
+    Audio.unchainChorusToReverb();
+    Audio.unchainPhaserToReverb();
+    Audio.unchainPhaserToDelay();
+    Audio.unchainFormantToReverb();
+    Audio.unchainFormantToDelay();
+
+    if (state.filterEnabled) Audio.enableVCF(true);
+    if (state.drive !== 1) Audio.setDrive(state.drive);
+    if (state.reverbMix > 0) Audio.setReverb(state.reverbMix);
+    if (state.delayMix > 0) Audio.setDelay(state.delayMix);
+    if (state.chorusMix > 0) Audio.setChorus(state.chorusMix);
+    if (state.phaserMix > 0) Audio.setPhaser(state.phaserMix);
+    if (state.formantMix > 0) Audio.setFormant(state.formantMix);
+    if (state.foldAmount > 1) Audio.setFold(state.foldAmount);
+    if (state.ringMix > 0) Audio.setRingMod(state.ringRatio, state.ringMix);
+
+    for (const routeKey of _connections.keys()) {
+      if (routeKey.startsWith('lfo-out→')) continue;
+      if (routeKey.endsWith('→tape-in')) continue;
+      Audio.connectPatchRoute(routeKey);
+    }
+
+    if (state.lfoTarget) {
+      Audio.startLFO(1, 0.1);
+      Audio.setLFOTarget(state.lfoTarget);
+      _lfoRunning = true;
+    } else if (manualLfoEnabled) {
+      const rate = lfoRateSlider ? parseFloat(lfoRateSlider.value) : 1;
+      const depth = lfoDepthSlider ? parseFloat(lfoDepthSlider.value) : 0.1;
+      Audio.startLFO(rate, depth);
+      Audio.setLFOTarget(manualLfoTarget);
+      _lfoRunning = true;
+    } else {
+      _lfoRunning = false;
+    }
+
+    if (state.tapeFlutter && !state.lfoTarget && !manualLfoEnabled) {
+      Audio.startLFO(0.15, 0.04);
+      Audio.setLFOTarget('vco');
+    }
+
+    _updateSignalStrip();
+    _syncModuleStatuses();
+  }
+
   function _connect(routeKey) {
     if (_connections.has(routeKey)) return;
     const route = VALID_ROUTES[routeKey];
     if (!route || !Audio.isReady()) return;
     _connections.set(routeKey, true);
-    route.enable();
     routeKey.split('→').forEach(id => {
       _jackEls[id]?.classList.add('connected');
       _jackEls[id]?.classList.remove('connectable');
-      const mod = id.split('-')[0];
-      _setStatusDot(mod, 'active');
     });
-    _updateSignalStrip();
+    _applyConnections();
     _redrawCables();
   }
 
   function _disconnect(routeKey) {
     if (!_connections.has(routeKey)) return;
-    const route = VALID_ROUTES[routeKey];
-    if (route && Audio.isReady()) route.disable();
     _connections.delete(routeKey);
     routeKey.split('→').forEach(id => {
       _jackEls[id]?.classList.remove('connected');
-      const mod = id.split('-')[0];
-      // Only dim if no other connections remain for this module
-      const stillConnected = [..._connections.keys()].some(k => k.includes(mod));
-      if (!stillConnected && mod !== 'vco' && mod !== 'adsr') _setStatusDot(mod, 'idle');
     });
-    _updateSignalStrip();
+    _applyConnections();
     _redrawCables();
   }
 
@@ -8382,7 +8707,7 @@ const Workshop = (() => {
     if (_waveRaf) { cancelAnimationFrame(_waveRaf); _waveRaf = null; }
   }
 
-  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire };
+  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz };
 })();
 
 /* ============================================================
