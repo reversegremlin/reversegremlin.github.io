@@ -1417,6 +1417,13 @@ canvas { display: block; }
 }
 .ws-jack-out .ws-jack-dot { border-color: var(--mod-primary, var(--gold)); }
 .ws-jack-in  .ws-jack-dot { border-color: var(--text-dim); }
+@keyframes ws-jack-in-invite {
+  0%, 100% { border-color: rgba(201,168,76,0.35); box-shadow: 0 0 3px rgba(201,168,76,0.12); }
+  50%       { border-color: rgba(201,168,76,0.65); box-shadow: 0 0 6px rgba(201,168,76,0.28); }
+}
+.ws-jack-in:not(.connected):not(.selected) .ws-jack-dot {
+  animation: ws-jack-in-invite 2.5s ease-in-out infinite;
+}
 .ws-jack.selected .ws-jack-dot {
   background: var(--gold); border-color: var(--gold-hi);
   box-shadow: 0 0 7px var(--gold);
@@ -7881,11 +7888,30 @@ const VALID_ROUTES = {
     label: 'Sequencer → Sidechain',
     desc:  'The sequencer\'s rhythm drives the sidechain pump. The pattern breathes at its own tempo.',
   },
+
+  // ── Wing 2 CV routes ──────────────────────────────────────────────────────
+  'chaos-cv-out→vco-freq-in':   { label:'Chaos → VCO Pitch',      desc:'The chaotic attractor drifts the oscillator frequency — unpredictable, wandering melody.' },
+  'chaos-cv-out→vcf-cutoff-in': { label:'Chaos → Filter Cutoff',  desc:'Chaotic CV modulates the filter — timbral instability from the attractor field.' },
+  'chaos-cv-out→qtz-in':        { label:'Chaos → Quantizer',      desc:'Chaotic voltage enters the quantizer — random pitches, each snapped to a legal scale degree.' },
+  'ck-gate-out→sh-in':          { label:'Clock → S&H Trigger',    desc:'The master clock triggers the Sample & Hold on each pulse — stepping through frozen voltages at tempo.' },
+  'ck-gate-out→vco-freq-in':    { label:'Clock → VCO Gate',       desc:'The clock gates the VCO — pitched pulses at master tempo. Time governs tone.' },
+  'sh-cv-out→vco-freq-in':      { label:'S&H → VCO Pitch',        desc:'Stepped random voltage drives VCO frequency — a new random pitch frozen at each clock pulse.' },
+  'sh-cv-out→vcf-cutoff-in':    { label:'S&H → Filter Cutoff',    desc:'Stepped random voltage modulates the filter — tone changes unpredictably at clock rate.' },
+  'sh-cv-out→qtz-in':           { label:'S&H → Quantizer',        desc:'Random sample-and-hold voltage into the quantizer — any random voltage becomes a legal pitch.' },
+  'qtz-cv-out→vco-freq-in':     { label:'Quantizer → VCO Pitch',  desc:'Quantized CV drives VCO pitch — the quantizer\'s law governs every note the oscillator plays.' },
+  'arp-cv-out→vco-freq-in':     { label:'Arpeggio → VCO Pitch',   desc:'The arpeggiator steps through chord intervals, driving the VCO — arpeggiated melody from interval law.' },
+  'arp-cv-out→vcf-cutoff-in':   { label:'Arpeggio → Filter',      desc:'Arpeggio intervals modulate the filter — rhythmic timbral stepping locked to the arpeggio pattern.' },
+  'xy-x-out→vcf-cutoff-in':     { label:'XY X → Filter Cutoff',  desc:'Horizontal position controls filter cutoff — draw filter sweeps across parameter space.' },
+  'xy-y-out→vco-freq-in':       { label:'XY Y → VCO Pitch',       desc:'Vertical position controls VCO frequency — perform pitch with Y axis gesture.' },
+  'chd-out→vco-freq-in':        { label:'Chord → VCO Root',       desc:'The chord generator\'s root CV drives the VCO — harmonic intervals emerge from the oscillator.' },
+  'lfo-out→av-in':              { label:'LFO → Attenuverter',     desc:'The LFO feeds the attenuverter — scale or invert modulation depth before routing downstream.' },
+  'av-out→vcf-cutoff-in':       { label:'Attenuverter → Filter',  desc:'Scaled/inverted CV modulates the filter cutoff — precise depth and polarity control over timbral motion.' },
+  'av-out→vco-freq-in':         { label:'Attenuverter → VCO Pitch', desc:'Scaled/inverted CV modulates pitch — control vibrato depth and invert rising motion to falling.' },
 };
 
 const _ROUTE_SOURCE_LABELS = {
-  'vco-out': 'VCO',
-  'vcf-out': 'Filter',
+  'vco-out':  'VCO',
+  'vcf-out':  'Filter',
   'ladder-out': 'Ladder',
   'noise-out': 'Noise',
   'chorus-out': 'Chorus',
@@ -7893,35 +7919,75 @@ const _ROUTE_SOURCE_LABELS = {
   'formant-out': 'Formant',
   'delay-out': 'Delay',
   'reverb-out': 'Reverb',
-  'fold-out': 'Wavefolder',
-  'ring-out': 'Ring Mod',
+  'fold-out':  'Wavefolder',
+  'ring-out':  'Ring Mod',
+  // Wing 2 audio outputs
+  'fl-out':   'Flanger',
+  'bc-out':   'Bitcrusher',
+  'sp-out':   'Spectral',
+  'res-out':  'Resonator',
+  'fm-out':   'FM',
+  'py-out':   'Poly',
+  'li-out':   'Lissajous',
+  'af-out':   'Affect',
+  'wt-out':   'Withered',
+  'mo-out':   'Morph',
+  'th-out':   'Theremin',
+  'mx-out':   'Mixer',
+  'mc-out':   'Microcosm',
 };
 
 const _ROUTE_SOURCE_TEXT = {
-  'vco-out': 'the raw oscillator',
-  'vcf-out': 'the filtered signal',
+  'vco-out':   'the raw oscillator',
+  'vcf-out':   'the filtered signal',
   'ladder-out': 'the ladder-filtered signal',
-  'noise-out': 'the noise source',
+  'noise-out':  'the noise source',
   'chorus-out': 'the chorused signal',
   'phaser-out': 'the phase-shifted signal',
   'formant-out': 'the vowel-shaped signal',
-  'delay-out': 'the delayed signal',
+  'delay-out':  'the delayed signal',
   'reverb-out': 'the reverberant signal',
-  'fold-out': 'the wavefolded signal',
-  'ring-out': 'the ring-modulated signal',
+  'fold-out':   'the wavefolded signal',
+  'ring-out':   'the ring-modulated signal',
+  // Wing 2 audio outputs
+  'fl-out':     'the flanged signal',
+  'bc-out':     'the bit-crushed signal',
+  'sp-out':     'the spectrally processed signal',
+  'res-out':    'the resonated signal',
+  'fm-out':     'the FM-modulated signal',
+  'py-out':     'the polyphonic signal',
+  'li-out':     'the Lissajous-modulated signal',
+  'af-out':     'the affect-shaped signal',
+  'wt-out':     'the Withered Architect signal',
+  'mo-out':     'the morphed waveform',
+  'th-out':     'the theremin signal',
+  'mx-out':     'the mixed signal',
+  'mc-out':     'the Microcosm output',
 };
 
 const _ROUTE_TARGETS = {
-  'vcf-in':     { label: 'Filter',     desc: source => `Routes ${source} into the filter so cutoff and resonance shape the tone.` },
-  'ladder-in':  { label: 'Ladder',     desc: source => `Routes ${source} into the Ladder filter for warmer, driven filtering.` },
-  'reverb-in':  { label: 'Reverb',     desc: source => `Sends ${source} into reverb so the space follows that tone color.` },
-  'delay-in':   { label: 'Delay',      desc: source => `Sends ${source} into delay so the echoes inherit that source character.` },
-  'chorus-in':  { label: 'Chorus',     desc: source => `Sends ${source} into chorus for shimmer and width.` },
-  'phaser-in':  { label: 'Phaser',     desc: source => `Sends ${source} into phaser for sweeping spectral motion.` },
-  'formant-in': { label: 'Formant',    desc: source => `Sends ${source} into the formant filter for vocal resonance.` },
-  'tape-in':    { label: 'Tape',       desc: source => `Runs ${source} through tape-style saturation and flutter.` },
-  'fold-in':    { label: 'Wavefolder', desc: source => `Runs ${source} through the wavefolder for added harmonics.` },
-  'ring-in':    { label: 'Ring Mod',   desc: source => `Routes ${source} into ring modulation for metallic sidebands.` },
+  'vcf-in':     { label: 'Filter',      desc: source => `Routes ${source} into the filter so cutoff and resonance shape the tone.` },
+  'ladder-in':  { label: 'Ladder',      desc: source => `Routes ${source} into the Ladder filter for warmer, driven filtering.` },
+  'reverb-in':  { label: 'Reverb',      desc: source => `Sends ${source} into reverb so the space follows that tone color.` },
+  'delay-in':   { label: 'Delay',       desc: source => `Sends ${source} into delay so the echoes inherit that source character.` },
+  'chorus-in':  { label: 'Chorus',      desc: source => `Sends ${source} into chorus for shimmer and width.` },
+  'phaser-in':  { label: 'Phaser',      desc: source => `Sends ${source} into phaser for sweeping spectral motion.` },
+  'formant-in': { label: 'Formant',     desc: source => `Sends ${source} into the formant filter for vocal resonance.` },
+  'tape-in':    { label: 'Tape',        desc: source => `Runs ${source} through tape-style saturation and flutter.` },
+  'fold-in':    { label: 'Wavefolder',  desc: source => `Runs ${source} through the wavefolder for added harmonics.` },
+  'ring-in':    { label: 'Ring Mod',    desc: source => `Routes ${source} into ring modulation for metallic sidebands.` },
+  // Wing 2 audio inputs
+  'fl-in':      { label: 'Flanger',     desc: source => `Sends ${source} through the flanger — comb-filter sweep via delayed self-copy.` },
+  'bc-in':      { label: 'Bitcrusher', desc: source => `Crushes ${source} — reduces bit depth and sample rate to lo-fi grit.` },
+  'sp-in':      { label: 'Spectral',    desc: source => `Processes ${source} in the frequency domain — freeze, smear, or shift the spectrum.` },
+  'res-in':     { label: 'Resonator',   desc: source => `Routes ${source} into the resonator — tuned cavity amplifies preferred frequencies.` },
+  'fm-in':      { label: 'FM',          desc: source => `Frequency-modulates ${source} against the operator ratio — sidebands appear in the spectrum.` },
+  'py-in':      { label: 'Poly',        desc: source => `Stacks ${source} into polyphonic voices — detuned chorus for width and harmonic density.` },
+  'li-in':      { label: 'Lissajous',   desc: source => `Ring-modulates ${source} — geometric frequency relationships in the Lissajous domain.` },
+  'af-in':      { label: 'Affect',      desc: source => `Applies affect shaping to ${source} — formant and envelope configured for emotional register.` },
+  'wt-in':      { label: 'Withered',    desc: source => `Routes ${source} through the Withered Architect — waveform, filter, and space combined.` },
+  'mx-in':      { label: 'Mixer',       desc: source => `Sums ${source} into the mixer — combine with other signals at controlled gain.` },
+  'mc-in':      { label: 'Microcosm',   desc: source => `Feeds ${source} into the Pthumerian Core — the synthesis of all processes at once.` },
 };
 
 for (const [fromId, sourceLabel] of Object.entries(_ROUTE_SOURCE_LABELS)) {
@@ -7971,6 +8037,43 @@ const JACK_DEFS = {
   euclid:     [{ id:'euclid-out',    dir:'out', label:'GATE', tip:'Euclidean rhythm gate out — only the distributed pulses fire. Patch to VCO FREQ or effects.' }],
   sidechain:  [{ id:'sidechain-in',  dir:'in',  label:'IN',   tip:'Sidechain trigger in — the signal whose presence causes the pumping gain modulation.' },
                { id:'sidechain-out', dir:'out', label:'PUMP', tip:'Sidechain pump out — the gain oscillation that ducks the master. Visualizes the breathing signal.' }],
+  // Wing 2 modules
+  withered:   [{ id:'wt-in',        dir:'in',  label:'IN',   tip:'Audio in — waveform, filter, and space combined as one encounter' },
+               { id:'wt-out',       dir:'out', label:'OUT',  tip:'Processed output — the three synthesis fundamentals heard together' }],
+  flanger:    [{ id:'fl-in',        dir:'in',  label:'IN',   tip:'Audio in — comb-filter sweep via the signal mixed with its own delayed copy' },
+               { id:'fl-out',       dir:'out', label:'OUT',  tip:'Flanged output — metallic phase sweep. Chain to reverb for the classic jet-plane bloom.' }],
+  bitcrush:   [{ id:'bc-in',        dir:'in',  label:'IN',   tip:'Audio in — bit-depth and sample-rate reduction to lo-fi grit' },
+               { id:'bc-out',       dir:'out', label:'OUT',  tip:'Crushed output — quantization noise and aliasing as texture' }],
+  spectral:   [{ id:'sp-in',        dir:'in',  label:'IN',   tip:'Audio in — spectral processing reads the chord inside the waveform' },
+               { id:'sp-out',       dir:'out', label:'OUT',  tip:'Spectrally processed output — frozen, smeared, or shifted frequency bins' }],
+  resonator:  [{ id:'res-in',       dir:'in',  label:'IN',   tip:'Audio in — tuned resonance amplifies preferred frequencies until they sing' },
+               { id:'res-out',      dir:'out', label:'OUT',  tip:'Resonated output — the cavity\'s preferred frequencies ring forward' }],
+  fm:         [{ id:'fm-in',        dir:'in',  label:'IN',   tip:'Audio in — frequency modulated against the carrier/modulator ratio' },
+               { id:'fm-out',       dir:'out', label:'OUT',  tip:'FM output — sidebands generated by operator ratio. Bell, brass, or metallic depending on ratio.' }],
+  arpeggio:   [{ id:'arp-cv-out',   dir:'out', label:'CV',   tip:'Arpeggio CV out — steps through chord intervals at set tempo. Patch to VCO FREQ for arpeggiated melody.' }],
+  quantize:   [{ id:'qtz-in',       dir:'in',  label:'IN',   tip:'CV in — continuous voltage to be snapped to the nearest legal scale degree' },
+               { id:'qtz-cv-out',   dir:'out', label:'CV',   tip:'Quantized CV out — any input voltage becomes a legal pitch. Patch to VCO FREQ.' }],
+  clock:      [{ id:'ck-gate-out',  dir:'out', label:'GATE', tip:'Master clock gate out — pulses at set BPM. Patch to S&H trigger or VCO to impose time.' }],
+  chaos:      [{ id:'chaos-cv-out', dir:'out', label:'CV',   tip:'Chaos CV out — chaotic attractor drift. Patch to VCO FREQ for wandering pitch or FILTER for timbral instability.' }],
+  samplehold: [{ id:'sh-in',        dir:'in',  label:'TRIG', tip:'Trigger in — the clock gate that causes the S&H to capture a new sample and hold it' },
+               { id:'sh-cv-out',    dir:'out', label:'CV',   tip:'S&H CV out — stepped random voltage, frozen at each trigger. Patch to VCO FREQ or Quantizer.' }],
+  attenuvtr:  [{ id:'av-in',        dir:'in',  label:'IN',   tip:'CV in — the modulation signal to be scaled or inverted' },
+               { id:'av-out',       dir:'out', label:'OUT',  tip:'Scaled CV out — attenuated or inverted control signal. Patch to filter cutoff or VCO pitch.' }],
+  mixer:      [{ id:'mx-in',        dir:'in',  label:'IN',   tip:'Audio in — signal to be summed with other inputs at controlled gain' },
+               { id:'mx-out',       dir:'out', label:'OUT',  tip:'Mixed audio out — sum of all signals. Chain to reverb or delay for spatial blend.' }],
+  xy:         [{ id:'xy-x-out',     dir:'out', label:'X',    tip:'XY X-axis CV — horizontal position. Patch to VCF CUTOFF to draw filter sweeps.' },
+               { id:'xy-y-out',     dir:'out', label:'Y',    tip:'XY Y-axis CV — vertical position. Patch to VCO FREQ to perform pitch with gesture.' }],
+  theremin:   [{ id:'th-out',       dir:'out', label:'OUT',  tip:'Theremin signal out — gestural pitch. Patch to effects for processing the contactless voice.' }],
+  poly:       [{ id:'py-in',        dir:'in',  label:'IN',   tip:'Audio in — polyphonic voice stacking and detuning for width and density' },
+               { id:'py-out',       dir:'out', label:'OUT',  tip:'Poly output — multiple detuned voices. Chain to reverb for a wide spatial spread.' }],
+  chord:      [{ id:'chd-out',      dir:'out', label:'CV',   tip:'Chord CV out — harmonic interval from root. Patch to VCO FREQ to hear the constructed chord.' }],
+  morph:      [{ id:'mo-out',       dir:'out', label:'OUT',  tip:'Morph signal out — waveform position in wavetable. Patch to effects to process the morphed tone.' }],
+  lissajous:  [{ id:'li-in',        dir:'in',  label:'IN',   tip:'Audio in — ring modulated against the Lissajous carrier ratio' },
+               { id:'li-out',       dir:'out', label:'OUT',  tip:'Lissajous output — ring-modulated sidebands in geometric ratio. Chain to reverb for spatial figures.' }],
+  affect:     [{ id:'af-in',        dir:'in',  label:'IN',   tip:'Audio in — apply the emotional affect configuration (formant register + envelope shape)' },
+               { id:'af-out',       dir:'out', label:'OUT',  tip:'Affect output — timbre shaped for the chosen emotional register. Chain to reverb or delay.' }],
+  microcosm:  [{ id:'mc-in',        dir:'in',  label:'IN',   tip:'Audio in — the synthesis of all processes, converging at the Pthumerian Core' },
+               { id:'mc-out',       dir:'out', label:'OUT',  tip:'Microcosm output — the complete system. The original tone, heard with full understanding.' }],
 };
 
 const JACK_MODULE_PREFIX = {
@@ -7994,6 +8097,28 @@ const JACK_MODULE_PREFIX = {
   stutter: 'stutter',
   euclid: 'euclid',
   sidechain: 'sc',
+  // Wing 2 modules
+  withered:   'wt',
+  flanger:    'fl',
+  bitcrush:   'bc',
+  spectral:   'sp',
+  resonator:  'res',
+  fm:         'fm',
+  arpeggio:   'arp',
+  quantize:   'qtz',
+  clock:      'ck',
+  chaos:      'chaos',
+  samplehold: 'sh',
+  attenuvtr:  'av',
+  mixer:      'mx',
+  xy:         'xy',
+  theremin:   'th',
+  poly:       'py',
+  chord:      'chd',
+  morph:      'mo',
+  lissajous:  'li',
+  affect:     'af',
+  microcosm:  'mc',
 };
 
 const JACK_PREFIX_TO_MODULE = Object.fromEntries(
@@ -9436,6 +9561,18 @@ const Workshop = (() => {
         state.drive = Math.max(state.drive, 2.5);
         state.tapeFlutter = true;
       }
+      // Wing 2 audio effect INs — mapped to underlying Wing 1 effect
+      if (toId === 'fl-in' || toId === 'py-in') state.chorusMix = Math.max(state.chorusMix, 0.4);
+      if (toId === 'sp-in' || toId === 'af-in') state.formantMix = Math.max(state.formantMix, 0.5);
+      if (toId === 'fm-in' || toId === 'li-in') state.ringMix = Math.max(state.ringMix, 0.5);
+      if (toId === 'res-in' || toId === 'bc-in' || toId === 'wt-in') state.filterEnabled = true;
+      // Wing 2 output sources chaining further
+      if (fromId === 'fl-out' || fromId === 'py-out') state.chorusMix = Math.max(state.chorusMix, 0.4);
+      if (fromId === 'sp-out' || fromId === 'af-out') state.formantMix = Math.max(state.formantMix, 0.5);
+      if (fromId === 'fm-out' || fromId === 'li-out') state.ringMix = Math.max(state.ringMix, 0.5);
+      if (fromId === 'res-out' || fromId === 'bc-out' || fromId === 'wt-out') state.filterEnabled = true;
+      // CV → VCF cutoff: enable filter so cutoff modulation is audible
+      if (toId === 'vcf-cutoff-in') state.filterEnabled = true;
     }
 
     return state;
@@ -9515,6 +9652,22 @@ const Workshop = (() => {
       if (routeKey.startsWith('turing-cv-out→')) continue;
       if (routeKey.startsWith('drunk-out→')) continue;
       if (routeKey.startsWith('euclid-out→')) continue;
+      // Wing 2 CV routes — conceptual/pedagogical, no audio nodes
+      if (routeKey.startsWith('chaos-cv-out→')) continue;
+      if (routeKey.startsWith('arp-cv-out→')) continue;
+      if (routeKey.startsWith('ck-gate-out→')) continue;
+      if (routeKey.startsWith('sh-cv-out→')) continue;
+      if (routeKey.startsWith('qtz-cv-out→')) continue;
+      if (routeKey.startsWith('xy-x-out→')) continue;
+      if (routeKey.startsWith('xy-y-out→')) continue;
+      if (routeKey.startsWith('chd-out→')) continue;
+      if (routeKey.startsWith('mo-out→')) continue;
+      if (routeKey.startsWith('th-out→')) continue;
+      if (routeKey.startsWith('av-out→')) continue;
+      if (routeKey.endsWith('→vcf-cutoff-in')) continue;
+      if (routeKey.endsWith('→qtz-in')) continue;
+      if (routeKey.endsWith('→sh-in')) continue;
+      if (routeKey.endsWith('→av-in')) continue;
       Audio.connectPatchRoute(routeKey);
     }
 
