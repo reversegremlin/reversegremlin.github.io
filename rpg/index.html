@@ -7091,6 +7091,68 @@ const UI = {
       svg.appendChild(g);
     });
 
+    // Wing II gateway node — visible on Wing I map when Wing II is unlocked.
+    // Placed to the right of the finale node, connected by a pulsing dashed edge,
+    // so it reads as a natural extension of the path rather than a UI button.
+    if (State.currentWing === 1 && State.wing2Unlocked) {
+      const finX = COL[2]/100*W, finY = 93/100*H;
+      const gwX  = COL[4]/100*W, gwY  = finY;
+
+      // Dashed pulsing edge from finale to gateway
+      const gwEdge = document.createElementNS('http://www.w3.org/2000/svg','line');
+      gwEdge.setAttribute('x1', finX); gwEdge.setAttribute('y1', finY);
+      gwEdge.setAttribute('x2', gwX);  gwEdge.setAttribute('y2', gwY);
+      gwEdge.setAttribute('stroke', '#aa44bb'); gwEdge.setAttribute('stroke-width', '2');
+      gwEdge.setAttribute('stroke-dasharray', '5 4'); gwEdge.setAttribute('stroke-linecap', 'round');
+      const gwEdgeAnim = document.createElementNS('http://www.w3.org/2000/svg','animate');
+      gwEdgeAnim.setAttribute('attributeName','stroke-opacity');
+      gwEdgeAnim.setAttribute('values','0.3;0.9;0.3');
+      gwEdgeAnim.setAttribute('dur','2s'); gwEdgeAnim.setAttribute('repeatCount','indefinite');
+      gwEdge.appendChild(gwEdgeAnim);
+      svg.appendChild(gwEdge);
+
+      // Gateway node
+      const gwG = document.createElementNS('http://www.w3.org/2000/svg','g');
+      gwG.setAttribute('transform', `translate(${gwX},${gwY})`);
+      gwG.style.cursor = 'pointer';
+
+      const gwGlow = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      gwGlow.setAttribute('r','30'); gwGlow.setAttribute('fill','none');
+      gwGlow.setAttribute('stroke','#aa44bb55'); gwGlow.setAttribute('stroke-width','18');
+      const gwGlowAnim = document.createElementNS('http://www.w3.org/2000/svg','animate');
+      gwGlowAnim.setAttribute('attributeName','stroke-opacity');
+      gwGlowAnim.setAttribute('values','0.15;0.6;0.15');
+      gwGlowAnim.setAttribute('dur','2s'); gwGlowAnim.setAttribute('repeatCount','indefinite');
+      gwGlow.appendChild(gwGlowAnim);
+      gwG.appendChild(gwGlow);
+
+      const gwRing = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      gwRing.setAttribute('r','22'); gwRing.setAttribute('fill','#100c18');
+      gwRing.setAttribute('stroke','#aa44bb'); gwRing.setAttribute('stroke-width','2');
+      gwG.appendChild(gwRing);
+
+      const gwArrow = document.createElementNS('http://www.w3.org/2000/svg','text');
+      gwArrow.setAttribute('text-anchor','middle'); gwArrow.setAttribute('y','7');
+      gwArrow.setAttribute('fill','#dd99ff'); gwArrow.setAttribute('font-size','16');
+      gwArrow.setAttribute('font-weight','bold');
+      gwArrow.textContent = '»';
+      gwG.appendChild(gwArrow);
+
+      const gwLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+      gwLabel.setAttribute('text-anchor','middle'); gwLabel.setAttribute('y','38');
+      gwLabel.setAttribute('fill','#cc88ee'); gwLabel.setAttribute('font-size','9');
+      gwLabel.setAttribute('font-weight','bold');
+      gwLabel.setAttribute('font-family','Courier New, monospace');
+      gwLabel.setAttribute('letter-spacing','0.1em');
+      gwLabel.textContent = 'WING II';
+      gwG.appendChild(gwLabel);
+
+      gwG.addEventListener('click', () => UI.switchWing(2));
+      gwG.addEventListener('mouseenter', () => gwRing.setAttribute('fill','#1e1230'));
+      gwG.addEventListener('mouseleave', () => gwRing.setAttribute('fill','#100c18'));
+      svg.appendChild(gwG);
+    }
+
     area.appendChild(svg);
     const mc = State.masterCount();
     document.getElementById('modules-mastered').textContent = mc;
@@ -7908,6 +7970,57 @@ const VALID_ROUTES = {
   'av-out→vcf-cutoff-in':       { label:'Attenuverter → Filter',  desc:'Scaled/inverted CV modulates the filter cutoff — precise depth and polarity control over timbral motion.' },
   'av-out→vco-freq-in':         { label:'Attenuverter → VCO Pitch', desc:'Scaled/inverted CV modulates pitch — control vibrato depth and invert rising motion to falling.' },
 };
+
+// Wing II audio routing — auto-generated.
+// Each Wing II effect module can receive from standard audio sources and chain its output
+// to common effect destinations. The _applyConnections state machine handles the actual
+// audio; these entries only let the jacks recognise each other as compatible.
+(function _addWing2AudioRoutes() {
+  const srcMap = {
+    'vco-out':    { label: 'VCO',    text: 'the raw oscillator' },
+    'vcf-out':    { label: 'Filter', text: 'the filtered signal' },
+    'ladder-out': { label: 'Ladder', text: 'the ladder-filtered signal' },
+    'noise-out':  { label: 'Noise',  text: 'the noise source' },
+  };
+  const w2Ins = {
+    'fl-in':  'Flanger',   'bc-in':  'Bitcrusher', 'sp-in':  'Spectral',
+    'res-in': 'Resonator', 'fm-in':  'FM',          'py-in':  'Poly',
+    'li-in':  'Lissajous', 'af-in':  'Affect',      'wt-in':  'Withered',
+    'mx-in':  'Mixer',     'mc-in':  'Microcosm',
+  };
+  const w2Outs = {
+    'fl-out':  'Flanger',   'bc-out':  'Bitcrusher', 'sp-out':  'Spectral',
+    'res-out': 'Resonator', 'fm-out':  'FM',          'py-out':  'Poly',
+    'li-out':  'Lissajous', 'af-out':  'Affect',      'wt-out':  'Withered',
+    'mx-out':  'Mixer',     'mc-out':  'Microcosm',
+  };
+  const destMap = {
+    'reverb-in': 'Reverb', 'delay-in': 'Delay', 'chorus-in': 'Chorus',
+    'vcf-in': 'Filter',    'ladder-in': 'Ladder',
+  };
+  for (const [srcId, src] of Object.entries(srcMap)) {
+    for (const [jackId, label] of Object.entries(w2Ins)) {
+      const key = `${srcId}→${jackId}`;
+      if (!VALID_ROUTES[key])
+        VALID_ROUTES[key] = { label: `${src.label} → ${label}`, desc: `Routes ${src.text} through the ${label}.` };
+    }
+  }
+  for (const [jackId, label] of Object.entries(w2Outs)) {
+    for (const [destId, destLabel] of Object.entries(destMap)) {
+      const key = `${jackId}→${destId}`;
+      if (!VALID_ROUTES[key])
+        VALID_ROUTES[key] = { label: `${label} → ${destLabel}`, desc: `Sends the ${label} output into ${destLabel.toLowerCase()}.` };
+    }
+  }
+  // Wing II outputs can chain into other Wing II effect inputs
+  for (const [srcId, srcLabel] of Object.entries(w2Outs)) {
+    for (const [dstId, dstLabel] of Object.entries(w2Ins)) {
+      const key = `${srcId}→${dstId}`;
+      if (!VALID_ROUTES[key])
+        VALID_ROUTES[key] = { label: `${srcLabel} → ${dstLabel}`, desc: `Chain ${srcLabel} into ${dstLabel} for serial effect processing.` };
+    }
+  }
+})();
 
 const _ROUTE_SOURCE_LABELS = {
   'vco-out':  'VCO',
@@ -9571,6 +9684,10 @@ const Workshop = (() => {
       if (fromId === 'sp-out' || fromId === 'af-out') state.formantMix = Math.max(state.formantMix, 0.5);
       if (fromId === 'fm-out' || fromId === 'li-out') state.ringMix = Math.max(state.ringMix, 0.5);
       if (fromId === 'res-out' || fromId === 'bc-out' || fromId === 'wt-out') state.filterEnabled = true;
+      if (toId === 'mx-in') state.reverbMix = Math.max(state.reverbMix, 0.25);
+      if (toId === 'mc-in') { state.reverbMix = Math.max(state.reverbMix, 0.35); state.chorusMix = Math.max(state.chorusMix, 0.3); state.filterEnabled = true; }
+      if (fromId === 'mx-out') state.reverbMix = Math.max(state.reverbMix, 0.25);
+      if (fromId === 'mc-out') { state.reverbMix = Math.max(state.reverbMix, 0.35); state.filterEnabled = true; }
       // CV → VCF cutoff: enable filter so cutoff modulation is audible
       if (toId === 'vcf-cutoff-in') state.filterEnabled = true;
     }
