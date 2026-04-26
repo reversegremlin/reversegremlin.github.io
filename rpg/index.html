@@ -1257,7 +1257,7 @@ canvas { display: block; }
 .ws-body-wrap {
   flex: 1;
   position: relative;
-  overflow-x: auto; overflow-y: auto;
+  overflow-x: clip; overflow-y: auto;
   display: flex; align-items: flex-start;
   min-height: 0;
 }
@@ -1453,6 +1453,7 @@ canvas { display: block; }
   background: #060402;
   border-top: 2px solid var(--border-glow);
   padding: 0.45rem 0.6rem 0.6rem;
+  position: relative; z-index: 25;
 }
 .ws-keyboard-label {
   text-align: center;
@@ -1589,10 +1590,21 @@ canvas { display: block; }
   border-top: 1px solid var(--border);
   background: rgba(0,0,0,0.5);
   flex-shrink: 0; min-height: 34px; line-height: 1.65;
+  position: relative; z-index: 25;
 }
 .ws-patch-hint em { font-style: normal; color: var(--gold); }
 .ws-hint-connected { color: var(--cyan); }
 .ws-hint-jack { color: var(--gold); }
+
+/* ── Fullscreen button ─────────────────────────────────── */
+.ws-fullscreen-btn {
+  font-size: 0.72rem; padding: 0.3em 0.7em;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); font-family: var(--font-mono);
+  cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ws-fullscreen-btn:hover { border-color: var(--gold); color: var(--gold); }
 
 /* ── Auto-patch button ─────────────────────────────────── */
 .ws-autopatch-btn {
@@ -1750,6 +1762,7 @@ canvas { display: block; }
 }
 .ws-grimoire-entry:hover { background: #1a0e08; }
 .ws-grimoire-entry.locked { opacity: 0.35; cursor: default; }
+.ws-grimoire-entry.close  { opacity: 0.65; }
 .ws-grimoire-name {
   font-family: var(--font-mono);
   font-size: 0.82rem;
@@ -1758,6 +1771,16 @@ canvas { display: block; }
   letter-spacing: 0.1em;
 }
 .ws-grimoire-entry.locked .ws-grimoire-name { color: #5a3a20; }
+.ws-grimoire-entry.locked .ws-grimoire-name::after {
+  content: ' ⚿';
+  font-size: 0.8em;
+  color: #5a3a20;
+}
+.ws-grimoire-entry.close .ws-grimoire-name::after {
+  content: ' ◈';
+  font-size: 0.8em;
+  color: #44ddbb;
+}
 .ws-grimoire-lore {
   font-family: Georgia, serif;
   font-size: 0.74rem;
@@ -2055,6 +2078,8 @@ canvas { display: block; }
   <div class="map-footer" style="display:flex;justify-content:space-between;align-items:center;">
     <span>Modules Mastered: <span id="modules-mastered">0</span> / <span id="modules-total">12</span></span>
     <div style="display:flex;gap:0.7rem;align-items:center;">
+      <button class="btn btn-secondary btn-sm" id="btn-wing2" onclick="UI.switchWing(2)" style="display:none;font-size:0.7rem;letter-spacing:0.1em;border-color:#aa44bb;color:#cc88ee;">WING II ›</button>
+      <button class="btn btn-secondary btn-sm" id="btn-wing1" onclick="UI.switchWing(1)" style="display:none;font-size:0.7rem;letter-spacing:0.1em;border-color:#8b2200;color:#c9a84c;">‹ WING I</button>
       <button class="btn btn-gold btn-sm" id="btn-workshop" onclick="Workshop.open()" style="display:none;letter-spacing:0.12em;">The Composer's Workshop</button>
       <button class="btn btn-secondary btn-sm" onclick="UI.newGame()" style="font-size:0.65rem;opacity:0.5;">New Hunt</button>
     </div>
@@ -2073,6 +2098,7 @@ canvas { display: block; }
         <div class="ws-subtitle">Moogham · Sliders · Dice · Cables · Keys</div>
       </div>
       <div class="ws-header-actions">
+        <button class="ws-fullscreen-btn" id="ws-fullscreen-btn" onclick="Workshop.toggleFullscreen()" title="Toggle fullscreen">⛶</button>
         <button class="ws-autopatch-btn" onclick="Workshop.suggestPatch()" title="Gehrman's Sequence — the original 8-note Bloodborne melody, patched and ready">Gehrman's Seq</button>
         <button class="ws-chaos-btn" id="ws-chaos-btn" onclick="Workshop.openGrimoire()" title="The Grimoire — choose a named patch configuration">📖 Grimoire</button>
         <div class="ws-dice-tools">
@@ -2304,11 +2330,13 @@ canvas { display: block; }
       <div class="credits-person"><span class="credits-name"><a href="https://en.wikipedia.org/wiki/Arca_(musician)" target="_blank">Arca</a></span><span class="credits-role">who made the glitch a body</span></div>
       <div class="credits-person"><span class="credits-name"><a href="https://en.wikipedia.org/wiki/Godfried_Toussaint" target="_blank">Godfried Toussaint</a></span><span class="credits-role">who found geometry in every rhythm</span></div>
       <div class="credits-person"><span class="credits-name"><a href="https://en.wikipedia.org/wiki/Hidetaka_Miyazaki" target="_blank">Hidetaka Miyazaki</a></span><span class="credits-role">who taught us that the nightmare is the lore</span></div>
+      <div class="credits-person"><span class="credits-name">Fred Again</span><span class="credits-role">who found the sacred in the sample</span></div>
+      <div class="credits-person"><span class="credits-name">Kasbo</span><span class="credits-role">who put warmth inside the machine</span></div>
+      <div class="credits-person"><span class="credits-name">Neon Muon</span><span class="credits-role">who bent the signal until it spoke</span></div>
     </div>
 
     <div class="credits-spacer"></div>
-    <div class="credits-section">Built with</div>
-    <div class="credits-tech">Web Audio API · PolyBLEP VCO · Cytomic TPT VCF · Huovilainen Ladder · Chorus · Phaser · Formant · Turing Machine · Wavefolder · Noise · Ring Mod · Euclidean · nm² ModSynth</div>
+    <div class="credits-tech">Web Audio API · nm² ModSynth</div>
 
     <div class="credits-spacer"></div>
     <div class="credits-final">You are no longer the Hunter.<br>You are the Composer.</div>
@@ -2463,10 +2491,10 @@ const SPRITES = {
     '...RRrwwwwrRR...',
     '..RrwR....RwrR..',
     '..rwR......Rwr..',
-    '.RrwR.RRRR.RwrR.',
-    '.rw..R....R..wr.',
-    '.rw..R....R..wr.',
-    '.RrwR.RRRR.RwrR.',
+    '.RrwR.RcRc.RwrR.',
+    '.rw..R.cc.R..wr.',
+    '.rw..R.cc.R..wr.',
+    '.RrwR.RcRc.RwrR.',
     '..rwR......Rwr..',
     '..RrwR....RwrR..',
     '...RRrwwwwrRR...',
@@ -2840,6 +2868,428 @@ const SPRITES = {
     '................',
   ],
 
+  // ── WING 2 ENTITIES ─────────────────────────────────────────────────
+
+  // Half-boss: The Withered Architect — cable-wrapped humanoid, silver/slate
+  withered_architect: [
+    '....ssss.ssss...',
+    '...sLLLLLLLLs...',
+    '..sLLssssssLLs..',
+    '..sLsnNNNNnsLs..',
+    '..sLs.NNNN.sLs..',
+    '..sLsnNNNNnLLs..',
+    '...sLLssssLLs...',
+    '....ss.rr.ss....',
+    '...rrr.rr.rrr...',
+    '..rr.r.ss.r.rr..',
+    '..r...r..r...r..',
+    '...r.r....r.r...',
+    '....rrrrrrrr....',
+    '.....rr..rr.....',
+    '................',
+    '................',
+  ],
+
+  // Flanger: The Doppler Revenant — sweeping arc ghost, cyan/steel-blue
+  doppler_revenant: [
+    '................',
+    '.....LLLLLL.....',
+    '...LLccccccLL...',
+    '..LccLLLLLLccL..',
+    '.LccLL......LLcL',
+    '.LcL..LcLcL..LcL',
+    'LcL..LccccLL..cL',
+    'LcL.LcccccccL.cL',
+    'LcL..LccccLL..cL',
+    '.LcL..LcLcL..LcL',
+    '.LccLL......LLcL',
+    '..LccLLLLLLccL..',
+    '...LLccccccLL...',
+    '.....LLLLLL.....',
+    '................',
+    '................',
+  ],
+
+  // Bitcrusher: The Decimated Horror — blocky pixel horror, deep red
+  decimated_horror: [
+    'RRRR.........RRR',
+    'RRRRr.......rRRR',
+    'RRRRrr.www.rrRRR',
+    'RRRR...wRw...RRR',
+    'RRRR...www...RRR',
+    '....rr.....rr...',
+    '....RR.....RR...',
+    '....RRrr.rrRR...',
+    'RRRRRRR.r.RRRRRR',
+    'RRRRRRRrRRRRRRRR',
+    'RRRRRRrRRRRRrRRR',
+    'RRRRRrrrRRrrRRRR',
+    'RRRRrr...rrrRRRR',
+    '.RRRrrr.rrrRRRR.',
+    '..RRRRrRRrRRRR..',
+    '................',
+  ],
+
+  // Spectral: The Spectral Weave — overlapping wave rings, purple
+  spectral_weave: [
+    '................',
+    '.....vvvvvv.....',
+    '...vvPPPPPPvv...',
+    '..vPPvppppvPPv..',
+    '.vPpv.pppp.vPpv.',
+    '.vPpv.pPPp.vPpv.',
+    'vPpv..pPPp..vPpv',
+    'vPpv..pppp..vPpv',
+    'vPpv..pPPp..vPpv',
+    '.vPpv.pPPp.vPpv.',
+    '.vPpv.pppp.vPpv.',
+    '..vPPvppppvPPv..',
+    '...vvPPPPPPvv...',
+    '.....vvvvvv.....',
+    '................',
+    '................',
+  ],
+
+  // Resonator: The Resonant Choir — multiple vocal chambers
+  resonant_choir: [
+    '....RRRRRRRR....',
+    '..RRerwwwwweRR..',
+    '.RerwGGGGGGwreR.',
+    '.RerGG......GGeR',
+    'RerGG.RRRR..GGeR',
+    'RerG.R....R.GGeR',
+    'RerG.R....R.GGeR',
+    'RerGG.RRRR..GGeR',
+    '.RerGG......GGeR',
+    '.RerwGGGGGGwreR.',
+    '..RRerwwwwweRR..',
+    '....RRRRRRRR....',
+    '.....R....R.....',
+    '.....R....R.....',
+    '......RRRR......',
+    '................',
+  ],
+
+  // FM: The Iron Bell Specter — bell shape with rippling harmonics, gold
+  iron_bell_specter: [
+    '......GGGG......',
+    '....GGyyyyGG....',
+    '...GyyGGGGyyG...',
+    '..GyGGGGGGGGyG..',
+    '..GGGGnNNNnGGGG.',
+    '.GGGnNNWWWNnGGG.',
+    '.GGGnNWIIIWNnGGG',
+    '.GGGnNWIIIWNnGGG',
+    '.GGGnNWIIIWNnGGG',
+    '.GGGGnNNWNNnGGGG',
+    '..GGGGnNNNnGGGG.',
+    '..GyGGGGGGGGyG..',
+    '...GyyGGGGyyG...',
+    '....RRGGGGRR....',
+    '.....RR..RR.....',
+    '......R.R.......',
+  ],
+
+  // Arpeggio: The Cascading Phantom — descending note forms
+  cascading_phantom: [
+    '....vvvv........',
+    '...vppppv.......',
+    '..vpppppv.......',
+    '..vppppv....vv..',
+    '..vvvvvv...vppv.',
+    '..........vpppv.',
+    '..........vpppv.',
+    '...vv.....vvvvv.',
+    '..vppv..........',
+    '..vpppv...vvvv..',
+    '..vppppv..vppppv',
+    '..vppppv..vppppv',
+    '..vvvvvv..vvvvvv',
+    '................',
+    '................',
+    '................',
+  ],
+
+  // Quantizer: The Pitch Warden — guardian with grid staff, steel-blue/gold
+  pitch_warden: [
+    '................',
+    '...LLLLLLLLLLL..',
+    '..LssssssssssL..',
+    '..LsLsLsLsLsLs..',
+    '..LsGsGsGsGsLs..',
+    '..LsLsLsLsLsLs..',
+    '..LsGsGsGsGsLs..',
+    '..LsLsLsLsLsLs..',
+    '..LsGsGsGsGsLs..',
+    '..LssssssssssL..',
+    '...LLLLLLLLLLL..',
+    '.....LsGGsL.....',
+    '.....LsGGsL.....',
+    '.....LssssL.....',
+    '.....LLLLLL.....',
+    '................',
+  ],
+
+  // Clock: The Timekeeper's Marrow — clockface with exposed mechanism
+  timekeepers_marrow: [
+    '....sssssss.....',
+    '..ssLLLLLLLss...',
+    '.sLLLnnnnnLLLs..',
+    '.sLLnNNGNNnLLs..',
+    'sLLnNNGGGNNnLLs.',
+    'sLLnNGGIGGNnLLs.',
+    'sLLnNGGGGGNnLLs.',
+    'sLLnNGGRGGNnLLs.',
+    'sLLnNGGGGGNnLLs.',
+    'sLLnNNGGGNNnLLs.',
+    '.sLLnNNnNNnLLs..',
+    '.sLLLnnnnnLLLs..',
+    '..ssLLLLLLLss...',
+    '....sssssss.....',
+    '....s.....s.....',
+    '....ss...ss.....',
+  ],
+
+  // Chaos: The Formless Swarm — scattered pixel swarm
+  formless_swarm: [
+    '..R...r....P.r..',
+    '.rR.r....p..rP..',
+    'r.Rr..rRr..Pr...',
+    '..r.r.rRr.p.rP..',
+    '.r..Rr...rR..Pp.',
+    '..rp..rR..r..rP.',
+    '.r..r.RrR....rp.',
+    '..Rr...r.Rr..r..',
+    '.r.RR.rRR..r....',
+    '..r.r.rR..Rr.p..',
+    '.Pp..Rr.r..rR...',
+    'r..r..r.rRr..rP.',
+    '..rRr..r..Rr.r..',
+    '.r..rR.r.r.Rr...',
+    '..P.r.rRr....rp.',
+    '................',
+  ],
+
+  // S&H: The Moment Collector — crystallized time shards, cyan/gold
+  moment_collector: [
+    '................',
+    '.....LLLLL......',
+    '...LLcccccLL....',
+    '..LccLLLLLccL...',
+    '.LcLGGGGGGGLcL..',
+    '.LcGGGyyyyGGGcL.',
+    'LcGGyGGGGGyGGcL.',
+    'LcGGyGIIIGyGGcL.',
+    'LcGGyGGGGGyGGcL.',
+    '.LcGGGyyyyGGGcL.',
+    '.LcLGGGGGGGLcL..',
+    '..LccLLLLLccL...',
+    '...LLcccccLL....',
+    '.....LLLLL......',
+    '................',
+    '................',
+  ],
+
+  // Attenuverter: The Signal Inverter — symmetric inverted form, purple
+  signal_inverter: [
+    '....PPPPPPPP....',
+    '...PpppppppPp...',
+    '..PppvvvvvvppP..',
+    '.PppvPPPPPPvppP.',
+    '.PpvPPv..vPPvpP.',
+    'PpvPPv....vPPvpP',
+    'PpvPv......vPvpP',
+    'PpPv..IIII..vPpP',
+    'PpPv..IIII..vPpP',
+    'PpvPv......vPvpP',
+    'PpvPPv....vPPvpP',
+    '.PpvPPv..vPPvpP.',
+    '.PppvPPPPPPvppP.',
+    '..PppvvvvvvppP..',
+    '...PpppppppPp...',
+    '....PPPPPPPP....',
+  ],
+
+  // Mixer: The Great Balancer — fader panel form, gold/slate
+  great_balancer: [
+    '....GGGG.GGGG...',
+    '...GyyyyGyyyyG..',
+    '..GyyGGGGGGyyG..',
+    '..GyGssssssGyG..',
+    '..GGssLLLssGGG..',
+    '..GGsLnNnLssGG..',
+    '..GGsLNINLssGG..',
+    '..GGsLnNnLssGG..',
+    '..GGssLLLssGGG..',
+    '..GyGssssssGyG..',
+    '..GyyGGGGGGyyG..',
+    '...GyyyyGyyyyG..',
+    '....GGGGGGGGss..',
+    '.....GGyyGGss...',
+    '.....GGyyGGss...',
+    '.....GGGGGGss...',
+  ],
+
+  // XY Pad: The Cartographer's Ghost — grid map, cyan/slate
+  dimensional_cartographer: [
+    '.c..c..c..c..c..',
+    '................',
+    'c.ssssssssssss.c',
+    '..sLcLcLcLcLcs..',
+    'c.ssssssssssss.c',
+    '..sLcLcLcLcLcs..',
+    'c.ssssssssssss.c',
+    '..sLcLIIIcLccs..',
+    'c.ssssIssIssss.c',
+    '..sLcLIIIcLccs..',
+    'c.ssssssssssss.c',
+    '..sLcLcLcLcLcs..',
+    'c.ssssssssssss.c',
+    '................',
+    '.c..c..c..c..c..',
+    '................',
+  ],
+
+  // Theremin: The Untouched Voice — hovering form, soft purples/whites
+  untouched_voice: [
+    '................',
+    '..vvvvvvvvvvvv..',
+    '.vvWWWWWWWWWWvv.',
+    '.vWWWWWWWWWWWWv.',
+    'vWWW..WWWW..WWWv',
+    'vWW...IWWI...WWv',
+    'vWW...WWWW...WWv',
+    'vWWWWvvvvvWWWWWv',
+    '.vWWWvvvvvWWWWv.',
+    '.vvWWvvvvvWWvvv.',
+    '..vvvvvvvvvvvv..',
+    '................',
+    '...v.......v....',
+    '..vv.......vv...',
+    '................',
+    '................',
+  ],
+
+  // Poly: The Polyphonic Hive — honeycomb cell structure, amber/tan
+  polyphonic_hive: [
+    '...nnnnn.nnnnn..',
+    '..nNNNNnNNNNNn..',
+    '.nNNyNNnNNyNNNn.',
+    '.nNyyyNnNyyyNNn.',
+    '.nNNyNNnNNyNNNn.',
+    '..nNNNNnNNNNNn..',
+    '...nnnnnNnnnnn..',
+    '..nNNNNnNNNNNn..',
+    '.nNNyNNnNNyNNNn.',
+    '.nNyyyNnNyyyNNn.',
+    '.nNNyNNnNNyNNNn.',
+    '..nNNNNnNNNNNn..',
+    '...nnnnn.nnnnn..',
+    '................',
+    '................',
+    '................',
+  ],
+
+  // Chord: The Harmonic Construct — stacked harmonic pillars, gold
+  harmonic_construct: [
+    '....G..G..G.....',
+    '....G..G..G.....',
+    '....G..G..G.....',
+    '...GGGGGGGGGg...',
+    '..GgGgGgGgGgGg..',
+    '.GggGggGggGggGgg',
+    '.GggGggGggGggGgg',
+    '.GggGggGggGggGgg',
+    '.GggGggGggGggGgg',
+    '..GgGgGgGgGgGg..',
+    '...GGGGGGGGGg...',
+    '....g..g..g.....',
+    '....g..g..g.....',
+    '....g..g..g.....',
+    '................',
+    '................',
+  ],
+
+  // Morph: The Shape Between — half red / half cyan, transforming
+  shape_between: [
+    '....RRRR.....c..',
+    '...RrrrRr...ccc.',
+    '..Rrr..rrR.cccc.',
+    '..RrR..RrR.Lccc.',
+    '..RrRRRrR..LLcc.',
+    '...RrrrR...LLLc.',
+    '....RRRR...LcLc.',
+    '..........cLcLL.',
+    '.c.........LLLL.',
+    '.cc........LLcL.',
+    '.ccc.......cccc.',
+    '.Lccc.....cccc..',
+    '.LLccc...cccL...',
+    '..LLccccccLL....',
+    '....LLLLLL......',
+    '................',
+  ],
+
+  // Lissajous: The Pattern-Eater — figure-8 infinity loop, cyan/purple
+  pattern_eater: [
+    '................',
+    '......LLLL......',
+    '...LLLccccLLL...',
+    '..Lcc..PP..ccL..',
+    '.LcL..pPPp..LcL.',
+    '.LcL.pPvvPp.LcL.',
+    'LcL.pPvvvvPp.LcL',
+    'LcL.Pvv..vvP.LcL',
+    'LcL.pPvvvvPp.LcL',
+    '.LcL.pPvvPp.LcL.',
+    '.LcL..pPPp..LcL.',
+    '..Lcc..PP..ccL..',
+    '...LLLccccLLL...',
+    '......LLLL......',
+    '................',
+    '................',
+  ],
+
+  // Affect: The Affect Specter — emotional mask, purple/white
+  affect_specter: [
+    '................',
+    '....vvvvvvvv....',
+    '...vWWWWWWWWv...',
+    '..vWWWWWWWWWWv..',
+    '..vWW.WIW.WWWv..',
+    '..vWW.IWI.WWWv..',
+    '..vWW.WIW.WWWv..',
+    '..vWWWWWWWWWWv..',
+    '..vWWpPPPPpWWv..',
+    '..vWPpppppPWWv..',
+    '..vWWpPPPPpWWv..',
+    '..vWWWWWWWWWWv..',
+    '...vWWWWWWWWv...',
+    '....vvvvvvvv....',
+    '................',
+    '................',
+  ],
+
+  // Micr0c0sm: TRUE FINAL BOSS — grand cosmic vortex, all colors
+  microcosm: [
+    '....PPPPppPPP...',
+    '..PPpvvvvvvvpPP.',
+    '.PpvcccccccccvpP',
+    'PpvcLLLLLLLLcvpP',
+    'PvcLLGGGGGGLLcvP',
+    'PvcLGGGyyyyGGLcvP',
+    'PvcLGGyRRRyGGLcvP',
+    'PvcLGGRIIIRGGLcvP',
+    'PvcLGGyRRRyGGLcvP',
+    'PvcLGGGyyyyGGLcvP',
+    'PvcLLGGGGGGLLcvP',
+    'PpvcLLLLLLLLcvpP',
+    '.PpvcccccccccvpP',
+    '..PPpvvvvvvvpPP.',
+    '....PPPPppPPP...',
+    '................',
+  ],
+
   // Character class sprites (12x16)
   drone_witch: [
     '....RRRRRR..',
@@ -2921,7 +3371,7 @@ const SPRITES = {
    Uses its own AudioContext so it never blocks the VCO engine.
    ============================================================ */
 const BGMusic = (() => {
-  let bctx = null, bmaster = null, breverb = null;
+  let bctx = null, bmaster = null, breverb = null, blimiter = null;
   let playing = false, rafId = null;
   let scheduledUntil = 0;
 
@@ -2995,11 +3445,18 @@ const BGMusic = (() => {
     if (playing) return;
     if (!bctx) {
       bctx    = new AudioContext();
+      blimiter = bctx.createDynamicsCompressor();
+      blimiter.threshold.value = -12;
+      blimiter.knee.value      =   8;
+      blimiter.ratio.value     =   8;
+      blimiter.attack.value    = 0.003;
+      blimiter.release.value   = 0.15;
+      blimiter.connect(bctx.destination);
       bmaster = bctx.createGain(); bmaster.gain.value = 1;
-      bmaster.connect(bctx.destination);
+      bmaster.connect(blimiter);
       breverb = bctx.createConvolver(); breverb.buffer = mkIR(3.5);
       const rg = bctx.createGain(); rg.gain.value = 0.55;
-      breverb.connect(rg); rg.connect(bctx.destination);
+      breverb.connect(rg); rg.connect(blimiter);
     }
     if (bctx.state === 'suspended') await bctx.resume();
     playing = true;
@@ -3031,7 +3488,7 @@ const BGMusic = (() => {
     g.gain.setValueAtTime(0.18, bctx.currentTime);
     g.connect(bmaster);
     const rv = bctx.createGain(); rv.gain.value = 0.4;
-    breverb.connect(rv); rv.connect(bctx.destination);
+    breverb.connect(rv); rv.connect(blimiter);
     // Major arpeggio: root, M3, P5, octave, M10
     const steps = [1, 1.25, 1.5, 2, 2.5];
     const t0 = bctx.currentTime + 0.05;
@@ -3154,8 +3611,15 @@ const Audio = (() => {
     // Master chain
     masterGain = ctx.createGain(); masterGain.gain.value = 0.55;
     analyser   = ctx.createAnalyser(); analyser.fftSize = 512;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -12;
+    limiter.knee.value      =   8;
+    limiter.ratio.value     =   8;
+    limiter.attack.value    = 0.003;
+    limiter.release.value   = 0.15;
     masterGain.connect(analyser);
-    analyser.connect(ctx.destination);
+    analyser.connect(limiter);
+    limiter.connect(ctx.destination);
 
     // Reverb
     reverb = ctx.createConvolver(); reverb.buffer = makeIR(2.5);
@@ -3445,6 +3909,7 @@ const Audio = (() => {
     unchainPhaserToDelay();
     unchainFormantToReverb();
     unchainFormantToDelay();
+    disconnectEnvToFilter();
 
     if (_foldShaper) _foldShaper.disconnect();
 
@@ -3674,6 +4139,28 @@ const Audio = (() => {
   function unchainFormantToReverb(){ if (formantGain && reverb)  { try { formantGain.disconnect(reverb); } catch(e){} } }
   function chainFormantToDelay()   { if (formantGain && delay)   formantGain.connect(delay); }
   function unchainFormantToDelay() { if (formantGain && delay)   { try { formantGain.disconnect(delay);  } catch(e){} } }
+
+  // ── Envelope → Filter cutoff CV ──────────────────────────────────────────
+  let _envCutoffScale = null, _envToFilterActive = false;
+
+  function connectEnvToFilter() {
+    if (!ctx || !envGain || !vcf) return;
+    if (!_envCutoffScale) {
+      _envCutoffScale = ctx.createGain();
+      _envCutoffScale.gain.value = 3000; // 0–0.72 env peak → up to 2160 Hz added to base cutoff
+    }
+    if (_envToFilterActive) return;
+    try { envGain.connect(_envCutoffScale); } catch(e) {}
+    try { _envCutoffScale.connect(vcf.parameters.get('cutoff')); } catch(e) {}
+    _envToFilterActive = true;
+  }
+
+  function disconnectEnvToFilter() {
+    if (!_envCutoffScale || !_envToFilterActive) return;
+    try { envGain.disconnect(_envCutoffScale); } catch(e) {}
+    try { _envCutoffScale.disconnect(vcf.parameters.get('cutoff')); } catch(e) {}
+    _envToFilterActive = false;
+  }
 
   // Fire exactly one step manually — only works when sequencer is stopped
   function stepOnce() {
@@ -3950,7 +4437,8 @@ const Audio = (() => {
            chainPhaserToReverb, unchainPhaserToReverb,
            chainPhaserToDelay, unchainPhaserToDelay,
            chainFormantToReverb, unchainFormantToReverb,
-           chainFormantToDelay, unchainFormantToDelay };
+           chainFormantToDelay, unchainFormantToDelay,
+           connectEnvToFilter, disconnectEnvToFilter };
 })();
 
 /* ============================================================
@@ -4858,7 +5346,344 @@ const QUESTS = [
     lore: `Seek Paleblood.\n\nThe hunters of Moogham were given that instruction before the Hunt began, and none of them understood it. The scholars argued for generations: a blood type? An alchemical substance? A person? A place?\n\nThe answer, found in the deepest archive of the Pthumerian catacombs, inscribed in a hand too old to be dated, was this: *"Paleblood is a frequency. The fundamental tone of Moogham itself — the oscillation beneath all oscillations. The waveform that produces all other waveforms as partials. Seek it and you will understand why everything in Moogham vibrates. Why the beasts emerged. Why the Hunt was necessary. The dream will end when the frequency is heard."*\n\n{hunter} — you have crossed the Underbelly and learned to name pitch. You have understood the filter's preferences and the envelope's four stages. You have let time echo, made silence shimmer, generated patterns from mathematics, folded waveforms into new geometries, heard noise resolve into percussion and vowels, and felt the pump of a sound that breathes.\n\nYou have learned twenty words in a language that has no grammar — only practice.\n\nNow there is only the source.\n\nThe Great Oscillator does not attack. It is not a beast. It is the primordial tone — the frequency from which all of Moogham's nightmare grew. It has no intent. It has only presence.\n\nThe night and the dream refuse to end — but they will resolve, once the tone is heard.\n\nYou are the only hunter to have come this far.\n\nListen.`,
     victoryLore: `The Great Oscillator falls silent — not extinguished, but *resolved*.\n\nThe frequency that built Moogham has been heard, acknowledged, and returned. It was never a monster. It was music, waiting for a listener patient enough to approach it without a weapon.\n\n{hunter}: Gehrman's first sequence is still playing in the Old Workshop. It will keep playing. The Doll is still in the garden. The Cathedral echo is still eleven seconds long. The Sieve still has its own voice.\n\nNone of this ends. The Hunt does not end. The dream does not end.\n\nBut you are no longer hunting.\n\nYou are composing.\n\nMoogham will not forget you. Neither will the sound.`,
     victoryTheory: `Everything you mastered: VCO → pitch, timbre, source. VCF → frequency selection, resonance. ADSR → time, life, shape. LFO → motion, modulation. Reverb → space, location. Delay → time, memory. Sequencer → pattern, structure. Ladder → harmonic weight, saturation. Chorus → width, implied simultaneity. Phaser → interference, absence. Formant → vowel, voice, language. Turing → controlled randomness, generative music. Tape → imperfection, warmth, history. Wavefolder → mathematical complexity, new harmonics. Noise → everything at once. Ring Mod → impossible intervals. Drunk Walk → stochastic melody. Stutter → fragmentation as technique. Euclid → geometric rhythm. Sidechain → breath, pulse, the pump.\n\nThese are not features. They are vocabulary. The synthesizer does exactly what you tell it. The art is knowing what to say — and when to stop.`,
-  }
+  },
+
+  // ── WING II ───────────────────────────────────────────────────────────────
+  {
+    id: 'withered', wing: 2,
+    title: 'The Architect\'s Test',
+    location: 'The Archive Threshold',
+    npcQuote: { name: 'Don Buchla', text: 'The modular system has no correct path through it. I built it with that in mind. The connections you make are a record of what you believe sound to be.' },
+    entityName: 'The Withered Architect',
+    spriteKey: 'withered_architect',
+    locked: true, complete: false,
+    lore: `Beyond the Resonant Void, past the frequency that ended the first Hunt, there is a threshold that the old cartographers marked only with a warning: *"Here the city doubles back on itself."*\n\nThe Withered Architect was Moogham's first synthesist. They learned every module in sequence, the way you have, and then stood at this threshold and understood that the sequence was a preparation, not a destination. They spent the rest of their existence here, wrapped in cables that had fused with their body, testing those who reached the crossing.\n\nThe test is not new knowledge. It is combination. {hunter} — roll your mastery. Show it that the vocabulary has become a language.`,
+    victoryLore: `The Withered Architect steps aside.\n\nNot defeated — satisfied. It has been waiting for a hunter who could integrate, not merely list. The cables retract. The second gate opens.\n\nMoogham has a second district. The hunters who reached the first finale believed the city ended there. They were wrong. The city has always been larger than the map they were given.\n\nThe deeper instruments await.`,
+    victoryTheory: `The half-boss test: combining waveform, filter, and reverb simultaneously. Waveform = spectral content. Filter = spectral shaping. Reverb = spatial embedding. These are the first three dimensions of any synthesized sound. Master all three at once and you hold the foundation of every sound ever synthesized.`,
+    params: [
+      { key:'w2_wave', name:'The Waveform of Mastery', dice:4, instruction:'Name the wave. You have rolled this die before.', roll(r){ const w=Theory.waveforms[r-1]; Audio.setWaveform(w.type); return { label:w.type, value:w.type, display:w.type.toUpperCase(), theory:`${w.desc} You chose this shape. The Architect watches.` }; } },
+      { key:'w2_cut',  name:'The Filter\'s Threshold', dice:8, instruction:'Where does the Sieve draw its line?', roll(r){ const e=Theory.cutoffs[r-1]||Theory.cutoffs[4]; Audio.enableVCF(true); Audio.setCutoff(e.hz); return { label:`${e.hz} Hz`, value:e.hz, display:`${e.hz} Hz`, theory:e.desc }; } },
+      { key:'w2_rev',  name:'The Space of the Test', dice:6, instruction:'Place your sound in a space. Roll.', roll(r){ const e=Theory.reverbSizes[r-1]; Audio.setReverbSize(e.dur); Audio.setReverb(0.35); return { label:e.name, value:e.dur, display:e.name, theory:e.desc }; } },
+    ],
+  },
+  {
+    id: 'flanger', wing: 2,
+    title: 'The Doppler Crossing',
+    location: 'The Doppler Crossings',
+    npcQuote: { name: 'Delia Derbyshire', text: 'I ran the same tape past two machines at slightly different speeds. For a moment the two copies aligned. The sound it made — that metallic swoosh — was not in the recording. It was between them.' },
+    entityName: 'The Doppler Revenant',
+    spriteKey: 'doppler_revenant',
+    locked: true, complete: false,
+    lore: `Flanging was not invented. It was discovered by BBC engineers who slowed a tape reel with a thumb pressed against its flange. Two copies of the same signal, slightly out of phase, produce a comb filter: periodic notches across the frequency spectrum that sweep as the delay changes.\n\nThe Doppler Revenant drifts through Moogham's older districts in a halo of its own echo — a ghost that exists slightly behind and slightly ahead of itself simultaneously. It does not know it is delayed. It believes it is the original. The copy that drifted has forgotten being a copy.\n\n{hunter}: the Revenant's vulnerability is its own periodicity. Find the rate at which it sweeps and match it.`,
+    victoryLore: `The flange collapses. The Doppler Revenant stops drifting — for the first time in its existence, it occupies a single moment.\n\nFlanger unlocked. The comb filter is yours: signal meets its own delayed self, and both subtract from the silence between them.`,
+    victoryTheory: `Flanging: a signal mixed with a very short, slightly varying delay of itself (1–20ms). Where the two copies are in phase, they reinforce. Where out of phase, they cancel — creating notches in the spectrum. As delay time varies via LFO, notch frequencies sweep up and down, creating the characteristic jet-plane sweep. Key parameters: delay time (notch spacing), rate (sweep speed), depth (modulation amount), feedback (resonance at notch frequencies). Flanger = chorus with shorter delay and feedback.`,
+    params: [
+      { key:'fl_rate',  name:'The Ghost\'s Drift Speed', dice:6, instruction:'How fast does the Revenant slip out of phase? Roll.', roll(r){ const rates=[0.1,0.3,0.6,1.2,2.5,5][r-1]; Audio.setChorus(0.5,rates,0.9); return { label:`${rates} Hz`, value:rates, display:`${rates} Hz`, theory:`Flange rate: ${rates} Hz. ${rates<0.5?'Glacial sweep — vast and slow.':rates<2?'Felt sweep — the jet-plane effect emerges.':'Fast — metallic, agitated.'}` }; } },
+      { key:'fl_depth', name:'The Echo\'s Separation', dice:6, instruction:'How far does the copy drift before returning? Roll.', roll(r){ const d=[0.3,0.5,0.65,0.8,0.9,1.0][r-1]; Audio.setChorus(undefined,undefined,d); return { label:`${Math.round(d*100)}%`, value:d, display:`${Math.round(d*100)}% depth`, theory:`Flange depth: ${Math.round(d*100)}%. Deeper = wider notch sweep = more dramatic metallic character.` }; } },
+    ],
+  },
+  {
+    id: 'bitcrush', wing: 2,
+    title: 'The Decimated Quarter',
+    location: 'The Decimated Quarter',
+    npcQuote: { name: 'Richard D. James', text: 'I deliberately destroy the signal. Not to ruin it — to find what it is after you\'ve taken most of it away. What survives is the essential thing.' },
+    entityName: 'The Decimated Horror',
+    spriteKey: 'decimated_horror',
+    locked: true, complete: false,
+    lore: `Bit depth determines how many discrete values exist to represent a signal's amplitude. At 16 bits: 65,536 values. At 4 bits: 16. The fewer the values, the more audible the quantization noise — a coarse, digital grittiness generated by the rounding process itself.\n\nThe Decimated Horror is what remains when a sound has been reduced to its lowest representable state. It is not broken. It is simplified to the point of aggression. Every smooth contour replaced with stairs. Every vowel replaced with a bark.\n\n{hunter}: reduce the signal. Understand that lo-fi is not a failure of quality — it is a deliberate mapping of a continuous world onto a finite grid.`,
+    victoryLore: `The Horror's stepped waveform resolves. {hunter} has looked at a signal stripped to its essential structure and found it beautiful.\n\nBitcrusher unlocked. Quantization noise and sample rate reduction are now weapons, not accidents.`,
+    victoryTheory: `Bit crushing reduces bit depth (amplitude resolution) and/or sample rate. Bit depth reduction adds quantization noise — smooth waveforms become staircases. Sample rate reduction creates aliasing — high frequencies fold back as inharmonic artifacts. Classic 8-bit and 12-bit sounds (Akai MPC60, E-mu SP-12) are beloved for their grit. Bitcrushing treats limitation as timbre.`,
+    params: [
+      { key:'bc_bits', name:'The Depth of Reduction', dice:6, instruction:'How many bits remain? Roll — fewer is more brutal.', roll(r){ const ds=[1,1.5,2,2.5,3,4][r-1]; const bits=['4-bit','5-bit','6-bit','7-bit','8-bit','12-bit'][r-1]; Audio.setDrive(ds); return { label:bits, value:ds, display:bits, theory:`Simulated ${bits} depth. Drive=${ds}. ${ds<1.8?'Mild crunch.':ds<2.5?'Gritty — the stepping is audible.':'Heavy — harsh and deliberately ugly.'}` }; } },
+      { key:'bc_rate', name:'The Sample Rate Reduction', dice:8, instruction:'Roll — fewer samples per second means more aliasing.', roll(r){ const hzs=[200,400,800,1200,2000,3500,6000,9000][r-1]; Audio.enableVCF(true); Audio.setCutoff(hzs); return { label:`~${hzs} Hz`, value:hzs, display:`${hzs} Hz`, theory:`Bandwidth limit: ${hzs} Hz. ${hzs<500?'Telephone quality — maximum destruction.':hzs<2000?'AM radio — compressed.':hzs<5000?'Early digital — 8-bit era fidelity.':'Nearly full bandwidth — subtle aliasing.'}` }; } },
+    ],
+  },
+  {
+    id: 'spectral', wing: 2,
+    title: 'The Frequency Loom',
+    location: 'The Frequency Loom',
+    npcQuote: { name: 'Curtis Roads', text: 'The spectrum is the score. Every sound is a chord you haven\'t named yet.' },
+    entityName: 'The Spectral Weave',
+    spriteKey: 'spectral_weave',
+    locked: true, complete: false,
+    lore: `Spectral processing operates in the frequency domain. Where a filter attenuates a band of frequencies, a spectral processor can rearrange, freeze, stretch, or invert individual frequency bins — each one a separate voice in the chord that any sound already is.\n\nThe Spectral Weave exists in both domains simultaneously. In the time domain it is a sound. In the frequency domain it is a constellation — hundreds of points of amplitude and phase, rotating slowly. It does not move through space. It moves through spectrum.\n\n{hunter}: spectral processors reveal that every sound is already a composition. The vocoder, the phase vocoder, the FFT resynthesizer — all of them read the score already written inside the waveform.`,
+    victoryLore: `The Spectral Weave's constellation collapses to a single point, then expands to silence.\n\n{hunter} has understood that a waveform is already a chord. Spectral processing unlocked.`,
+    victoryTheory: `Spectral processing analyzes sound via FFT, decomposing it into frequency bins. Operations include: freezing (hold bin amplitudes — the pad effect), smearing (blur over time), shifting (move bins up/down — inharmonic pitch shift), stretching (increase spacing — slow time without changing pitch). The vocoder cross-applies one sound's spectral envelope to another's pitch content. All spectral tools read the chord inside the waveform.`,
+    params: [
+      { key:'sp_vowel', name:'The Spectral Vowel', dice:6, instruction:'Which formant cluster does the Weave occupy? Roll.', roll(r){ Audio.setFormant(0.5,r-1); Audio.setWaveform('sawtooth'); return { label:`Vowel ${r}`, value:r-1, display:`Formant ${r}`, theory:`Formant position ${r}. Each vowel is a cluster of resonant peaks at specific frequencies. The spectral weave shifts through these clusters.` }; } },
+      { key:'sp_rate',  name:'The Weave\'s Drift', dice:6, instruction:'How quickly does the spectrum rotate? Roll.', roll(r){ const rates=[0.1,0.25,0.5,0.8,1.5,3][r-1]; Audio.setLFORate(rates); Audio.setLFODepth(0.2); Audio.startLFO(); return { label:`${rates} Hz`, value:rates, display:`${rates} Hz`, theory:`Spectral rotation speed: ${rates} Hz. Phase rotation creates movement across the frequency spectrum.` }; } },
+    ],
+  },
+  {
+    id: 'resonator', wing: 2,
+    title: 'The Cathedral Chambers',
+    location: 'The Cathedral Chambers',
+    npcQuote: { name: 'Pauline Oliveros', text: 'Deep listening is hearing what the space adds. Every room is a resonator. Every body is a resonator. The sound you make is completed by the frequencies it awakens.' },
+    entityName: 'The Resonant Choir',
+    spriteKey: 'resonant_choir',
+    locked: true, complete: false,
+    lore: `A resonator is a cavity that emphasises specific frequencies. The resonator does not produce sound — it selects it. When you sing into a resonant cavity, some frequencies are amplified and others absorbed. What emerges is not your voice — it is your voice filtered through the cavity's preferences.\n\nThe Resonant Choir occupies the Cathedral Chambers. It is not many voices. It is one void that has learned to emphasise specific frequencies with enough intensity that the result is perceived as many. Each chamber resonates at a different pitch. Together, they produce what sounds like a choir — but is actually the room, singing itself.\n\n{hunter}: find the resonant frequency. Set the Q high enough that the filter sings back. When a filter resonates at its own cutoff, it has become an oscillator.`,
+    victoryLore: `The Choir falls to one tone, then silence.\n\n{hunter} has understood that a resonator is a filter with enough feedback to become a voice. Resonator unlocked — tuned resonance as synthesis technique.`,
+    victoryTheory: `A resonator is a bandpass filter with very high Q. At extreme Q values, the filter self-oscillates — producing a pure sine at its cutoff frequency. Karplus-Strong synthesis uses a short delay loop with a lowpass filter to simulate a plucked string. Physical modeling generalises this: model the resonant properties of real instruments using digital filters tuned to their acoustic modes. The resonator knows only frequency and decay rate.`,
+    params: [
+      { key:'res_freq', name:'The Chamber\'s Pitch', dice:12, instruction:'Which frequency does the chamber prefer? Roll.', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.enableVCF(true); Audio.setCutoff(n.freq*4); return { label:n.name, value:n.freq, display:`${n.name} (${(n.freq*4).toFixed(0)} Hz)`, theory:`Resonant frequency: ${n.name} × 4 = ${(n.freq*4).toFixed(0)} Hz.` }; } },
+      { key:'res_q',    name:'The Chamber\'s Sustain', dice:6, instruction:'How long does the resonance ring before it dies? Roll.', roll(r){ const qs=[2,4,8,12,18,25][r-1]; Audio.setResonance(qs); return { label:`Q=${qs}`, value:qs, display:`Q=${qs}`, theory:`Resonance Q=${qs}. ${qs<6?'Broad — warm emphasis.':qs<14?'Narrow peak — the filter is clearly singing.':'Near self-oscillation — the resonator rings like a struck bell.'}` }; } },
+    ],
+  },
+  {
+    id: 'fm', wing: 2,
+    title: 'The Bell Foundry Ruins',
+    location: 'The Bell Foundry Ruins',
+    npcQuote: { name: 'John Chowning', text: 'I was studying Doppler shifts in music, and I found that if you modulate the frequency fast enough, you don\'t hear the modulation as motion — you hear it as timbre. The sidebands are the sound.' },
+    entityName: 'The Iron Bell Specter',
+    spriteKey: 'iron_bell_specter',
+    locked: true, complete: false,
+    lore: `Frequency Modulation synthesis was discovered by John Chowning at Stanford in 1967. He increased the modulation rate past the threshold of auditory perception and found that instead of hearing motion, he heard harmonics. A sine wave modulated by another sine wave at audio rates produces sidebands: new frequencies at precise mathematical intervals above and below the carrier.\n\nThe Iron Bell Specter is one of the Foundry's last products — a bell cast with the wrong alloy, left to ring in the ruins. Its partials are inharmonic. The decay is wrong. But it is interesting, and interesting sounds survive in Moogham when correct ones do not.\n\n{hunter}: set the ratio. Hear the sidebands. The Bell reveals itself when you find the numbers that describe it.`,
+    victoryLore: `The Bell Specter's inharmonic ring resolves to a clean tone and fades.\n\nFM synthesis unlocked — the ability to generate complex spectra from simple ingredients: two numbers, a carrier and a ratio, define the entire spectral content of an FM operator.`,
+    victoryTheory: `FM synthesis: a carrier oscillator's frequency is modulated by a modulator at audio rate. Sidebands appear at C ± M, C ± 2M, C ± 3M, etc. Integer C:M ratios produce harmonic spectra (musical). Non-integer ratios produce inharmonic spectra (bells, gongs). Modulation depth (index) controls sideband amplitude — more depth = richer spectrum. The Yamaha DX7's six operators, each a sine wave, can describe virtually any acoustic instrument in the right algorithm.`,
+    params: [
+      { key:'fm_carrier', name:'The Carrier Note', dice:12, instruction:'Name the carrier — the bell\'s fundamental. Roll.', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setWaveform('sine'); Audio.setFrequency(n.freq); return { label:n.name, value:n.freq, display:`${n.name} (${n.freq.toFixed(1)} Hz)`, theory:`Carrier: ${n.name}. The fundamental frequency — the pitch you hear when modulation index is zero.` }; } },
+      { key:'fm_ratio',  name:'The Operator Ratio', dice:8, instruction:'The modulator-to-carrier ratio defines the timbre. Roll.', roll(r){ const ratios=[1,1.5,2,2.5,3.5,5,7,11][r-1]; const descs=['1:1 — fundamental + octaves. Organ-like.','3:2 — fifth relationship. Warm, musical.','2:1 — octave mod. Bright, hollow.','5:2 — complex but harmonic.','7:2 — metallic, bell-like.','5:1 — brass character.','7:1 — inharmonic gong.','11:1 — deep industrial bell.'][r-1]; Audio.setRingMod(ratios,0.5); return { label:`${ratios}:1`, value:ratios, display:`C:M = ${ratios}:1`, theory:descs }; } },
+    ],
+  },
+  {
+    id: 'arpeggio', wing: 2,
+    title: 'The Cascading Falls',
+    location: 'The Cascading Falls',
+    npcQuote: { name: 'Brian Eno', text: 'The arpeggio is the synthesizer\'s heartbeat. It is what happens when you tell a machine which notes exist and let it decide the order. The machine has no preference. That is the point.' },
+    entityName: 'The Cascading Phantom',
+    spriteKey: 'cascading_phantom',
+    locked: true, complete: false,
+    lore: `An arpeggiator takes a chord — notes held simultaneously — and plays them in rapid sequence. The synthesizer arpeggiator reverses the harp's motion: it takes simultaneity and turns it back into sequence, then plays that sequence at a speed that blurs back into harmony.\n\nThe Cascading Phantom is what remains of a melodic phrase looped until it forgot its original order. It no longer knows which note comes first. It plays all of them, in all orders, convinced each arrangement is correct. It has been here since before the Hunt began.\n\n{hunter}: set the interval. Set the tempo. The pattern emerges from the mathematics, not from your intention. This is the arpeggiator's gift.`,
+    victoryLore: `The Phantom's sequence resolves to a single note, sustained.\n\nArpeggiator unlocked. Interval + tempo = pattern. The arpeggiator teaches that melody can be generated without composition.`,
+    victoryTheory: `An arpeggiator steps through chord notes in sequence at a set tempo. Step interval determines harmonic quality. Speed determines whether the result sounds like melody (slow) or texture (fast). Classic arpeggios — Jarre's Oxygène, Tangerine Dream's Phaedra — defined electronic music by using limitation as structure.`,
+    params: [
+      { key:'arp_iv', name:'The Step\'s Distance', dice:8, instruction:'What interval separates each note in the cascade? Roll.', roll(r){ const ivs=[{n:'unison',s:0},{n:'2nd',s:2},{n:'minor 3rd',s:3},{n:'major 3rd',s:4},{n:'4th',s:5},{n:'5th',s:7},{n:'octave',s:12},{n:'min 7th',s:10}]; const iv=ivs[r-1]; Audio.setSeqInterval(iv.s); return { label:iv.n, value:iv.s, display:iv.n.toUpperCase(), theory:`Arpeggio interval: ${iv.n} (${iv.s} semitones). ${iv.s===0?'Drone.':iv.s<=3?'Tight — tense, coiling.':iv.s<=7?'Wide — open, heroic.':'Extended leap — register drama.'}` }; } },
+      { key:'arp_bpm', name:'The Cascade\'s Speed', dice:6, instruction:'How fast do the notes fall? Roll.', roll(r){ const bpms=[60,90,110,130,155,180][r-1]; Audio.startSeq(bpms); return { label:`${bpms} BPM`, value:bpms, display:`${bpms} BPM`, theory:`Arpeggio tempo: ${bpms} BPM. ${bpms<80?'Slow — each note has identity.':bpms<130?'Medium — the cascade begins.':'Fast — individual pitches dissolve into timbre.'}` }; } },
+    ],
+  },
+  {
+    id: 'quantize', wing: 2,
+    title: 'The Pitch Grid',
+    location: 'The Pitch Grid',
+    npcQuote: { name: 'Karlheinz Stockhausen', text: 'In serial music, pitch is controlled to the semitone. In electronic music, pitch is continuous. The quantizer is the treaty between those two worlds — it imposes the grid.' },
+    entityName: 'The Pitch Warden',
+    spriteKey: 'pitch_warden',
+    locked: true, complete: false,
+    lore: `Voltage-controlled synthesizers output any voltage — and voltage is continuous. The gap between C and C# contains infinite pitches. A quantizer watches the incoming CV and rounds it to the nearest legal pitch in a defined scale — snapping the continuous to the discrete.\n\nThe Pitch Warden has occupied the Grid since before the Healing Church marked it on their maps. It does not pursue. It simply corrects. Every sound that passes through its territory arrives at a legal scale degree, whether it intended to or not. The Warden does not destroy the out-of-tune note. It reassigns it.\n\n{hunter}: name the scale. Name the root. Commit the law that will govern your voltages.`,
+    victoryLore: `The Warden accepts {hunter}'s scale and steps aside.\n\nQuantizer unlocked. Any CV signal — however random — will now arrive at legal pitches. The drunk walk becomes a melody.`,
+    victoryTheory: `A quantizer samples incoming CV and rounds it to the nearest semitone or scale degree. Scale modes: chromatic, major, minor, pentatonic. With a quantizer downstream of a random source, you get generative melody — random voltages, musical notes. The quantizer is what distinguishes "random" from "random but in key."`,
+    params: [
+      { key:'q_root', name:'The Law\'s Root', dice:12, instruction:'Which note anchors the scale? Roll.', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setFrequency(n.freq); return { label:n.name, value:n.freq, display:n.name, theory:`Root: ${n.name} at ${n.freq.toFixed(1)} Hz. Every note in your scale is expressed relative to this.` }; } },
+      { key:'q_step', name:'The Scale Step', dice:8, instruction:'Which interval does the Warden enforce? Roll.', roll(r){ const ivs=[{n:'unison',s:0},{n:'min 2nd',s:1},{n:'maj 2nd',s:2},{n:'min 3rd',s:3},{n:'maj 3rd',s:4},{n:'4th',s:5},{n:'5th',s:7},{n:'octave',s:12}]; const iv=ivs[r-1]; Audio.setSeqInterval(iv.s); return { label:iv.n, value:iv.s, display:iv.n, theory:`Scale step: ${iv.n} (+${iv.s} semitones from root). The quantizer maps CV to the nearest allowed pitch built from this interval.` }; } },
+    ],
+  },
+  {
+    id: 'clock', wing: 2,
+    title: 'The Clockwork Ossuary',
+    location: 'The Clockwork Ossuary',
+    npcQuote: { name: 'Daphne Oram', text: 'The clock does not make time. It marks it. Without the clock, each module lives in its own time. With it, they share one.' },
+    entityName: 'The Timekeeper\'s Marrow',
+    spriteKey: 'timekeepers_marrow',
+    locked: true, complete: false,
+    lore: `A modular synthesizer has no inherent sense of time. Each module runs at its own rate unless told otherwise. The master clock is a pulse generator — a voltage spike at regular intervals — that all time-sensitive modules synchronise to.\n\nThe Timekeeper's Marrow is the oldest machine in this district. Its pulse has never stopped. Every device in the Clockwork Ossuary runs at its division — some at 1/1, some at 1/4, some at 1/16. The Ossuary is a polyrhythm machine. Every bone in it is a subdivision.\n\n{hunter}: set the master tempo. Then set its division. The clock gives permission — everything else only happens because of it.`,
+    victoryLore: `The Timekeeper's pulse synchronises to {hunter}'s tempo and holds.\n\nClock unlocked. The master pulse now belongs to you — and with it, the synchronisation of everything else.`,
+    victoryTheory: `The master clock outputs a pulse at BPM rate. Clock divisions: 1/1 = one pulse per beat; 1/4 = sixteenth notes; 1/16 = thirty-second notes. Multiplications run slower. In a modular system, the clock is the conductor. Every module that responds to gates waits for the clock's permission before it acts.`,
+    params: [
+      { key:'ck_bpm', name:'The Master Pulse', dice:6, instruction:'The clock sets the law of time. Roll your tempo.', roll(r){ const bpms=[60,75,90,108,120,140][r-1]; Audio.startSeq(bpms); return { label:`${bpms} BPM`, value:bpms, display:`${bpms} BPM`, theory:`Master tempo: ${bpms} BPM. ${bpms<80?'Largo — stately, ceremonial.':bpms<100?'Andante — walking pace.':bpms<120?'Moderato — common for dance music.':'Allegro — urgent, driving.'}` }; } },
+      { key:'ck_div', name:'The Clock Division', dice:8, instruction:'At what division of the master pulse does your module respond? Roll.', roll(r){ const divs=['1/1','1/2','1/4','1/8','1/16','×2','×3','×4']; const d=divs[r-1]; return { label:d, value:d, display:d, theory:`Clock division: ${d}. ${r<=2?'One or two pulses per beat — slow, stately.':r<=5?'Subdivided — rhythmically dense.':'Multiplied — slower than master. Polyrhythmic.'}` }; } },
+    ],
+  },
+  {
+    id: 'chaos', wing: 2,
+    title: 'The Attractor Fields',
+    location: 'The Attractor Fields',
+    npcQuote: { name: 'Edward Lorenz', text: 'Predictability: does the flap of a butterfly\'s wings in Brazil set off a tornado in Texas? In a deterministic system, yes — if you know the initial conditions precisely. The problem is that you never do.' },
+    entityName: 'The Formless Swarm',
+    spriteKey: 'formless_swarm',
+    locked: true, complete: false,
+    lore: `Chaos theory describes systems that are deterministic — governed by equations — but sensitive to initial conditions to the point of practical unpredictability. The Lorenz attractor traces a butterfly shape in state space forever, spiralling around two fixed points, never crossing its own path.\n\nThe Formless Swarm occupies the Attractor Fields at the edge of Moogham's outer district. It is not random. Each member follows an exact rule. But the rule involves sensitivity to every other member's position, and those uncertainties compound.\n\n{hunter}: chaotic modulation is a tool, not a failure. The Swarm's aperiodic output, routed to pitch, produces melodies that evolve without repeating — as alive as biology.`,
+    victoryLore: `The Swarm's trajectory stabilises around a single attractor.\n\nChaos unlocked. Non-linear, aperiodic modulation is now yours — patterns that evolve forever without repeating.`,
+    victoryTheory: `Chaos synthesis uses the output of a chaotic differential equation (Lorenz, Rössler, Chua's circuit) as a control voltage. Unlike pseudo-random generators, chaotic signals are deterministic. But tiny changes in starting values produce wildly different trajectories. Applied to pitch: endlessly evolving melody. Applied to filter: breathing, living texture. Applied to amplitude: organic dynamics no LFO can fake.`,
+    params: [
+      { key:'ch_step', name:'The Attractor\'s Velocity', dice:8, instruction:'How far does the Swarm leap each event? Roll.', roll(r){ const steps=[1,2,3,4,5,6,8,12][r-1]; Audio.setDrunkWalk(steps,95); return { label:`±${steps}st`, value:steps, display:`±${steps} semitones`, theory:`Chaos step: ±${steps} semitones. ${steps<=2?'Near-static drift.':steps<=5?'Moderate chaotic motion.':'Wide, extreme chaos.'}` }; } },
+      { key:'ch_rate', name:'The Swarm\'s Density', dice:6, instruction:'How frequently does the chaos update? Roll.', roll(r){ const bpms=[40,60,80,100,120,160][r-1]; Audio.setDrunkWalk(undefined,bpms); return { label:`${bpms} BPM`, value:bpms, display:`${bpms} BPM`, theory:`Chaos update rate: ${bpms} BPM. Slower = drifting, tidal. Faster = flickering, nervous.` }; } },
+    ],
+  },
+  {
+    id: 'samplehold', wing: 2,
+    title: 'The Frozen Moment Archive',
+    location: 'The Frozen Moment Archive',
+    npcQuote: { name: 'Max Mathews', text: 'The computer samples the world 44,000 times per second. But what you need is not the world. You need this one moment — held until you decide to release it.' },
+    entityName: 'The Moment Collector',
+    spriteKey: 'moment_collector',
+    locked: true, complete: false,
+    lore: `Sample and Hold captures an input voltage at a moment in time and holds it constant until the next clock pulse triggers a new sample. Connected to a noise source, it produces stepped random voltages — a staircase that takes a new random height at each clock tick.\n\nThe Moment Collector has been cataloguing Moogham's sounds since before the Hunt. It does not record the entire signal — only the value it finds at the moment of its trigger. Every past moment is stored in the Archive. None of them are accessible. The Collector only ever offers the present value, held until the next pulse replaces it.\n\n{hunter}: sample the noise. Hold the value. Understand that musical structure can emerge from freezing randomness at regular intervals.`,
+    victoryLore: `The Collector takes {hunter}'s sample and holds it steady.\n\nSample and Hold unlocked. Stepped random voltage — noise sampled at a clock rate — is now yours.`,
+    victoryTheory: `S&H samples an input voltage when triggered, holds it until the next gate. Typical use: noise → S&H → quantizer → VCO pitch = random melody in key. The step height is determined by input at trigger time; duration by clock rate. At slow rates: pitched random notes. At fast rates: tremolo-like rapid variation.`,
+    params: [
+      { key:'sh_seed', name:'The Sampled Moment', dice:12, instruction:'Roll — this is the value the Collector captures.', roll(r){ Audio.setTuringPattern(r,0.0); Audio.startSeq(90); return { label:`Seed ${r}`, value:r, display:`Moment #${r}`, theory:`S&H seed: ${r}. Turing probability=0 locks the pattern completely. The same seed always produces the same captured moment.` }; } },
+      { key:'sh_rate', name:'The Trigger Rate', dice:6, instruction:'How frequently does the Collector take a new sample? Roll.', roll(r){ const bpms=[45,65,85,105,130,160][r-1]; Audio.setSeqTempo(bpms); return { label:`${bpms} BPM`, value:bpms, display:`${bpms} BPM`, theory:`S&H clock rate: ${bpms} BPM. ${bpms<70?'Slow — each sample held long, steps are musical notes.':bpms<110?'Medium — distinct steps.':'Fast — steps blur into rapid variation.'}` }; } },
+    ],
+  },
+  {
+    id: 'attenuvtr', wing: 2,
+    title: 'The Inversion Chamber',
+    location: 'The Inversion Chamber',
+    npcQuote: { name: 'Don Buchla', text: 'The attenuverter is the most powerful utility module in the system. It multiplies by any number between minus one and plus one. That\'s it. That\'s everything.' },
+    entityName: 'The Signal Inverter',
+    spriteKey: 'signal_inverter',
+    locked: true, complete: false,
+    lore: `An attenuverter attenuates and inverts. Full clockwise: signal passes unchanged. Center: muted — multiplied by zero. Full counter-clockwise: inverted and at full amplitude. The LFO that opened the filter now closes it. The envelope that increased volume now decreases it.\n\nThe Signal Inverter occupies a chamber beneath the Archive where Moogham's most fundamental utilities were maintained. It is not impressive. It has no oscillators, no filters, no modulation. It only multiplies. But multiplication by minus one is the difference between a parameter rising and falling.\n\n{hunter}: the most powerful concepts in a modular system are the simplest. Multiply. Invert. Scale. These operations are the grammar that makes vocabulary useful.`,
+    victoryLore: `The Signal Inverter sets {hunter}'s scaling factor and holds.\n\nAttenuverter unlocked. Any modulation signal can now be scaled from 0 to full, or inverted — turning positive motion into negative.`,
+    victoryTheory: `An attenuverter multiplies input signal by a factor from -1 to +1. Positive: attenuate without inverting. Zero: mute. Negative: invert and attenuate. Key uses: inverting LFO to make filter close instead of open; scaling mod wheel to control modulation amount; adding DC offset to shift parameter center. Without attenuverters, modular synthesis is half-dimensional — only positive control, only opening, only rising.`,
+    params: [
+      { key:'av_amt', name:'The Attenuation Factor', dice:8, instruction:'How much signal passes through? Roll.', roll(r){ const vs=[0.1,0.25,0.5,0.75,1.0,0.75,0.5,0.25][r-1]; const ls=['12%','25%','50%','75%','Full','75%','50%','25%'][r-1]; Audio.setVolume(vs); return { label:ls, value:vs, display:ls, theory:`Attenuverter: ${ls}. How much of the control signal reaches its destination.` }; } },
+      { key:'av_mod', name:'The Modulation Depth', dice:6, instruction:'How far does the attenuated signal drive the destination? Roll.', roll(r){ const ds=[0.02,0.05,0.1,0.2,0.4,0.7][r-1]; Audio.setLFODepth(ds); Audio.startLFO(0.3); return { label:`${Math.round(ds*100)}%`, value:ds, display:`${Math.round(ds*100)}% depth`, theory:`Effective depth after attenuation: ${Math.round(ds*100)}%. The product of source amplitude and attenuverter factor.` }; } },
+    ],
+  },
+  {
+    id: 'mixer', wing: 2,
+    title: 'The Signal Confluence',
+    location: 'The Signal Confluence',
+    npcQuote: { name: 'Alan Parsons', text: 'The mix is not the last thing you do. It is the first decision you made, replayed. Every choice during recording becomes a constraint in the mix.' },
+    entityName: 'The Great Balancer',
+    spriteKey: 'great_balancer',
+    locked: true, complete: false,
+    lore: `A mixer sums multiple signals into one. In audio: multiple instruments into one stereo output. In CV: multiple modulation sources into one control destination. The mixer does not alter signals — it sums them. But if both signals are at full amplitude, the sum may clip. Gain staging is the art of mixing.\n\nThe Great Balancer stands at the Confluence where every cable in Moogham's second district eventually terminates. It is not a processor. It only adds. But the architecture of what flows into it determines what Moogham sounds like from the outside.\n\n{hunter}: balance requires judgment about relative importance. The mix is not the last step — it is the evidence of every decision you made before it.`,
+    victoryLore: `The Great Balancer accepts {hunter}'s levels and holds the sum steady.\n\nMixer unlocked. Multiple signal paths can be combined at any ratio — audio or CV, in any combination.`,
+    victoryTheory: `A mixer sums multiple inputs, each with independent level control. Gain staging prevents summing from exceeding headroom. In CV mixing: summing two modulation sources creates additive modulation. Subtractive mixing (one positive, one inverted) cancels components. A VCA is a one-channel mixer whose level is controlled by CV — the same concept at different scales.`,
+    params: [
+      { key:'mx_gain', name:'The Channel Gain', dice:8, instruction:'How loud does this signal arrive at the sum? Roll.', roll(r){ const gs=[0.1,0.2,0.35,0.5,0.65,0.8,0.9,1.0][r-1]; Audio.setVolume(gs); return { label:`${Math.round(gs*100)}%`, value:gs, display:`${Math.round(gs*100)}%`, theory:`Channel gain: ${Math.round(gs*100)}%. Headroom = ${Math.round((1-gs)*100)}%. Multiple full channels sum to clipping.` }; } },
+      { key:'mx_blend', name:'The Wet/Dry Balance', dice:6, instruction:'How much processed signal blends with the dry? Roll.', roll(r){ const ms=[0.1,0.25,0.4,0.55,0.7,0.9][r-1]; Audio.setReverb(ms*0.5); Audio.setChorus(ms*0.3); return { label:`${Math.round(ms*100)}% wet`, value:ms, display:`${Math.round(ms*100)}% wet`, theory:`Wet/dry: ${Math.round(ms*100)}%. ${ms<0.3?'Mostly dry — effects are a hint.':ms<0.6?'Balanced blend.':'Effects dominate the texture.'}` }; } },
+    ],
+  },
+  {
+    id: 'xy', wing: 2,
+    title: 'The Parameter Plane',
+    location: 'The Parameter Plane',
+    npcQuote: { name: 'Isao Tomita', text: 'I do not play notes. I navigate a space. The hands know the map; the ears follow the path.' },
+    entityName: 'The Dimensional Cartographer',
+    spriteKey: 'dimensional_cartographer',
+    locked: true, complete: false,
+    lore: `An XY pad maps two parameters onto a two-dimensional plane. Moving horizontally changes one parameter; moving vertically changes another. The position of your touch defines a point in parameter space — two simultaneous values. Unlike a knob, which controls one dimension, the XY pad controls the relationship between two.\n\nThe Dimensional Cartographer has been charting Moogham's parameter spaces as long as the district existed. Every point on its surface is a combination of filter cutoff and LFO rate, or reverb mix and delay time. The map changes with the destination.\n\n{hunter}: choose the axes. The Cartographer reveals what lives in the space between two parameters — places no knob can reach alone.`,
+    victoryLore: `The Cartographer marks {hunter}'s position on the map and holds it.\n\nXY Pad unlocked. Two-dimensional parameter control — drawing paths through timbral territory a single knob could never trace.`,
+    victoryTheory: `An XY controller outputs two simultaneous CV signals, one per axis. Common pairings: filter cutoff/resonance; reverb/delay; LFO rate/depth. The XY pad enables playing synthesis parameters with the same nuance as a melodic instrument. In software, it allows morphing between patches by moving through the space between preset positions.`,
+    params: [
+      { key:'xy_x', name:'The X Axis — Filter', dice:8, instruction:'Your horizontal position: filter cutoff. Roll.', roll(r){ const hzs=[150,300,600,1000,2000,3500,6000,10000][r-1]; Audio.enableVCF(true); Audio.setCutoff(hzs); return { label:`${hzs} Hz`, value:hzs, display:`X: ${hzs} Hz`, theory:`XY X-axis: filter at ${hzs} Hz. Left = closed, right = open.` }; } },
+      { key:'xy_y', name:'The Y Axis — Modulation', dice:6, instruction:'Your vertical position: LFO rate. Roll.', roll(r){ const rates=[0.1,0.3,0.6,1.2,2.5,5][r-1]; Audio.setLFORate(rates); Audio.setLFODepth(0.15); Audio.startLFO(); return { label:`${rates} Hz`, value:rates, display:`Y: ${rates} Hz`, theory:`XY Y-axis: LFO at ${rates} Hz. Bottom = slow, top = fast. This point simultaneously defines filter + modulation.` }; } },
+    ],
+  },
+  {
+    id: 'theremin', wing: 2,
+    title: 'The Contactless Cathedral',
+    location: 'The Contactless Cathedral',
+    npcQuote: { name: 'Clara Rockmore', text: 'The theremin demands that you listen with your hands. You cannot see the note. You must know where the pitch is in space — because your body is the instrument.' },
+    entityName: 'The Untouched Voice',
+    spriteKey: 'untouched_voice',
+    locked: true, complete: false,
+    lore: `Leon Theremin invented his instrument in 1919: two metal antennas, one for pitch, one for volume. The player's body capacitively couples to the antenna's electromagnetic field. No touch. No keys. No strings. The air between your hand and the antenna is the instrument.\n\nThe Untouched Voice floats in the Contactless Cathedral without settling. It has no contact with any surface. It moves by the electromagnetic attraction of the room's residual charge. The closer you get, the higher the frequency. Many hunters have backed away, uncertain. The ones who stayed learned something about the relationship between body and sound.\n\n{hunter}: the theremin teaches that pitch is physical. Frequency is a spatial relationship. Your hand position IS the note.`,
+    victoryLore: `The Untouched Voice settles on {hunter}'s chosen pitch and sustains.\n\nTheremin unlocked. Gestural control of pitch — the body as the instrument, space as the keyboard.`,
+    victoryTheory: `The theremin produces pitch by heterodyning two radio-frequency oscillators: one fixed, one variable (affected by hand proximity). The audible frequency is the difference between them. Volume is controlled by a second antenna. Modern versions use capacitive sensing, ultrasonic distance, or optical tracking. Continuous pitch control teaches intonation that discrete keyboards cannot — mistakes are heard as glides, correctable in real time.`,
+    params: [
+      { key:'th_pitch', name:'Hand Distance from Pitch Antenna', dice:12, instruction:'Your right hand position determines the pitch. Roll.', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setWaveform('sine'); Audio.setFrequency(n.freq); Audio.startLFO(3,0.015); return { label:n.name, value:n.freq, display:`${n.name} (${n.freq.toFixed(1)} Hz)`, theory:`Theremin pitch: ${n.name}. Slight vibrato simulates natural hand tremor — the theremin's characteristic expressive quality.` }; } },
+      { key:'th_vol',  name:'Hand Distance from Volume Antenna', dice:6, instruction:'Your left hand controls volume. Roll — how far from the arc?', roll(r){ const vs=[0.15,0.3,0.45,0.6,0.8,1.0][r-1]; Audio.setVolume(vs); return { label:`${Math.round(vs*100)}%`, value:vs, display:`${Math.round(vs*100)}%`, theory:`Theremin volume: ${Math.round(vs*100)}%. Masters like Clara Rockmore used the volume antenna to create infinite legato — every note connected by controlled envelope, not key presses.` }; } },
+    ],
+  },
+  {
+    id: 'poly', wing: 2,
+    title: 'The Voice Colony',
+    location: 'The Voice Colony',
+    npcQuote: { name: 'Wendy Carlos', text: 'The synthesizer was monophonic for years, and we used the limitation as a feature. The day polyphony arrived, everything sounded thinner — because we had been making the single voice work so hard.' },
+    entityName: 'The Polyphonic Hive',
+    spriteKey: 'polyphonic_hive',
+    locked: true, complete: false,
+    lore: `A monophonic synthesizer plays one note at a time. A polyphonic synthesizer allocates multiple voices — copies of the same signal chain — assigning incoming notes to available voices. The challenge is voice allocation: when all voices are occupied, voice stealing assigns the quietest or oldest voice to the new note.\n\nThe Polyphonic Hive is a colony of identical creatures that have learned to harmonise. Each member is identical in architecture. But they never play the same pitch — they negotiate, in real time, without a conductor. The Hive is distributed polyphony: leaderless, self-organising, capable of chords.\n\n{hunter}: polyphony is an organisational problem disguised as a musical one. How many voices, how detuned, how allocated — engineering questions with aesthetic consequences.`,
+    victoryLore: `The Hive assigns {hunter} a voice and the colony stabilises.\n\nPolyphony unlocked. Multiple simultaneous voices — chords, harmonics, unison layering — are yours to architect.`,
+    victoryTheory: `Polyphonic synthesis assigns one complete signal chain per simultaneous note. Voice allocation: low-note, high-note, last-note, or round-robin priority. Unison mode stacks all voices on the same note with slight detuning for width. Detune amount controls the beating frequency between voices. The Juno-106 (6 voices), Oberheim Matrix-12 (12 voices), and Korg M1 (16 voices) each defined an era.`,
+    params: [
+      { key:'py_v', name:'The Colony\'s Voice Count', dice:6, instruction:'How many voices speak simultaneously? Roll.', roll(r){ const vs=[1,2,3,4,6,8][r-1]; const ms=[0,0.15,0.25,0.35,0.5,0.7][r-1]; Audio.setChorus(ms,0.3,0.6); return { label:`${vs}v`, value:vs, display:`${vs} voices`, theory:`${vs} voices — simulated via chorus width: ${Math.round(ms*100)}%. ${vs===1?'Monophonic — maximum focus.':vs<=3?'Sparse — distinct voices.':'Full polyphony — rich, warm stacking.'}` }; } },
+      { key:'py_d',  name:'The Colony\'s Detuning', dice:6, instruction:'How much do the voices drift from unison? Roll.', roll(r){ const ds=[0.1,0.2,0.35,0.5,0.7,1.0][r-1]; Audio.setChorus(undefined,0.5,ds); return { label:`${Math.round(ds*100)}%`, value:ds, display:`${Math.round(ds*100)}% detune`, theory:`Voice detuning: ${Math.round(ds*100)}%. ${ds<0.25?'Tight unison — barely perceptible shimmer.':ds<0.6?'Classic chorus warmth.':'Heavy — voices noticeably separated, almost chordal.'}` }; } },
+    ],
+  },
+  {
+    id: 'chord', wing: 2,
+    title: 'The Harmonic Archive',
+    location: 'The Harmonic Archive',
+    npcQuote: { name: 'Klaus Schulze', text: 'A chord is not three notes. It is one sound with texture. The synthesizer taught me that what I thought was harmony was actually timbre — that the chord and the waveform are the same phenomenon at different scales.' },
+    entityName: 'The Harmonic Construct',
+    spriteKey: 'harmonic_construct',
+    locked: true, complete: false,
+    lore: `A chord is multiple frequencies sounding simultaneously. A waveform is also multiple frequencies sounding simultaneously — its harmonics. The difference is one of scale. Play a chord fast enough and it becomes a timbre. Slow a timbre down and it becomes a chord.\n\nThe Harmonic Construct is architecture built from stacked resonant chambers — each tuned to a different interval above a common root. When a sound is played through it, specific frequencies are amplified and others absorbed. The sound that emerges has acquired the harmony of the building itself.\n\n{hunter}: name the root. Name the quality. The Construct demonstrates that harmony and timbre are one phenomenon.`,
+    victoryLore: `The Construct accepts {hunter}'s root and quality, and the intervals ring.\n\nChord synthesis unlocked — simultaneous intervals, harmonic stacking, the relationship between waveform and chord as expressions of the same mathematics.`,
+    victoryTheory: `Chord synthesis stacks oscillators at interval ratios above a root. Major chord: 1, 5/4, 3/2 (root, major third, fifth). Minor: 1, 6/5, 3/2. These ratios align with the harmonic series — why chords sound consonant. Dissonance is misalignment with the harmonic series. Chord modules generate intervals internally from a single pitch input, allowing monophonic playing with harmonic output.`,
+    params: [
+      { key:'ch_root', name:'The Harmonic Root', dice:12, instruction:'Which pitch anchors the construct? Roll.', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setWaveform('sawtooth'); Audio.setFrequency(n.freq); Audio.setReverbSize(2.5); Audio.setReverb(0.35); return { label:n.name, value:n.freq, display:n.name, theory:`Root: ${n.name} at ${n.freq.toFixed(1)} Hz. The construct builds upward from this.` }; } },
+      { key:'ch_qual', name:'The Chord\'s Quality', dice:6, instruction:'Major, minor, or beyond? Roll.', roll(r){ const qs=[{n:'Major',s:4},{n:'Minor',s:3},{n:'Dom 7th',s:10},{n:'Maj 7th',s:11},{n:'Sus 4',s:5},{n:'Diminished',s:3}]; const q=qs[r-1]; Audio.setSeqInterval(q.s); return { label:q.n, value:q.s, display:q.n, theory:`${q.n} quality (+${q.s} semitones). ${q.n==='Major'?'Bright, stable.':q.n==='Minor'?'Dark, introspective.':q.n==='Dom 7th'?'Tension — wants to resolve.':q.n==='Maj 7th'?'Lush, bittersweet.':q.n==='Sus 4'?'Ambiguous, unresolved.':'Unstable, diminished — maximum tension.'}` }; } },
+    ],
+  },
+  {
+    id: 'morph', wing: 2,
+    title: 'The Form Archive',
+    location: 'The Form Archive',
+    npcQuote: { name: 'Suzanne Ciani', text: 'The Buchla\'s waveform control was a dial between two voices. I spent years exploring what lived between them. Between a sine and a sawtooth there is not emptiness — there is every other instrument.' },
+    entityName: 'The Shape Between',
+    spriteKey: 'shape_between',
+    locked: true, complete: false,
+    lore: `Wavetable synthesis stores multiple waveforms in a table and sweeps through them continuously. The position in the wavetable determines which waveform plays, or what interpolation between adjacent waveforms plays. At position 0: sine. At position 127: sawtooth. At position 64: the crossfade between them — a shape that has existed in mathematics but has never been named.\n\nThe Shape Between inhabits every position between two extremes. It was neither the first shape nor the last — it is the interpolation, the gradient, the passage. In Moogham it occupies a district of things that exist between categories: half-built structures, half-completed rituals.\n\n{hunter}: morph controls the waveform position. The sound is always in transition — always becoming more or less of what it started as.`,
+    victoryLore: `The Shape Between settles at {hunter}'s chosen morphing position.\n\nWavetable morphing unlocked — continuous waveform crossfading controlled by CV, allowing timbral motion no single waveform can produce.`,
+    victoryTheory: `Wavetable synthesis stores single-cycle waveforms in an array. A position parameter (0–127) selects between them with interpolation at fractional positions. The position can be modulated by LFO, envelope, or any CV — creating timbral animation. PPG Wave (1981) pioneered it; Serum popularised it. The waveform can evolve in sync with the envelope (bright attack, dark sustain) or LFO (oscillating between two timbres).`,
+    params: [
+      { key:'mo_wave', name:'The Starting Form', dice:4, instruction:'Where on the morphing axis do you begin? Roll.', roll(r){ const ws=Theory.waveforms[r-1]; Audio.setWaveform(ws.type); return { label:ws.type, value:ws.type, display:ws.type.toUpperCase(), theory:`Starting waveform: ${ws.type}. ${ws.desc} This is position 0 on the morph axis.` }; } },
+      { key:'mo_fold', name:'The Morph Depth', dice:6, instruction:'How far across the wavetable does the morph sweep? Roll.', roll(r){ const fs=[1,1.5,2,2.5,3,4][r-1]; Audio.setFold(fs); return { label:`${fs}×`, value:fs, display:`Fold ${fs}×`, theory:`Wavetable position via wavefolding: ${fs}× drive. As morph position increases, new harmonic content appears — simulating sweeping across a wavetable.` }; } },
+    ],
+  },
+  {
+    id: 'lissajous', wing: 2,
+    title: 'The Lissajous Observatory',
+    location: 'The Lissajous Observatory',
+    npcQuote: { name: 'Jules Antoine Lissajous', text: 'When two vibrations act together, they trace their relationship in space. The figure is a signature — the signature of proportion. Every ratio has its own geometry.' },
+    entityName: 'The Pattern Eater',
+    spriteKey: 'pattern_eater',
+    locked: true, complete: false,
+    lore: `A Lissajous figure is the XY graph of two oscillators — one horizontal, one vertical. When the frequencies are in a simple integer ratio, the figure is a stable closed curve: a circle, a figure-eight, a bowtie. When the ratio is irrational, the figure never closes and fills the screen gradually, never repeating.\n\nThe Pattern Eater arrived in the Observatory before the first oscilloscope did. The observatory's primary lens projects the pattern onto a wall. Hunters who enter cannot stop watching — the figure is hypnotic because it is both predictable (mathematics) and surprising (the figure reveals the relationship between two numbers).\n\n{hunter}: set the X frequency. Set the Y. The ratio between them is the figure. The pattern is already implicit in the numbers.`,
+    victoryLore: `The Pattern Eater's figure stabilises at {hunter}'s chosen ratio.\n\nLissajous synthesis unlocked — XY oscilloscope art as synthesis technique, frequency relationships made geometric.`,
+    victoryTheory: `A Lissajous figure plots two oscillators on XY axes. 1:1 = circle/line (depending on phase). 1:2 = figure-eight. 2:3 = three-lobed figure. The shape reveals frequency ratio and phase relationship. In synthesis, Lissajous patterns are generated by ring modulating two oscillators. Oscilloscope mode shows the pattern to reveal tuning: when oscillators are in harmonic ratio, the figure snaps to a stable, closed shape.`,
+    params: [
+      { key:'li_ratio', name:'The X:Y Frequency Ratio', dice:8, instruction:'Set the ratio. The figure is already in the numbers. Roll.', roll(r){ const rs=[1,1.5,2,2.5,3,4,5,7][r-1]; Audio.setRingMod(rs,0.6); return { label:`${rs}:1`, value:rs, display:`X:Y = ${rs}:1`, theory:`Lissajous ratio: ${rs}:1. ${rs===1?'Circle — perfect unison.':rs<=2?'Figure-eight — classic Lissajous.':rs<=4?'Complex but periodic.':'Densely lobed, closed figure.'}` }; } },
+      { key:'li_phase', name:'The Phase Relationship', dice:6, instruction:'The phase rotates the figure. Roll.', roll(r){ const ps=[0,15,30,45,60,90][r-1]; const ds=[0.3,0.4,0.5,0.6,0.7,0.8][r-1]; Audio.setChorus(ds,r*0.3,0.4); return { label:`${ps}°`, value:ps, display:`${ps}° phase`, theory:`Phase: ${ps}°. At 0° the figure is a line; at 90° a circle (for 1:1 ratio); intermediate phases produce ellipses.` }; } },
+    ],
+  },
+  {
+    id: 'affect', wing: 2,
+    title: 'The Affective Resonance',
+    location: 'The Affective Resonance',
+    npcQuote: { name: 'Laurie Anderson', text: 'The instrument does not feel. But when you play it correctly, something feels through it. I don\'t know where that happens. I know that it does.' },
+    entityName: 'The Affect Specter',
+    spriteKey: 'affect_specter',
+    locked: true, complete: false,
+    lore: `Affect in music theory refers to the emotional quality that a piece communicates — not by describing an emotion linguistically but by evoking it through timbre, rhythm, space, and gesture. The synthesizer does not feel. Its parameters are numbers. But the right combination of numbers consistently produces the same affective response in listeners.\n\nThe Affect Specter moves through Moogham according to the emotional needs of whatever moment is current. When the city is grieving, it settles in the lower registers, long attacks, high reverb. When frightened, it compresses frequency range and shortens all decays. It does not decide to be in a place. It is wherever the affect is.\n\n{hunter}: the parameters you have been setting all along were never neutral. Every roll you have made has been an affective choice.`,
+    victoryLore: `The Affect Specter settles into {hunter}'s chosen emotional register.\n\nAffect synthesis unlocked — the deliberate use of timbre, envelope, and space to produce specific emotional responses. The vocabulary is now also an expressive language.`,
+    victoryTheory: `Affective synthesis: choosing parameters for emotional impact rather than technical correctness. Reliable correlations: high attack = aggression or surprise; long release = melancholy; high Q = anxiety; low frequencies + slow modulation = gravitas or dread; bright waveform + high formant = joy or alarm. These are tendencies shaped by culture and context. The synthesizer is the most direct instrument for testing them: a parameter change is immediate, isolated, and audible.`,
+    params: [
+      { key:'af_vowel', name:'The Affective Vowel', dice:6, instruction:'Which formant cluster carries the emotional quality? Roll.', roll(r){ const ds=['Dark, closed — grief, depth.','Warm — comfort, nostalgia.','Open mid — yearning, longing.','Bright — curiosity, anxiety.','Clear — alertness, clarity.','Forward — urgency, alarm.'][r-1]; Audio.setFormant(r/6,r-1); Audio.setWaveform('sawtooth'); return { label:`Vowel ${r}`, value:r-1, display:`Vowel ${r}`, theory:`Affective formant ${r}: ${ds}` }; } },
+      { key:'af_atk',  name:'The Emotional Attack', dice:6, instruction:'How does the affect arrive? Roll.', roll(r){ const atks=[0.005,0.03,0.1,0.3,0.7,1.5][r-1]; const ls=['Shock','Quick','Moderate','Gradual','Slow','Glacial'][r-1]; const ds=['Percussive — alarm, aggression.','Fast — direct, confident.','Natural — conversational.','Deliberate — thoughtful.','Long swell — anticipation.','Very slow — reverence, awe.'][r-1]; Audio.setAttack(atks); Audio.setRelease(atks*4+0.5); return { label:ls, value:atks, display:ls, theory:`Attack: ${(atks*1000).toFixed(0)}ms (${ls}). ${ds}` }; } },
+    ],
+  },
+  {
+    id: 'microcosm', wing: 2,
+    title: 'The Pthumerian Core',
+    location: 'The Pthumerian Core',
+    npcQuote: { name: 'Karlheinz Stockhausen', text: 'The universe is a synthesizer. I am not being metaphorical. The universe oscillates at every frequency simultaneously. What we call music is the part of that spectrum we have chosen to attend to.' },
+    entityName: 'Micr0c0sm',
+    spriteKey: 'microcosm',
+    locked: true, complete: false,
+    isFinalBoss: true,
+    params: [],
+    lore: `Beneath Moogham — beneath the Resonant Void, beneath the Cathedral Chambers, beneath the Attractor Fields — there is a point the old cartographers called the Pthumerian Core. They drew it as a dot and wrote next to it: *"Do not seek to describe what is here. The description would require a language we have not invented."*\n\nMicr0c0sm is not a creature. It is a process — the synthesis of every process you have encountered. All oscillators, all filters, all modulators, all effects, all sequencers simultaneously. It is not large. It is dense. It generates its own sound continuously. It has never stopped. It predates the city.\n\nThe only path through the Core is through what you know. Every encounter you survived has given you a piece of the language the cartographers said did not exist. {hunter} — you have built it. Every roll, every cable, every parameter. You carry the whole system now.\n\nListen. All of it is here.`,
+    victoryLore: `Micr0c0sm resolves.\n\nNot into silence — into something that sounds like all the encounters simultaneously. Then it simplifies, until only the tone you first learned in the Moogham Underbelly remains: 220 Hz. The Singing Wound's note. The beginning.\n\n{hunter}: the synthesis of synthesis is the original oscillator. Everything you learned between the first tone and this one was the long way around to the same note — heard, this time, with forty-one more dimensions of understanding.\n\nYou are not a hunter. You have not been a hunter for a long time. You are a composer of the frequency that contains all other frequencies.\n\nMoogham will always be here. So will the sound. So will you.`,
+    victoryTheory: `The complete synthesis vocabulary: VCO → VCF → ADSR → LFO → Reverb/Delay/Chorus/Phaser/Tape → Sequencer/Turing/Drunk/Euclid/Sidechain → Wavefolder/Ring Mod/Noise/Formant/Ladder → Flanger/Bitcrusher/Spectral/Resonator/FM → Arpeggio/Quantize/Clock/Chaos/S&H → Attenuverter/Mixer/XY/Theremin/Poly/Chord/Morph/Lissajous/Affect.\n\nThese are not separate tools. They are one system with many entry points. The synthesizer is one instrument. You have learned all of it.`,
+  },
 ];
 
 /* ============================================================
@@ -4889,6 +5714,28 @@ const QUEST_AUDIO_SETUP = {
   euclid:     () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setSeqInterval(7); Audio.setEuclid(5, 8); Audio.startSeq(100); },
   sidechain:  () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setChorus(0.15); Audio.setSidechain(4, 0.7); },
   finale:     () => { /* handled entirely by Finale.start() */ },
+  // Wing 2 audio setups
+  withered:   () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(3000); Audio.setReverb(0.3); },
+  flanger:    () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setChorus(0.5, 0.3, 0.9); },
+  bitcrush:   () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setDrive(2); Audio.enableVCF(true); Audio.setCutoff(3500); },
+  spectral:   () => { Audio.setFormant(0.5, 2); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setLFORate(0.3); Audio.setLFODepth(0.15); Audio.startLFO(); },
+  resonator:  () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(880); Audio.setResonance(12); },
+  fm:         () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setRingMod(2, 0.5); },
+  arpeggio:   () => { Audio.setWaveform('square'); Audio.setFrequency(220); Audio.setSeqInterval(7); },
+  quantize:   () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setSeqInterval(5); },
+  clock:      () => { Audio.setWaveform('square'); Audio.setFrequency(220); Audio.setSeqInterval(0); },
+  chaos:      () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setDrunkWalk(5, 80); },
+  samplehold: () => { Audio.setWaveform('square'); Audio.setTuringPattern(7, 0.0); Audio.startSeq(90); },
+  attenuvtr:  () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setVolume(0.5); Audio.startLFO(0.3, 0.1); },
+  mixer:      () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setVolume(0.6); Audio.setChorus(0.2); Audio.setReverb(0.2); },
+  xy:         () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(2000); Audio.setLFORate(0.5); Audio.setLFODepth(0.1); Audio.startLFO(); },
+  theremin:   () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.startLFO(3, 0.015); },
+  poly:       () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setChorus(0.35, 0.3, 0.6); },
+  chord:      () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setReverbSize(2.5); Audio.setReverb(0.4); Audio.setSeqInterval(4); },
+  morph:      () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setFold(2); },
+  lissajous:  () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setRingMod(2, 0.6); },
+  affect:     () => { Audio.setFormant(0.5, 2); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setAttack(0.3); Audio.setRelease(1.5); },
+  microcosm:  () => { /* handled entirely by Microcosm.start() */ },
 };
 
 /* ============================================================
@@ -4902,21 +5749,25 @@ const State = {
   lockedParams: {},   // param key → result (in-progress encounter only)
   currentParamIdx: 0,
   lastRoll: null,
+  currentWing: 1,   // which wing the map is showing (1 or 2)
+  wing2Unlocked: false,
 
   load() {
     try {
       const saved = JSON.parse(localStorage.getItem('nm2rpg_v1') || '{}');
-      if (saved.player)      this.player      = saved.player;
-      if (saved.progress)    this.progress    = saved.progress;
-      if (saved.questParams) this.questParams = saved.questParams;
+      if (saved.player)        this.player        = saved.player;
+      if (saved.progress)      this.progress      = saved.progress;
+      if (saved.questParams)   this.questParams   = saved.questParams;
+      if (saved.wing2Unlocked) this.wing2Unlocked = saved.wing2Unlocked;
     } catch(e) {}
   },
 
   save() {
     localStorage.setItem('nm2rpg_v1', JSON.stringify({
-      player:      this.player,
-      progress:    this.progress,
-      questParams: this.questParams,
+      player:        this.player,
+      progress:      this.progress,
+      questParams:   this.questParams,
+      wing2Unlocked: this.wing2Unlocked,
     }));
   },
 
@@ -4947,28 +5798,50 @@ const State = {
     if (!this.currentQuest) return;
     const id = this.currentQuest.id;
     this.progress[id] = true;
-    // Persist the locked params snapshot for this quest
     this.questParams[id] = { ...this.lockedParams };
-    // Unlock next quest in sequence
+
+    const wing1Quests = QUESTS.filter(q => !q.wing || q.wing === 1);
+    const wing2Quests = QUESTS.filter(q => q.wing === 2);
+
+    // Unlock next quest in the same wing sequence
     const idx = QUESTS.findIndex(q => q.id === id);
-    if (idx >= 0 && idx + 1 < QUESTS.length) {
-      QUESTS[idx + 1].locked = false;
-      this.pendingUnlock = QUESTS[idx + 1];
+    const currentWing = this.currentQuest.wing || 1;
+    const nextQ = QUESTS[idx + 1];
+    if (nextQ && (nextQ.wing || 1) === currentWing && !nextQ.isFinalBoss) {
+      nextQ.locked = false;
+      this.pendingUnlock = nextQ;
     }
-    // Unlock finale when all 8 base quests are done
-    const baseQuests = QUESTS.filter(q => !q.isFinale);
-    const finaleQuest = QUESTS.find(q => q.isFinale);
-    if (finaleQuest && baseQuests.every(q => this.progress[q.id])) {
-      finaleQuest.locked = false;
-      this.pendingUnlock = finaleQuest;
+
+    // Unlock Wing 1 finale when all Wing 1 base quests done
+    const w1Base = wing1Quests.filter(q => !q.isFinale);
+    const w1Finale = wing1Quests.find(q => q.isFinale);
+    if (w1Finale && w1Base.every(q => this.progress[q.id])) {
+      w1Finale.locked = false;
+      this.pendingUnlock = w1Finale;
     }
+
+    // Unlock Wing 2 when ALL Wing 1 quests (including finale) are complete
+    if (!this.wing2Unlocked && wing1Quests.every(q => this.progress[q.id])) {
+      this.wing2Unlocked = true;
+      const firstW2 = wing2Quests[0];
+      if (firstW2) { firstW2.locked = false; this.pendingUnlock = firstW2; }
+    }
+
+    // Unlock Micr0c0sm when all Wing 2 non-boss quests done
+    const w2Base = wing2Quests.filter(q => !q.isFinalBoss);
+    const microcosm = wing2Quests.find(q => q.isFinalBoss);
+    if (microcosm && w2Base.every(q => this.progress[q.id])) {
+      microcosm.locked = false;
+      this.pendingUnlock = microcosm;
+    }
+
     this.save();
   },
 
   unlockAllModules() {
     let newlyMastered = 0;
     QUESTS.forEach(q => {
-      if (q.isFinale) return;
+      if (q.isFinale || q.isFinalBoss) return;
       if (!this.progress[q.id]) newlyMastered++;
       this.progress[q.id] = true;
       q.complete = true;
@@ -4977,6 +5850,9 @@ const State = {
     });
     const finaleQuest = QUESTS.find(q => q.isFinale);
     if (finaleQuest) finaleQuest.locked = false;
+    this.wing2Unlocked = true;
+    const microcosm = QUESTS.find(q => q.isFinalBoss);
+    if (microcosm) microcosm.locked = false;
     this.pendingUnlock = null;
     this.save();
     return newlyMastered;
@@ -4993,13 +5869,15 @@ const State = {
 
   reset() {
     localStorage.removeItem('nm2rpg_v1');
-    this.player      = { name: 'Hunter', classKey: null };
-    this.progress    = {};
-    this.questParams = {};
-    this.lockedParams = {};
-    this.currentQuest = null;
+    this.player        = { name: 'Hunter', classKey: null };
+    this.progress      = {};
+    this.questParams   = {};
+    this.lockedParams  = {};
+    this.currentQuest  = null;
     this.pendingUnlock = null;
-    // Reset QUESTS runtime state
+    this.currentWing   = 1;
+    this.wing2Unlocked = false;
+    // Reset QUESTS runtime state — only first Wing 1 quest starts unlocked
     QUESTS.forEach((q, i) => { q.locked = (i !== 0); q.complete = false; });
   },
 };
@@ -5071,6 +5949,28 @@ const MODULE_COLORS = {
   stutter:     { primary: '#cc2200', secondary: '#ff6644', dim: 'rgba(204,34,0,0.18)' },
   euclid:      { primary: '#3355aa', secondary: '#6688ee', dim: 'rgba(51,85,170,0.18)' },
   sidechain:   { primary: '#882299', secondary: '#cc55ee', dim: 'rgba(136,34,153,0.18)' },
+  // Wing 2 modules
+  withered:    { primary: '#7799aa', secondary: '#aaccdd', dim: 'rgba(119,153,170,0.22)' },
+  flanger:     { primary: '#2277bb', secondary: '#66bbff', dim: 'rgba(34,119,187,0.18)' },
+  bitcrush:    { primary: '#aa0000', secondary: '#ff4422', dim: 'rgba(170,0,0,0.18)' },
+  spectral:    { primary: '#9922aa', secondary: '#dd66ff', dim: 'rgba(153,34,170,0.18)' },
+  resonator:   { primary: '#228866', secondary: '#44ffcc', dim: 'rgba(34,136,102,0.18)' },
+  fm:          { primary: '#cc9900', secondary: '#ffdd44', dim: 'rgba(204,153,0,0.18)' },
+  arpeggio:    { primary: '#7722cc', secondary: '#bb66ff', dim: 'rgba(119,34,204,0.18)' },
+  quantize:    { primary: '#3388aa', secondary: '#77ccee', dim: 'rgba(51,136,170,0.18)' },
+  clock:       { primary: '#556677', secondary: '#99bbdd', dim: 'rgba(85,102,119,0.18)' },
+  chaos:       { primary: '#bb2200', secondary: '#ff7744', dim: 'rgba(187,34,0,0.18)' },
+  samplehold:  { primary: '#008899', secondary: '#22ccee', dim: 'rgba(0,136,153,0.18)' },
+  attenuvtr:   { primary: '#884488', secondary: '#cc88dd', dim: 'rgba(136,68,136,0.18)' },
+  mixer:       { primary: '#997700', secondary: '#ccaa22', dim: 'rgba(153,119,0,0.18)' },
+  xy:          { primary: '#115599', secondary: '#4488cc', dim: 'rgba(17,85,153,0.18)' },
+  theremin:    { primary: '#6644aa', secondary: '#aa88ee', dim: 'rgba(102,68,170,0.18)' },
+  poly:        { primary: '#aa7722', secondary: '#ddaa55', dim: 'rgba(170,119,34,0.18)' },
+  chord:       { primary: '#bb9900', secondary: '#eedd44', dim: 'rgba(187,153,0,0.18)' },
+  morph:       { primary: '#cc3355', secondary: '#ff6688', dim: 'rgba(204,51,85,0.18)' },
+  lissajous:   { primary: '#1188aa', secondary: '#33ccee', dim: 'rgba(17,136,170,0.18)' },
+  affect:      { primary: '#8833bb', secondary: '#cc66ff', dim: 'rgba(136,51,187,0.18)' },
+  microcosm:   { primary: '#aa44bb', secondary: '#ff88ee', dim: 'rgba(170,68,187,0.28)' },
 };
 
 /* ============================================================
@@ -5897,63 +6797,69 @@ const UI = {
     this.show('screen-map');
   },
 
+  switchWing(n) {
+    State.currentWing = n;
+    document.getElementById('btn-wing1').style.display = n === 2 ? 'inline-flex' : 'none';
+    document.getElementById('btn-wing2').style.display = (n === 1 && State.wing2Unlocked) ? 'inline-flex' : 'none';
+    this._buildMap();
+  },
+
   _buildMap() {
     const area = document.getElementById('map-area');
     area.innerHTML = '';
     const W = area.clientWidth  || 900;
     const H = area.clientHeight || 480;
 
+    // Show wing toggle buttons
+    const w2btn = document.getElementById('btn-wing2');
+    const w1btn = document.getElementById('btn-wing1');
+    if (w2btn) w2btn.style.display = (State.currentWing === 1 && State.wing2Unlocked) ? 'inline-flex' : 'none';
+    if (w1btn) w1btn.style.display = State.currentWing === 2 ? 'inline-flex' : 'none';
+
+    // Filter quests for the current wing
+    const wingQuests = QUESTS.filter(q => State.currentWing === 2 ? q.wing === 2 : (!q.wing || q.wing === 1));
+
     // Snake-path layout — 5 columns × 4 rows, then finale centered below.
-    // Row 1 goes left→right, row 2 right→left, row 3 left→right, row 4 right→left.
-    // No edge crossings; turns happen at the right or left wall.
     const COL = [11, 29, 49, 69, 87];  // x% for each column
     const ROW = [12, 33, 55, 76];      // y% for each row
     const positions = [
       // Row 1: L→R
-      [COL[0], ROW[0]], // 0  VCO
-      [COL[1], ROW[0]], // 1  VCF
-      [COL[2], ROW[0]], // 2  ADSR
-      [COL[3], ROW[0]], // 3  LFO
-      [COL[4], ROW[0]], // 4  REVERB
-      // Row 2: R→L  (turn down on right wall)
-      [COL[4], ROW[1]], // 5  DELAY
-      [COL[3], ROW[1]], // 6  SEQ
-      [COL[2], ROW[1]], // 7  LADDER
-      [COL[1], ROW[1]], // 8  CHORUS
-      [COL[0], ROW[1]], // 9  PHASER
-      // Row 3: L→R  (turn down on left wall)
-      [COL[0], ROW[2]], // 10 FORMANT
-      [COL[1], ROW[2]], // 11 TURING
-      [COL[2], ROW[2]], // 12 TAPE
-      [COL[3], ROW[2]], // 13 WAVEFOLDER
-      [COL[4], ROW[2]], // 14 NOISE
-      // Row 4: R→L  (turn down on right wall)
-      [COL[4], ROW[3]], // 15 RINGMOD
-      [COL[3], ROW[3]], // 16 DRUNK
-      [COL[2], ROW[3]], // 17 STUTTER
-      [COL[1], ROW[3]], // 18 EUCLID
-      [COL[0], ROW[3]], // 19 SIDECHAIN
-      // Finale — centered below row 4
-      [COL[2], 93],     // 20 FINALE
+      [COL[0], ROW[0]], // 0
+      [COL[1], ROW[0]], // 1
+      [COL[2], ROW[0]], // 2
+      [COL[3], ROW[0]], // 3
+      [COL[4], ROW[0]], // 4
+      // Row 2: R→L
+      [COL[4], ROW[1]], // 5
+      [COL[3], ROW[1]], // 6
+      [COL[2], ROW[1]], // 7
+      [COL[1], ROW[1]], // 8
+      [COL[0], ROW[1]], // 9
+      // Row 3: L→R
+      [COL[0], ROW[2]], // 10
+      [COL[1], ROW[2]], // 11
+      [COL[2], ROW[2]], // 12
+      [COL[3], ROW[2]], // 13
+      [COL[4], ROW[2]], // 14
+      // Row 4: R→L
+      [COL[4], ROW[3]], // 15
+      [COL[3], ROW[3]], // 16
+      [COL[2], ROW[3]], // 17
+      [COL[1], ROW[3]], // 18
+      [COL[0], ROW[3]], // 19
+      // Finale / FinalBoss — centered below row 4
+      [COL[2], 93],     // 20
     ];
 
-    // Sequential snake path — no crossings
+    // Sequential snake path
     const MAP_EDGES = [
-      // Row 1
       [0,1],[1,2],[2,3],[3,4],
-      // Turn: right wall R1→R2
       [4,5],
-      // Row 2
       [5,6],[6,7],[7,8],[8,9],
-      // Turn: left wall R2→R3
       [9,10],
-      // Row 3
       [10,11],[11,12],[12,13],[13,14],
-      // Turn: right wall R3→R4
       [14,15],
-      // Row 4
       [15,16],[16,17],[17,18],[18,19],
-      // Path to finale
       [19,20],
     ];
 
@@ -5982,8 +6888,8 @@ const UI = {
     // Draw path edges — two passes: dim road beneath, bright traversed road on top
     for (let pass = 0; pass < 2; pass++) {
       for (const [ai, bi] of MAP_EDGES) {
-        if (ai >= QUESTS.length || bi >= QUESTS.length) continue;
-        const qA = QUESTS[ai], qB = QUESTS[bi];
+        if (ai >= wingQuests.length || bi >= wingQuests.length) continue;
+        const qA = wingQuests[ai], qB = wingQuests[bi];
         const [x1p,y1p] = positions[ai], [x2p,y2p] = positions[bi];
         const x1 = x1p/100*W, y1 = y1p/100*H;
         const x2 = x2p/100*W, y2 = y2p/100*H;
@@ -6046,16 +6952,17 @@ const UI = {
     const playerCls = CLASSES.find(c => c.key === State.player.classKey);
 
     // Quest nodes
-    QUESTS.forEach((quest, i) => {
+    wingQuests.forEach((quest, i) => {
+      if (i >= positions.length) return;
       const [px, py] = positions[i];
       const x = px/100*W, y = py/100*H;
       const complete   = State.progress[quest.id];
       const unlocked   = !quest.locked;
       const isFavoured = playerCls?.bonusKeys.includes(quest.id);
       const spriteRows = SPRITES[quest.spriteKey];
-      const isFinale   = !!quest.isFinale;
+      const isFinale   = !!quest.isFinale || !!quest.isFinalBoss;
 
-      // Node sizes: finale larger, regular modest
+      // Node sizes: finale/boss larger, regular modest
       const R     = isFinale ? 26 : 20;
       const SCALE = isFinale ? 2 : 2;
       const SW    = spriteRows[0].length * SCALE;
@@ -6116,7 +7023,8 @@ const UI = {
       }
 
       // Module ID label — short, sits below ring
-      const modId = isFinale ? (unlocked ? '✦ FINALE ✦' : '???') : quest.id.toUpperCase();
+      const finaleLabel = quest.isFinalBoss ? '✦ BOSS ✦' : '✦ FINALE ✦';
+      const modId = isFinale ? (unlocked ? finaleLabel : '???') : quest.id.toUpperCase();
       const idLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
       idLabel.setAttribute('text-anchor','middle');
       idLabel.setAttribute('y', R + 13);
@@ -6179,7 +7087,7 @@ const UI = {
     area.appendChild(svg);
     const mc = State.masterCount();
     document.getElementById('modules-mastered').textContent = mc;
-    const baseCount2 = QUESTS.filter(q => !q.isFinale).length;
+    const baseCount2 = QUESTS.filter(q => !q.isFinale && !q.isFinalBoss).length;
     const totalEl = document.getElementById('modules-total');
     if (totalEl) totalEl.textContent = baseCount2;
     const wsBtn = document.getElementById('btn-workshop');
@@ -6187,8 +7095,9 @@ const UI = {
   },
 
   async startEncounter(questId) {
-    // Route finale to its own special screen
-    if (questId === 'finale') { Finale.start(); return; }
+    // Route finale/boss to their own special screens
+    if (questId === 'finale')    { Finale.start();     return; }
+    if (questId === 'microcosm') { Microcosm.start();  return; }
 
     State.startQuest(questId);
     const quest = State.currentQuest;
@@ -6880,6 +7789,98 @@ const VALID_ROUTES = {
     label: 'Formant → Delay',
     desc:  'Vowel echoes — the voice repeats and fades.',
   },
+
+  // ── ADSR envelope routes ──────────────────────────────────────────────────
+  'adsr-env-out→vcf-cutoff-in': {
+    enable:  ()=>Audio.connectEnvToFilter(),
+    disable: ()=>Audio.disconnectEnvToFilter(),
+    label: 'ADSR ENV → Filter Cutoff',
+    desc:  'The envelope animates the filter — the cutoff opens on attack and closes on release. Classic synth lead or pad technique.',
+  },
+
+  // ── Sequencer / generative CV source routes ───────────────────────────────
+  'seq-cv-out→vco-freq-in': {
+    enable:  ()=>{},
+    disable: ()=>Audio.stopSeq(),
+    label: 'Sequencer → VCO Pitch',
+    desc:  'The sequencer steps through pitch values driving the VCO frequency. This connection is always live while the sequencer is running.',
+  },
+  'seq-cv-out→reverb-in': {
+    enable:  ()=>Audio.setReverb(0.35),
+    disable: ()=>Audio.setReverb(0),
+    label: 'Sequencer → Reverb',
+    desc:  'Each sequencer step blooms into reverb space. The pattern becomes atmospheric.',
+  },
+  'seq-cv-out→delay-in': {
+    enable:  ()=>Audio.setDelay(0.38),
+    disable: ()=>Audio.setDelay(0),
+    label: 'Sequencer → Delay',
+    desc:  'Each sequencer step echoes. The pattern becomes rhythmically layered.',
+  },
+  'turing-cv-out→vco-freq-in': {
+    enable:  ()=>{},
+    disable: ()=>Audio.stopSeq(),
+    label: 'Turing Machine → VCO Pitch',
+    desc:  'The Turing Machine outputs pseudo-random pitch CV to the VCO. The machine composes.',
+  },
+  'turing-cv-out→reverb-in': {
+    enable:  ()=>Audio.setReverb(0.35),
+    disable: ()=>Audio.setReverb(0),
+    label: 'Turing Machine → Reverb',
+    desc:  'The Turing Machine\'s random melody dissolves into reverb — generative ambience.',
+  },
+  'drunk-out→vco-freq-in': {
+    enable:  ()=>{},
+    disable: ()=>Audio.stopDrunkWalk(),
+    label: 'Drunk Walk → VCO Pitch',
+    desc:  'The wandering tone is the VCO frequency — the walk is the melody.',
+  },
+  'euclid-out→vco-freq-in': {
+    enable:  ()=>{},
+    disable: ()=>Audio.stopSeq(),
+    label: 'Euclidean → VCO Gate',
+    desc:  'The euclidean rhythm gates the VCO — only the distributed pulses fire notes. Silence is part of the pattern.',
+  },
+  'euclid-out→reverb-in': {
+    enable:  ()=>Audio.setReverb(0.35),
+    disable: ()=>Audio.setReverb(0),
+    label: 'Euclidean → Reverb',
+    desc:  'Each euclidean pulse blooms into reverb. The geometric rhythm becomes spatial.',
+  },
+
+  // ── Stutter output chains ─────────────────────────────────────────────────
+  'stutter-out→reverb-in': {
+    enable:  ()=>Audio.setReverb(0.45),
+    disable: ()=>Audio.setReverb(0),
+    label: 'Stutter → Reverb',
+    desc:  'Each stutter fragment blooms into reverb space. The glitch becomes atmospheric — broken music dissolving into a cathedral.',
+  },
+  'stutter-out→delay-in': {
+    enable:  ()=>Audio.setDelay(0.38),
+    disable: ()=>Audio.setDelay(0),
+    label: 'Stutter → Delay',
+    desc:  'Each stutter fragment echoes. The glitch becomes rhythmic — the error repeats.',
+  },
+  'stutter-out→chorus-in': {
+    enable:  ()=>Audio.setChorus(0.4),
+    disable: ()=>Audio.setChorus(0),
+    label: 'Stutter → Chorus',
+    desc:  'The stutter fragments shimmer. Multiple broken copies — a choir of glitches.',
+  },
+
+  // ── Sidechain routes ──────────────────────────────────────────────────────
+  'vco-out→sidechain-in': {
+    enable:  ()=>Audio.setSidechain(2, 0.7),
+    disable: ()=>Audio.setSidechain(undefined, 0),
+    label: 'VCO → Sidechain',
+    desc:  'The oscillator output is pumped by the sidechain. The sound breathes against itself — expansion and contraction.',
+  },
+  'seq-cv-out→sidechain-in': {
+    enable:  ()=>Audio.setSidechain(2, 0.7),
+    disable: ()=>Audio.setSidechain(undefined, 0),
+    label: 'Sequencer → Sidechain',
+    desc:  'The sequencer\'s rhythm drives the sidechain pump. The pattern breathes at its own tempo.',
+  },
 };
 
 const _ROUTE_SOURCE_LABELS = {
@@ -6940,15 +7941,16 @@ for (const [fromId, sourceLabel] of Object.entries(_ROUTE_SOURCE_LABELS)) {
 const JACK_DEFS = {
   vco:    [{ id:'vco-out',      dir:'out', label:'OUT',  tip:'Oscillator signal out' },
            { id:'vco-freq-in',  dir:'in',  label:'FREQ', tip:'CV pitch input (from LFO)' }],
-  vcf:    [{ id:'vcf-in',       dir:'in',  label:'IN',   tip:'Audio in for filtering' },
-           { id:'vcf-out',      dir:'out', label:'OUT',  tip:'Filtered signal out' }],
-  adsr:   [],
-  lfo:    [{ id:'lfo-out',      dir:'out', label:'MOD',  tip:'Modulation signal (connect to FREQ or filter)' }],
+  vcf:    [{ id:'vcf-in',       dir:'in',  label:'IN',     tip:'Audio in for filtering' },
+           { id:'vcf-out',      dir:'out', label:'OUT',    tip:'Filtered signal out' },
+           { id:'vcf-cutoff-in',dir:'in',  label:'CUTOFF', tip:'Cutoff CV in — patch ADSR ENV here to open the filter on attack and close it on release' }],
+  adsr:   [{ id:'adsr-env-out', dir:'out', label:'ENV',    tip:'Envelope CV out — connects to VCF CUTOFF to animate the filter with your attack/decay/sustain/release shape' }],
+  lfo:    [{ id:'lfo-out',      dir:'out', label:'MOD',    tip:'Modulation signal (connect to FREQ or filter)' }],
   reverb: [{ id:'reverb-in',    dir:'in',  label:'IN',   tip:'Audio in — adds reverb' },
            { id:'reverb-out',   dir:'out', label:'OUT',  tip:'Reverb wet output — chain to DELAY IN to echo the reverb tail' }],
   delay:  [{ id:'delay-in',     dir:'in',  label:'IN',   tip:'Audio in — adds delay echoes' },
            { id:'delay-out',    dir:'out', label:'OUT',  tip:'Delay wet output — chain to REVERB IN to bloom each echo into space' }],
-  seq:    [],
+  seq:    [{ id:'seq-cv-out',    dir:'out', label:'CV',  tip:'Sequencer CV out — steps through pitch values and drives the VCO. Patch to VCO FREQ to show the connection, or to reverb/delay for effect sends.' }],
   ladder: [{ id:'ladder-in',    dir:'in',  label:'IN',   tip:'Audio in for Ladder filter' },
            { id:'ladder-out',   dir:'out', label:'OUT',  tip:'Ladder-filtered signal out — chain to reverb, delay, or chorus' }],
   chorus:     [{ id:'chorus-in',    dir:'in',  label:'IN',   tip:'Audio in — adds chorus shimmer' },
@@ -6957,17 +7959,18 @@ const JACK_DEFS = {
                { id:'phaser-out',   dir:'out', label:'OUT',  tip:'Phase-swept output — chain to reverb or delay' }],
   formant:    [{ id:'formant-in',   dir:'in',  label:'IN',   tip:'Audio in — adds vowel resonance' },
                { id:'formant-out',  dir:'out', label:'OUT',  tip:'Vowel-filtered output — chain to reverb or delay' }],
-  turing:     [],
+  turing:     [{ id:'turing-cv-out', dir:'out', label:'CV', tip:'Turing Machine CV out — pseudo-random pitch steps driving the VCO. Patch to VCO FREQ or effects.' }],
   tape:       [{ id:'tape-in',      dir:'in',  label:'IN',   tip:'Audio in — adds tape saturation and flutter' }],
   wavefolder: [{ id:'fold-in',      dir:'in',  label:'IN',   tip:'Audio in — adds wavefolder harmonics' },
                { id:'fold-out',     dir:'out', label:'OUT',  tip:'Wavefolder output — route folded harmonics onward' }],
   noise:      [{ id:'noise-out',    dir:'out', label:'OUT',  tip:'Noise output — patch to VCF IN for shaped noise' }],
   ringmod:    [{ id:'ring-in',      dir:'in',  label:'IN',   tip:'Audio in — ring modulates against carrier' },
                { id:'ring-out',     dir:'out', label:'OUT',  tip:'Ring modulator output — route metallic sidebands onward' }],
-  drunk:      [],
-  stutter:    [],
-  euclid:     [],
-  sidechain:  [],
+  drunk:      [{ id:'drunk-out',      dir:'out', label:'CV',   tip:'Drunk Walk CV out — the wandering pitch signal. Patch to VCO FREQ or effects.' }],
+  stutter:    [{ id:'stutter-out',   dir:'out', label:'OUT',  tip:'Stutter audio out — route fragmented gate bursts through reverb or delay for atmospheric glitch.' }],
+  euclid:     [{ id:'euclid-out',    dir:'out', label:'GATE', tip:'Euclidean rhythm gate out — only the distributed pulses fire. Patch to VCO FREQ or effects.' }],
+  sidechain:  [{ id:'sidechain-in',  dir:'in',  label:'IN',   tip:'Sidechain trigger in — the signal whose presence causes the pumping gain modulation.' },
+               { id:'sidechain-out', dir:'out', label:'PUMP', tip:'Sidechain pump out — the gain oscillation that ducks the master. Visualizes the breathing signal.' }],
 };
 
 const JACK_MODULE_PREFIX = {
@@ -7806,12 +8809,16 @@ const Workshop = (() => {
     if (!list) return;
     list.innerHTML = '';
     _CHAOS_PRESETS.forEach(preset => {
-      const canUse = preset.requires.every(r => mastered.has(r));
+      const missing = preset.requires.filter(r => !mastered.has(r));
+      const canUse = missing.length === 0;
       const entry = document.createElement('div');
-      entry.className = 'ws-grimoire-entry' + (canUse ? '' : ' locked');
+      entry.className = 'ws-grimoire-entry'
+        + (canUse ? '' : ' locked')
+        + (missing.length === 1 ? ' close' : '');
+      entry.setAttribute('title', canUse ? '' : `Requires: ${missing.join(', ')}`);
       entry.innerHTML = `<div class="ws-grimoire-name">${preset.name}</div>
         <div class="ws-grimoire-lore">${preset.lore}</div>
-        ${canUse ? '' : `<div class="ws-grimoire-req">Requires: ${preset.requires.join(', ')}</div>`}`;
+        ${canUse ? '' : `<div class="ws-grimoire-req">Requires: ${missing.join(', ')}</div>`}`;
       if (canUse) {
         entry.addEventListener('click', () => {
           closeGrimoire();
@@ -8407,6 +9414,14 @@ const Workshop = (() => {
         continue;
       }
 
+      // ADSR ENV → VCF cutoff: real audio routing handled by Audio.connectEnvToFilter
+      if (routeKey === 'adsr-env-out→vcf-cutoff-in') { state.envToFilter = true; continue; }
+
+      // Conceptual CV routes — audio already implicit, cable is pedagogical
+      if (toId === 'vco-freq-in' && fromId !== 'lfo-out') continue;
+      // Sidechain trigger: enable pumping
+      if (toId === 'sidechain-in') { state.sidechainEnabled = true; continue; }
+
       if (fromId === 'vcf-out' || fromId === 'ladder-out') state.filterEnabled = true;
       if (toId === 'vcf-in' || toId === 'ladder-in') state.filterEnabled = true;
       if (toId === 'ladder-in' || fromId === 'ladder-out') state.drive = Math.max(state.drive, 2.2);
@@ -8466,6 +9481,7 @@ const Workshop = (() => {
     Audio.setDrive(1);
     Audio.setFold(1);
     Audio.setRingMod(undefined, 0);
+    Audio.disconnectEnvToFilter();
     Audio.clearPatchRoutes();
     Audio.unchainReverbToDelay();
     Audio.unchainDelayToReverb();
@@ -8484,10 +9500,21 @@ const Workshop = (() => {
     if (state.formantMix > 0) Audio.setFormant(state.formantMix);
     if (state.foldAmount > 1) Audio.setFold(state.foldAmount);
     if (state.ringMix > 0) Audio.setRingMod(state.ringRatio, state.ringMix);
+    if (state.envToFilter) Audio.connectEnvToFilter();
+    if (state.sidechainEnabled) Audio.setSidechain(2, 0.7);
 
     for (const routeKey of _connections.keys()) {
       if (routeKey.startsWith('lfo-out→')) continue;
       if (routeKey.endsWith('→tape-in')) continue;
+      if (routeKey === 'adsr-env-out→vcf-cutoff-in') continue;
+      if (routeKey.endsWith('→sidechain-in')) continue;
+      if (routeKey.endsWith('→vco-freq-in') && !routeKey.startsWith('lfo-out→')) continue;
+      // CV source routes have no audio node — skip generic connect, state already applied above
+      if (routeKey.startsWith('stutter-out→')) continue;
+      if (routeKey.startsWith('seq-cv-out→')) continue;
+      if (routeKey.startsWith('turing-cv-out→')) continue;
+      if (routeKey.startsWith('drunk-out→')) continue;
+      if (routeKey.startsWith('euclid-out→')) continue;
       Audio.connectPatchRoute(routeKey);
     }
 
@@ -8707,7 +9734,26 @@ const Workshop = (() => {
     if (_waveRaf) { cancelAnimationFrame(_waveRaf); _waveRaf = null; }
   }
 
-  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz };
+  function toggleFullscreen() {
+    const btn = document.getElementById('ws-fullscreen-btn');
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      if (btn) btn.textContent = '✕';
+      if (btn) btn.title = 'Exit fullscreen';
+    } else {
+      document.exitFullscreen().catch(() => {});
+      if (btn) btn.textContent = '⛶';
+      if (btn) btn.title = 'Toggle fullscreen';
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('ws-fullscreen-btn');
+    if (!btn) return;
+    if (!document.fullscreenElement) { btn.textContent = '⛶'; btn.title = 'Toggle fullscreen'; }
+  });
+
+  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen };
 })();
 
 /* ============================================================
@@ -8940,24 +9986,245 @@ const Finale = (() => {
 })();
 
 /* ============================================================
+   MICROCOSM — TRUE FINAL BOSS (Wing 2 finale)
+   ============================================================ */
+const Microcosm = (() => {
+  let _rafId = null;
+  let _phase = 'intro';
+  let _particles = [];
+
+  // Descends through all learned timbres then resolves to the origin note
+  const BOSS_STEPS = [
+    440.00, 392.00, 329.63, 293.66, 261.63,
+    220.00, 196.00, 164.81, 146.83, 130.81,
+    110.00, 98.00,  65.41,
+    110.00, 220.00, 440.00,
+  ];
+  const BOSS_BPM = 66;
+
+  async function start() {
+    BGMusic.fadeOut(2.0);
+    if (!Audio.isReady()) await Audio.init();
+    Audio.resetChain();
+    _phase = 'intro';
+    _particles = [];
+
+    const q = QUESTS.find(q => q.isFinalBoss);
+    document.getElementById('finale-entity').innerHTML = renderSprite(SPRITES.microcosm, 10);
+    document.getElementById('finale-title').textContent = 'Micr0c0sm';
+    const hn = State.player.name || 'Hunter';
+    document.getElementById('finale-lore').innerHTML = q.lore
+      .replace(/\n\n/g,'<br><br>')
+      .replace(/\{hunter\}/g,`<em style="color:var(--gold);font-style:normal;font-weight:bold;">${hn}</em>`);
+    document.getElementById('finale-status').textContent = '';
+
+    UI.show('screen-finale');
+    _startViz();
+    await _sleep(3000);
+    await _playBoss();
+  }
+
+  async function _playBoss() {
+    _phase = 'playing';
+    _setStatus('Micr0c0sm awakens…');
+    if (!Audio.isReady()) return;
+
+    const saved = State.questParams;
+    const wave    = saved.withered?.w2_wave?.value || saved.vco?.wave?.value || 'sawtooth';
+    const revSize = parseFloat(saved.resonator?.res_freq?.value || saved.reverb?.reverb_size?.value || 4.0);
+    const fmRatio = parseFloat(saved.fm?.fm_ratio?.value || 2);
+
+    Audio.setWaveform(wave);
+    Audio.setAttack(0.3); Audio.setDecay(0.2); Audio.setSustain(0.7); Audio.setRelease(2.0);
+    Audio.setVolume(0.65);
+    Audio.setReverbSize(Math.max(3.5, revSize)); Audio.setReverb(0.55);
+    Audio.setDelay(0.5, 0.333, 0.5);
+    Audio.enableVCF(true); Audio.setCutoff(1200); Audio.setResonance(4);
+    Audio.setRingMod(fmRatio, 0.3);
+    Audio.startLFO(0.12, 0.08);
+
+    await _sleep(1500);
+    _setStatus('All frequencies at once…');
+
+    const stepMs = (60 / BOSS_BPM) * 1000;
+    for (let i = 0; i < BOSS_STEPS.length; i++) {
+      if (!Audio.isReady()) break;
+      Audio.gateOn(BOSS_STEPS[i]);
+      _spawnParticles();
+      await _sleep(stepMs * 0.85);
+      Audio.gateOff();
+      await _sleep(stepMs * 0.15);
+      if (i === 4)  _setStatus('Every encounter is here…');
+      if (i === 8)  _setStatus('Every roll, every cable, every choice…');
+      if (i === 12) _setStatus('The synthesis of synthesis…');
+    }
+
+    // Final hold on the origin note
+    Audio.gateOn(220);
+    _setStatus('220 Hz. The first note. The last note.');
+    await _sleep(5000);
+    Audio.gateOff();
+    await _sleep(2000);
+
+    _phase = 'resolve';
+    await _resolve();
+  }
+
+  async function _resolve() {
+    _setStatus('');
+    State.startQuest('microcosm');
+    State.completeQuest();
+    Audio.stopVoice(3.0);
+    await _sleep(1500);
+    _stopViz();
+    _showCredits();
+  }
+
+  function _showCredits() {
+    const learned = document.getElementById('credits-learned');
+    if (learned) {
+      learned.innerHTML = QUESTS.filter(q => State.progress[q.id] && !q.isFinale && !q.isFinalBoss).map(q => `
+        <div class="credits-learned-row">
+          <span class="cl-module">${q.id.toUpperCase()}</span>
+          <span class="cl-entity">${q.entityName}</span>
+        </div>`).join('');
+    }
+    UI.show('screen-credits');
+    _startStars();
+  }
+
+  function _setStatus(txt) {
+    const el = document.getElementById('finale-status');
+    if (el) el.textContent = txt;
+  }
+
+  function _startViz() {
+    _stopViz();
+    const canvas = document.getElementById('finale-canvas');
+    if (!canvas) return;
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const draw = () => {
+      _rafId = requestAnimationFrame(draw);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0,0,W,H);
+      const cx = W/2, cy = H/2;
+      const t = Date.now()/1000;
+
+      // Multi-color rotating rings (all module colors)
+      if (_phase === 'playing') {
+        const colors = ['#aa44bb','#2277bb','#aa0000','#9922aa','#228866','#cc9900','#3388aa','#cc2200'];
+        colors.forEach((c,i) => {
+          const r = 40 + i*18;
+          const a = t*(0.3+i*0.07) + i*Math.PI/4;
+          ctx.beginPath();
+          ctx.arc(cx+Math.cos(a)*3, cy+Math.sin(a)*3, r, a, a+Math.PI*1.4);
+          ctx.strokeStyle = c + '88';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+      }
+
+      // Particles
+      _particles = _particles.filter(p => p.life > 0);
+      _particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.life -= 0.015;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${p.rgb},${p.life})`;
+        ctx.fill();
+      });
+    };
+    draw();
+  }
+
+  function _spawnParticles() {
+    const canvas = document.getElementById('finale-canvas');
+    if (!canvas) return;
+    const cx = canvas.width/2, cy = canvas.height/2;
+    const rgbs = ['170,68,187','34,119,187','170,0,0','153,34,170'];
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random()*Math.PI*2;
+      const speed = 1.5+Math.random()*3;
+      _particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+        r: 1+Math.random()*3,
+        life: 0.8+Math.random()*0.4,
+        rgb: rgbs[Math.floor(Math.random()*rgbs.length)],
+      });
+    }
+  }
+
+  function _stopViz() {
+    if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+  }
+
+  function _startStars() {
+    const canvas = document.getElementById('credits-stars');
+    if (!canvas) return;
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    const ctx = canvas.getContext('2d');
+    const stars = Array.from({length:150},()=>({
+      x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+      r:0.5+Math.random()*2, a:0.2+Math.random()*0.7,
+      da:(Math.random()-0.5)*0.01,
+      hue: Math.floor(Math.random()*360),
+    }));
+    const draw = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      stars.forEach(s=>{
+        s.a=Math.max(0.05,Math.min(0.9,s.a+s.da));
+        if(s.a<=0.05||s.a>=0.9)s.da*=-1;
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${s.hue},80%,70%,${s.a})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    };
+    draw();
+  }
+
+  function _sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+  return { start };
+})();
+
+/* ============================================================
    INIT
    ============================================================ */
 function init() {
   State.load();
 
   // Restore progress into QUESTS array
-  let firstLocked = true;
   QUESTS.forEach((q, i) => {
     if (State.progress[q.id]) {
       q.complete = true;
       q.locked   = false;
-      // Also unlock next
       if (i + 1 < QUESTS.length) QUESTS[i + 1].locked = false;
-    } else if (firstLocked && i === 0) {
-      q.locked = false;  // Quest 1 always unlocked
     }
   });
-  QUESTS[0].locked = false; // always
+  QUESTS[0].locked = false; // Wing 1 quest 1 always unlocked
+
+  // Restore Wing 2 unlock state
+  if (State.wing2Unlocked) {
+    const firstW2 = QUESTS.find(q => q.wing === 2);
+    if (firstW2) firstW2.locked = false;
+  }
+
+  // Unlock Wing 1 finale if all base Wing 1 quests done
+  const w1Base = QUESTS.filter(q => (!q.wing || q.wing === 1) && !q.isFinale);
+  const w1Finale = QUESTS.find(q => q.isFinale);
+  if (w1Finale && w1Base.every(q => State.progress[q.id])) w1Finale.locked = false;
+
+  // Unlock Micr0c0sm if all Wing 2 base quests done
+  const w2Base = QUESTS.filter(q => q.wing === 2 && !q.isFinalBoss);
+  const microcosm = QUESTS.find(q => q.isFinalBoss);
+  if (microcosm && w2Base.every(q => State.progress[q.id])) microcosm.locked = false;
 
   // Blood drip effect + sprite decorations on title
   spawnDrips();
