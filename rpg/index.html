@@ -1862,6 +1862,40 @@ canvas { display: block; }
   min-height: 1.5em;
 }
 
+/* ── Micr0c0sm battle UI ─────────────────────────────────── */
+.mc-battle-ui {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.9rem; max-width: 560px; width: 100%;
+}
+.mc-phase-label {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  letter-spacing: 0.35em; color: #aa44bb; text-transform: uppercase;
+}
+.mc-challenge {
+  font-family: var(--font-serif); font-size: 0.87rem;
+  color: var(--text-dim); line-height: 1.75; text-align: center; max-width: 480px;
+}
+.mc-instruction {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  letter-spacing: 0.2em; color: #dd88ff;
+}
+.mc-dice-tray {
+  display: flex; justify-content: center;
+  padding: 0.4rem 0; min-height: 90px; align-items: center;
+}
+.mc-result {
+  font-family: var(--font-mono); font-size: 1.05rem;
+  color: var(--gold); min-height: 1.6em; letter-spacing: 0.1em; text-align: center;
+}
+.mc-result.flash { animation: result-flash 0.45s ease-out; }
+.mc-theory {
+  font-family: var(--font-serif); font-size: 0.8rem; font-style: italic;
+  color: var(--text-dim); max-width: 460px; text-align: center;
+  line-height: 1.7; min-height: 3.5em;
+}
+.mc-continue { margin-top: 0.4rem; }
+.finale-entity.rolling { animation: entity-shake 0.5s ease-in-out; }
+
 /* ============================================================
    CREDITS SCREEN
    ============================================================ */
@@ -2292,6 +2326,15 @@ canvas { display: block; }
     <h1 class="finale-title" id="finale-title">The Final Frequency</h1>
     <div class="finale-lore" id="finale-lore"></div>
     <div class="finale-status" id="finale-status"></div>
+    <div id="mc-battle-ui" class="mc-battle-ui" style="display:none;">
+      <div id="mc-phase-label" class="mc-phase-label"></div>
+      <div id="mc-challenge" class="mc-challenge"></div>
+      <div id="mc-instruction" class="mc-instruction"></div>
+      <div id="mc-dice-tray" class="mc-dice-tray"></div>
+      <div id="mc-result" class="mc-result"></div>
+      <div id="mc-theory" class="mc-theory"></div>
+      <button id="mc-continue-btn" class="btn btn-gold mc-continue" style="display:none" onclick="Microcosm._onContinue()">The signal holds. Continue →</button>
+    </div>
   </div>
 </div>
 
@@ -2341,9 +2384,6 @@ canvas { display: block; }
       <div class="credits-person"><span class="credits-name">Kasbo</span><span class="credits-role">who put warmth inside the machine</span></div>
       <div class="credits-person"><span class="credits-name">Neon Muon</span><span class="credits-role">who bent the signal until it spoke</span></div>
     </div>
-
-    <div class="credits-spacer"></div>
-    <div class="credits-tech">Web Audio API · nm² ModSynth</div>
 
     <div class="credits-spacer"></div>
     <div class="credits-final">You are no longer the Hunter.<br>You are the Composer.</div>
@@ -10260,95 +10300,321 @@ const Finale = (() => {
    ============================================================ */
 const Microcosm = (() => {
   let _rafId = null;
-  let _phase = 'intro';
+  let _vizMode = 'idle';
   let _particles = [];
+  let _currentPhaseIdx = 0;
+  let _currentFreq = 220;
+  let _rollLocked = false;
+  let _transitioning = false;
 
-  // Descends through all learned timbres then resolves to the origin note
-  const BOSS_STEPS = [
-    440.00, 392.00, 329.63, 293.66, 261.63,
-    220.00, 196.00, 164.81, 146.83, 130.81,
-    110.00, 98.00,  65.41,
-    110.00, 220.00, 440.00,
+  // ── Phase data ───────────────────────────────────────────────────────────────
+
+  const PHASES = [
+    {
+      number: 'PHASE I',
+      label: 'THE FRACTURE',
+      dice: 8,
+      challenge: 'Micr0c0sm has no form. All frequencies converge simultaneously — noise without shape, signal without direction. Your first task: isolate the dominant voice.',
+      instruction: 'ROLL TO IDENTIFY THE SIGNAL',
+      spriteScale: 6,
+      baseAudio() {
+        Audio.setWaveform('sawtooth'); Audio.setFrequency(220);
+        Audio.enableVCF(true); Audio.setCutoff(700); Audio.setResonance(5);
+        Audio.setDrunkWalk(3, 70); Audio.setReverb(0.3); Audio.setVolume(0.55);
+      },
+      roll(r) {
+        const opts = [
+          { label: 'OSCILLATOR CORE', display: 'VCO dominant',
+            theory: 'The oscillator is the origin — a single waveform generates the entire harmonic series. Everything in synthesis begins here, at the fundamental frequency.',
+            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(3000); Audio.setResonance(2); Audio.stopDrunkWalk(); } },
+          { label: 'FILTER BREATH', display: 'VCF dominant',
+            theory: 'The filter shapes timbre by removing frequencies. High resonance at the cutoff frequency creates a singing peak — the filter becomes its own voice.',
+            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(380); Audio.setResonance(18); Audio.stopDrunkWalk(); } },
+          { label: 'LFO PULSE', display: 'Modulation dominant',
+            theory: 'The LFO is the pulse of the machine — a slow oscillator that modulates parameters, creating movement and life where there would only be stasis.',
+            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(1800); Audio.startLFO(1.4, 0.22); Audio.stopDrunkWalk(); } },
+          { label: 'PERCUSSIVE DECAY', display: 'ADSR dominant',
+            theory: 'The envelope is time given to sound — how it arrives, how it sustains, how it dies. Shape is character. Duration is meaning. The ADSR envelope is the voice\'s biography.',
+            audio() { Audio.setWaveform('sine'); Audio.enableVCF(false); Audio.setAttack(0.001); Audio.setDecay(1.1); Audio.setSustain(0.0); Audio.setRelease(0.6); Audio.stopDrunkWalk(); } },
+          { label: 'SPATIAL MASS', display: 'Reverb dominant',
+            theory: 'Reverb models acoustic space — the sound of the room that holds the note. Large decay times simulate cathedrals, caves, the space between thoughts.',
+            audio() { Audio.setWaveform('sine'); Audio.enableVCF(false); Audio.setAttack(0.9); Audio.setReverbSize(7); Audio.setReverb(0.85); Audio.stopDrunkWalk(); } },
+          { label: 'LADDER DRIVE', display: 'Saturation dominant',
+            theory: 'The transistor ladder filter adds harmonic richness through saturation — warmth and weight that no purely linear filter can produce. The Moog sound.',
+            audio() { Audio.setWaveform('sawtooth'); Audio.setDrive(4.5); Audio.enableVCF(true); Audio.setCutoff(900); Audio.setResonance(9); Audio.stopDrunkWalk(); } },
+          { label: 'RING FRACTURE', display: 'Ring Mod dominant',
+            theory: 'Ring modulation multiplies two signals, producing sum and difference sidebands — inharmonic, metallic, alien. Sounds that have no counterpart in the natural world.',
+            audio() { Audio.setWaveform('sine'); Audio.setRingMod(3.14, 0.78); Audio.enableVCF(false); Audio.stopDrunkWalk(); } },
+          { label: 'CHAOS WALK', display: 'Stochastic dominant',
+            theory: 'Random walks, sample-and-hold, Turing patterns — stochastic processes give the machine memory without determinism. Chance becomes structure. Noise becomes melody.',
+            audio() { Audio.setWaveform('triangle'); Audio.enableVCF(true); Audio.setCutoff(1400); Audio.setDrunkWalk(7, 62); } },
+        ][r - 1];
+        opts.audio();
+        return { label: opts.label, display: opts.display, theory: opts.theory };
+      },
+    },
+    {
+      number: 'PHASE II',
+      label: 'THE CONVERGENCE',
+      dice: 12,
+      challenge: 'The dominant voice is found. Now Micr0c0sm begins to cohere — a single pitch emerging from the noise. All of frequency space narrows to one resonant node.',
+      instruction: 'ROLL TO TUNE THE RESONANT NODE',
+      spriteScale: 8,
+      baseAudio() {
+        Audio.enableVCF(true); Audio.setCutoff(1400); Audio.setResonance(11);
+        Audio.setLFORate(0.14); Audio.setLFODepth(0.06); Audio.startLFO();
+        Audio.setReverb(0.35); Audio.setVolume(0.6);
+      },
+      roll(r) {
+        const notes = [
+          { freq: 110.00, name: 'A2',  display: 'A2 — 110 Hz',
+            theory: '110 Hz: the original Singing Wound frequency. The first note you ever rolled in Moogham\'s underbelly. Micr0c0sm recognizes it. It was always waiting here.' },
+          { freq: 116.54, name: 'A♯2', display: 'A♯2 — 116.5 Hz',
+            theory: 'A♯2: the blue note, flattened by grief. The frequency of things left unsaid in Moogham\'s outer districts, where the Hunters go quiet.' },
+          { freq: 123.47, name: 'B2',  display: 'B2 — 123.5 Hz',
+            theory: 'B2: the leading tone — always reaching upward toward C, never arriving on its own. The frequency of perpetual anticipation.' },
+          { freq: 130.81, name: 'C3',  display: 'C3 — 130.8 Hz',
+            theory: 'C3: the Hollow frequency. Named by Moogham\'s old cartographers for the emptiness it describes in the lower underbelly, where sound goes to diminish.' },
+          { freq: 138.59, name: 'C♯3', display: 'C♯3 — 138.6 Hz',
+            theory: 'C♯3: Phrygian tonic — dark, weighted with centuries of minor thirds. Historically, the sound of a door closing. Permanently.' },
+          { freq: 146.83, name: 'D3',  display: 'D3 — 146.8 Hz',
+            theory: 'D3: the midpoint — neither grief nor joy, but the space between. The frequency of waiting. Of standing at the threshold before the encounter begins.' },
+          { freq: 155.56, name: 'D♯3', display: 'D♯3 — 155.6 Hz',
+            theory: 'D♯3: the tritone relative. Unstable, dissonant — historically called diabolus in musica, the devil\'s interval. Micr0c0sm appreciates the irony.' },
+          { freq: 164.81, name: 'E3',  display: 'E3 — 164.8 Hz',
+            theory: 'E3: major third from C — the first overtone the human ear hears as consonant. Brightness begins here. The first note that doesn\'t feel like falling.' },
+          { freq: 174.61, name: 'F3',  display: 'F3 — 174.6 Hz',
+            theory: 'F3: the subdominant. Stable, restful — the frequency of arrival. Something large settles into it without effort.' },
+          { freq: 185.00, name: 'F♯3', display: 'F♯3 — 185 Hz',
+            theory: 'F♯3: the Lydian raised fourth — the sound of open sky, of possibility not yet foreclosed. The frequency the cartographers associated with unmapped territory.' },
+          { freq: 196.00, name: 'G3',  display: 'G3 — 196 Hz',
+            theory: 'G3: perfect fifth from C — the most consonant interval after the octave. The spine of Western harmony, the frequency around which all chords orient.' },
+          { freq: 207.65, name: 'G♯3', display: 'G♯3 — 207.7 Hz',
+            theory: 'G♯3: the augmented fifth — the boundary between major and minor, between certainty and doubt. Micr0c0sm oscillates here at its most coherent.' },
+        ][r - 1];
+        _currentFreq = notes.freq;
+        Audio.setFrequency(notes.freq);
+        Audio.setCutoff(notes.freq * 5.5);
+        return { label: notes.name, display: notes.display, theory: notes.theory };
+      },
+    },
+    {
+      number: 'PHASE III',
+      label: 'THE SYNTHESIS',
+      dice: 6,
+      challenge: 'The Core has a pitch. The last question is form — what texture will carry the origin into the world. You have learned all of this. Every encounter has led here. Name the final timbre.',
+      instruction: 'ROLL TO SPEAK THE FINAL TIMBRE',
+      spriteScale: 10,
+      baseAudio() {
+        Audio.setReverbSize(5); Audio.setReverb(0.45);
+        Audio.setDelay(0.4, 0.375, 0.42);
+        Audio.setLFORate(0.07); Audio.setLFODepth(0.035); Audio.startLFO();
+        Audio.setVolume(0.62);
+      },
+      roll(r) {
+        const forms = [
+          { label: 'PURE SINE', display: 'The Foundation Tone',
+            theory: 'The sine wave contains only the fundamental — no overtones, no complexity. The most elemental sound a synthesizer can produce. All of synthesis begins and ends here.',
+            audio() { Audio.setWaveform('sine'); Audio.enableVCF(false); Audio.setReverb(0.2); } },
+          { label: 'SAW DRONE', display: 'The Harmonic Series',
+            theory: 'The sawtooth contains every harmonic in descending amplitude — the complete harmonic series in a single waveform. Maximum information density from a single oscillator.',
+            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(2200); Audio.setReverb(0.48); Audio.setReverbSize(5); } },
+          { label: 'CHORUSED TRIANGLE', display: 'The Ensemble Voice',
+            theory: 'Triangle waves have only odd harmonics, falling as 1/n². Chorus adds slight pitch drift between layers — the warmth of ensemble playing, from one oscillator.',
+            audio() { Audio.setWaveform('triangle'); Audio.setChorus(0.55, 0.55, 0.62); Audio.setReverb(0.4); } },
+          { label: 'FOLDED WAVE', display: 'The Complex Overtone',
+            theory: 'Wavefolding adds new harmonics by reflecting the signal when it exceeds a threshold — non-linear complexity from simple input. More than the oscillator alone knows how to be.',
+            audio() { Audio.setWaveform('sine'); Audio.setFold(3.8); Audio.setReverb(0.38); } },
+          { label: 'FM BELL', display: 'The Inharmonic Resonance',
+            theory: 'Non-integer FM ratios produce inharmonic spectra — bell tones, metallic percussion, sounds that no acoustic instrument has ever made. Pure synthesis.',
+            audio() { Audio.setWaveform('sine'); Audio.setRingMod(2.73, 0.48); Audio.setReverb(0.55); Audio.setReverbSize(6); } },
+          { label: 'NOISE CATHEDRAL', display: 'The Spectral Cloud',
+            theory: 'White noise contains all frequencies at equal amplitude. Narrow VCF resonance shapes it into pitched breath — the synthesizer approximating the wind, the crowd, the living city.',
+            audio() { Audio.setNoise(0.38, 'white'); Audio.enableVCF(true); Audio.setCutoff(760); Audio.setResonance(17); Audio.setReverb(0.65); Audio.setReverbSize(7); } },
+        ][r - 1];
+        forms.audio();
+        return { label: forms.label, display: forms.display, theory: forms.theory };
+      },
+    },
   ];
-  const BOSS_BPM = 66;
+
+  // ── Public entry point ───────────────────────────────────────────────────────
 
   async function start() {
     BGMusic.fadeOut(2.0);
     if (!Audio.isReady()) await Audio.init();
     Audio.resetChain();
-    _phase = 'intro';
+    _vizMode = 'chaos';
     _particles = [];
+    _currentPhaseIdx = 0;
+    _currentFreq = 220;
+    _rollLocked = false;
+    _transitioning = false;
 
     const q = QUESTS.find(q => q.isFinalBoss);
-    document.getElementById('finale-entity').innerHTML = renderSprite(SPRITES.microcosm, 10);
-    document.getElementById('finale-title').textContent = 'Micr0c0sm';
     const hn = State.player.name || 'Hunter';
-    document.getElementById('finale-lore').innerHTML = q.lore
+
+    _el('mc-battle-ui').style.display = 'none';
+    _el('mc-continue-btn').style.display = 'none';
+    _el('finale-lore').style.display = '';
+    _el('finale-status').style.display = '';
+
+    _el('finale-entity').innerHTML = renderSprite(SPRITES.microcosm, 6);
+    _el('finale-title').textContent = 'Micr0c0sm';
+    _el('finale-lore').innerHTML = q.lore
       .replace(/\n\n/g,'<br><br>')
       .replace(/\{hunter\}/g,`<em style="color:var(--gold);font-style:normal;font-weight:bold;">${hn}</em>`);
-    document.getElementById('finale-status').textContent = '';
+    _el('finale-status').textContent = '';
 
     UI.show('screen-finale');
     _startViz();
-    await _sleep(3000);
-    await _playBoss();
-  }
 
-  async function _playBoss() {
-    _phase = 'playing';
-    _setStatus('Micr0c0sm awakens…');
-    if (!Audio.isReady()) return;
-
-    const saved = State.questParams;
-    const wave    = saved.withered?.w2_wave?.value || saved.vco?.wave?.value || 'sawtooth';
-    const revSize = parseFloat(saved.resonator?.res_freq?.value || saved.reverb?.reverb_size?.value || 4.0);
-    const fmRatio = parseFloat(saved.fm?.fm_ratio?.value || 2);
-
-    Audio.setWaveform(wave);
-    Audio.setAttack(0.3); Audio.setDecay(0.2); Audio.setSustain(0.7); Audio.setRelease(2.0);
-    Audio.setVolume(0.65);
-    Audio.setReverbSize(Math.max(3.5, revSize)); Audio.setReverb(0.55);
-    Audio.setDelay(0.5, 0.333, 0.5);
-    Audio.enableVCF(true); Audio.setCutoff(1200); Audio.setResonance(4);
-    Audio.setRingMod(fmRatio, 0.3);
-    Audio.startLFO(0.12, 0.08);
-
-    await _sleep(1500);
-    _setStatus('All frequencies at once…');
-
-    const stepMs = (60 / BOSS_BPM) * 1000;
-    for (let i = 0; i < BOSS_STEPS.length; i++) {
-      if (!Audio.isReady()) break;
-      Audio.gateOn(BOSS_STEPS[i]);
-      _spawnParticles();
-      await _sleep(stepMs * 0.85);
-      Audio.gateOff();
-      await _sleep(stepMs * 0.15);
-      if (i === 4)  _setStatus('Every encounter is here…');
-      if (i === 8)  _setStatus('Every roll, every cable, every choice…');
-      if (i === 12) _setStatus('The synthesis of synthesis…');
+    // Atmospheric intro drone
+    if (Audio.isReady()) {
+      Audio.setWaveform('sawtooth'); Audio.setFrequency(55);
+      Audio.enableVCF(true); Audio.setCutoff(280); Audio.setResonance(2);
+      Audio.setReverb(0.55); Audio.setReverbSize(8); Audio.setVolume(0.3);
+      Audio.gateOn(55);
     }
 
-    // Final hold on the origin note
-    Audio.gateOn(220);
-    _setStatus('220 Hz. The first note. The last note.');
-    await _sleep(5000);
-    Audio.gateOff();
-    await _sleep(2000);
+    await _sleep(1400);
+    _el('finale-status').textContent = 'All frequencies at once…';
+    await _sleep(2600);
+    if (Audio.isReady()) Audio.gateOff();
+    await _sleep(500);
 
-    _phase = 'resolve';
-    await _resolve();
+    _el('finale-lore').style.display = 'none';
+    _el('finale-status').style.display = 'none';
+    await _startPhase(0);
   }
 
-  async function _resolve() {
-    _setStatus('');
+  // ── Phase management ─────────────────────────────────────────────────────────
+
+  async function _startPhase(idx) {
+    _currentPhaseIdx = idx;
+    _rollLocked = false;
+    _transitioning = false;
+    const phase = PHASES[idx];
+    _vizMode = ['chaos', 'converge', 'crystallize'][idx];
+
+    if (Audio.isReady()) {
+      Audio.resetChain();
+      await new Promise(r => setTimeout(r, 130));
+      Audio.setFrequency(_currentFreq);
+      Audio.setAttack(0.18); Audio.setDecay(0.2); Audio.setSustain(0.75); Audio.setRelease(2.5);
+      phase.baseAudio();
+      Audio.gateOn(_currentFreq);
+    }
+
+    _el('finale-entity').innerHTML = renderSprite(SPRITES.microcosm, phase.spriteScale);
+    _el('mc-phase-label').textContent = `${phase.number}  —  ${phase.label}`;
+    _el('mc-challenge').textContent = phase.challenge;
+    _el('mc-instruction').textContent = phase.instruction;
+    _el('mc-result').textContent = '';
+    _el('mc-result').classList.remove('flash');
+    _el('mc-theory').textContent = '';
+    _el('mc-continue-btn').style.display = 'none';
+
+    const tray = _el('mc-dice-tray');
+    tray.innerHTML = '';
+    const die = DiceGraphics.makeDieCanvas(phase.dice, () => _onRoll(phase, die));
+    tray.appendChild(die);
+
+    _el('mc-battle-ui').style.display = 'flex';
+  }
+
+  function _onRoll(phase, dieEl) {
+    if (_rollLocked || _transitioning) return;
+    _rollLocked = true;
+
+    const raw = Math.ceil(Math.random() * phase.dice);
+    const dieCanvas = dieEl.querySelector('canvas');
+    if (dieCanvas && dieCanvas._animateRoll) dieCanvas._animateRoll(raw);
+
+    setTimeout(() => {
+      const result = phase.roll(raw);
+
+      if (Audio.isReady()) {
+        Audio.gateOff();
+        setTimeout(() => { if (Audio.isReady()) Audio.gateOn(_currentFreq); }, 85);
+      }
+
+      _spawnParticles();
+
+      const resultEl = _el('mc-result');
+      resultEl.textContent = `${result.label}  —  ${result.display}`;
+      resultEl.classList.remove('flash');
+      void resultEl.offsetWidth;
+      resultEl.classList.add('flash');
+
+      _el('mc-theory').textContent = result.theory;
+      _el('mc-continue-btn').style.display = 'inline-block';
+
+      const sprite = _el('finale-entity');
+      sprite.classList.remove('rolling');
+      void sprite.offsetWidth;
+      sprite.classList.add('rolling');
+      setTimeout(() => sprite.classList.remove('rolling'), 500);
+
+    }, 545);
+  }
+
+  function _onContinue() {
+    if (_transitioning) return;
+    _transitioning = true;
+    _el('mc-battle-ui').style.display = 'none';
+    if (Audio.isReady()) Audio.gateOff();
+
+    if (_currentPhaseIdx < PHASES.length - 1) {
+      setTimeout(() => _startPhase(_currentPhaseIdx + 1), 650);
+    } else {
+      setTimeout(() => _finalResolution(), 650);
+    }
+  }
+
+  // ── Ceremonial resolution ────────────────────────────────────────────────────
+
+  async function _finalResolution() {
+    _vizMode = 'resolve';
+    _el('finale-lore').style.display = '';
+    _el('finale-status').style.display = '';
+    _el('finale-entity').innerHTML = renderSprite(SPRITES.microcosm, 10);
+
+    const q = QUESTS.find(q => q.isFinalBoss);
+    const hn = State.player.name || 'Hunter';
+    _el('finale-lore').innerHTML = q.victoryLore
+      .replace(/\n\n/g,'<br><br>')
+      .replace(/\{hunter\}/g,`<em style="color:var(--gold);font-style:normal;font-weight:bold;">${hn}</em>`);
+    _el('finale-status').textContent = '';
+
+    if (Audio.isReady()) {
+      Audio.resetChain();
+      await new Promise(r => setTimeout(r, 130));
+      Audio.setWaveform('sine'); Audio.setFrequency(220);
+      Audio.setAttack(0.6); Audio.setDecay(0.3); Audio.setSustain(0.82); Audio.setRelease(4.5);
+      Audio.setReverb(0.58); Audio.setReverbSize(7); Audio.setVolume(0.55);
+      Audio.setDelay(0.5, 0.333, 0.42);
+      Audio.startLFO(0.09, 0.038);
+    }
+
+    await _sleep(900);
+    _el('finale-status').textContent = '220 Hz. The first note. The last note.';
+    if (Audio.isReady()) Audio.gateOn(220);
+    await _sleep(5500);
+    if (Audio.isReady()) Audio.gateOff();
+    await _sleep(1000);
+    _el('finale-status').textContent = 'Micr0c0sm resolves.';
+    await _sleep(2200);
+
+    _stopViz();
     State.startQuest('microcosm');
     State.completeQuest();
     Audio.stopVoice(3.0);
-    await _sleep(1500);
-    _stopViz();
+    await _sleep(1000);
     _showCredits();
   }
+
+  // ── Credits ───────────────────────────────────────────────────────────────────
 
   function _showCredits() {
     const learned = document.getElementById('credits-learned');
@@ -10363,10 +10629,11 @@ const Microcosm = (() => {
     _startStars();
   }
 
-  function _setStatus(txt) {
-    const el = document.getElementById('finale-status');
-    if (el) el.textContent = txt;
-  }
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  function _el(id) { return document.getElementById(id); }
+
+  // ── Visualizer ────────────────────────────────────────────────────────────────
 
   function _startViz() {
     _stopViz();
@@ -10381,30 +10648,84 @@ const Microcosm = (() => {
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.fillRect(0,0,W,H);
-      const cx = W/2, cy = H/2;
-      const t = Date.now()/1000;
+      ctx.fillRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2;
+      const t = Date.now() / 1000;
 
-      // Multi-color rotating rings (all module colors)
-      if (_phase === 'playing') {
-        const colors = ['#aa44bb','#2277bb','#aa0000','#9922aa','#228866','#cc9900','#3388aa','#cc2200'];
-        colors.forEach((c,i) => {
-          const r = 40 + i*18;
-          const a = t*(0.3+i*0.07) + i*Math.PI/4;
+      if (_vizMode === 'chaos') {
+        const colors = ['#aa44bb','#2277bb','#aa0000','#228866','#cc9900','#3388aa','#cc2200','#9922aa'];
+        colors.forEach((c, i) => {
+          const r = 28 + i * 20;
+          const a = t * (0.45 + i * 0.12) + i * Math.PI * 0.47;
+          const ox = Math.sin(t * 0.72 + i * 1.1) * 14;
+          const oy = Math.cos(t * 0.53 + i * 1.4) * 14;
           ctx.beginPath();
-          ctx.arc(cx+Math.cos(a)*3, cy+Math.sin(a)*3, r, a, a+Math.PI*1.4);
-          ctx.strokeStyle = c + '88';
-          ctx.lineWidth = 2;
+          ctx.arc(cx + ox, cy + oy, r, a, a + Math.PI * (1.15 + Math.sin(t + i) * 0.28));
+          ctx.strokeStyle = c + '99';
+          ctx.lineWidth = 2.5;
           ctx.stroke();
         });
+      } else if (_vizMode === 'converge') {
+        const colors = ['#aa44bb','#8833cc','#6622dd','#5511ee','#4400ff'];
+        colors.forEach((c, i) => {
+          const maxR = 90 - i * 13;
+          const r = Math.max(6, maxR * (0.55 + Math.sin(t * (0.65 + i * 0.09) + i) * 0.36));
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.strokeStyle = c + 'aa';
+          ctx.lineWidth = 1.5 + i * 0.4;
+          ctx.stroke();
+        });
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4 + Math.sin(t * 3.2) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#dd88ff';
+        ctx.fill();
+      } else if (_vizMode === 'crystallize') {
+        const r = 58 + Math.sin(t * 1.6) * 14;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#dd88ffcc';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 14, 0, Math.PI * 2);
+        ctx.strokeStyle = '#aa44bb44';
+        ctx.lineWidth = 9;
+        ctx.stroke();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + t * 0.32;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(a) * (r - 8), cy + Math.sin(a) * (r - 8));
+          ctx.strokeStyle = '#dd88ff55';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5 + Math.sin(t * 4.2) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      } else if (_vizMode === 'resolve') {
+        for (let i = 0; i < 3; i++) {
+          const c2 = ((t * 0.48 + i / 3) % 1);
+          const r2 = c2 * Math.min(W, H) * 0.52;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r2, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(170,68,187,${(1 - c2) * 0.65})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8 + Math.sin(t * 2.1) * 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#dd88ff';
+        ctx.fill();
       }
 
-      // Particles
       _particles = _particles.filter(p => p.life > 0);
       _particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.015;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.012;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${p.rgb},${p.life})`;
         ctx.fill();
       });
@@ -10415,17 +10736,17 @@ const Microcosm = (() => {
   function _spawnParticles() {
     const canvas = document.getElementById('finale-canvas');
     if (!canvas) return;
-    const cx = canvas.width/2, cy = canvas.height/2;
-    const rgbs = ['170,68,187','34,119,187','170,0,0','153,34,170'];
-    for (let i = 0; i < 12; i++) {
-      const angle = Math.random()*Math.PI*2;
-      const speed = 1.5+Math.random()*3;
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const rgbs = ['170,68,187','34,119,187','170,0,0','153,34,170','221,136,255'];
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.5 + Math.random() * 4;
       _particles.push({
         x: cx, y: cy,
-        vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
-        r: 1+Math.random()*3,
-        life: 0.8+Math.random()*0.4,
-        rgb: rgbs[Math.floor(Math.random()*rgbs.length)],
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        r: 1 + Math.random() * 3,
+        life: 0.8 + Math.random() * 0.4,
+        rgb: rgbs[Math.floor(Math.random() * rgbs.length)],
       });
     }
   }
@@ -10439,29 +10760,29 @@ const Microcosm = (() => {
     if (!canvas) return;
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     const ctx = canvas.getContext('2d');
-    const stars = Array.from({length:150},()=>({
-      x:Math.random()*canvas.width, y:Math.random()*canvas.height,
-      r:0.5+Math.random()*2, a:0.2+Math.random()*0.7,
-      da:(Math.random()-0.5)*0.01,
-      hue: Math.floor(Math.random()*360),
+    const stars = Array.from({ length: 150 }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      r: 0.5 + Math.random() * 2, a: 0.2 + Math.random() * 0.7,
+      da: (Math.random() - 0.5) * 0.01,
+      hue: Math.floor(Math.random() * 360),
     }));
-    const draw = () => {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      stars.forEach(s=>{
-        s.a=Math.max(0.05,Math.min(0.9,s.a+s.da));
-        if(s.a<=0.05||s.a>=0.9)s.da*=-1;
-        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-        ctx.fillStyle=`hsla(${s.hue},80%,70%,${s.a})`;
+    const drawS = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      stars.forEach(s => {
+        s.a = Math.max(0.05, Math.min(0.9, s.a + s.da));
+        if (s.a <= 0.05 || s.a >= 0.9) s.da *= -1;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${s.hue},80%,70%,${s.a})`;
         ctx.fill();
       });
-      requestAnimationFrame(draw);
+      requestAnimationFrame(drawS);
     };
-    draw();
+    drawS();
   }
 
-  function _sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+  function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  return { start };
+  return { start, _onContinue };
 })();
 
 /* ============================================================
