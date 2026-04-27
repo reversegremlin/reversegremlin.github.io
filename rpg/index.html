@@ -2093,6 +2093,30 @@ canvas { display: block; }
   font-size: 1rem; margin-top: 1px; flex-shrink: 0;
 }
 
+/* ── First-cable tutorial ─────────────────────────────────── */
+.ws-cable-tutorial {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(6,3,2,0.9);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 1.1rem; padding: 2rem;
+}
+.ws-cable-tutorial-title {
+  color: var(--gold); font-size: 1.25rem; letter-spacing: 0.12em;
+  text-align: center; text-shadow: 0 0 14px #c9a84c55;
+}
+.ws-cable-tutorial-body {
+  color: var(--text); font-size: 0.9rem; line-height: 1.8;
+  max-width: 320px; text-align: center;
+}
+@keyframes ws-tut-pulse {
+  0%, 100% { box-shadow: 0 0 6px var(--gold), 0 0 16px #c9a84c66; transform: scale(1); }
+  50%       { box-shadow: 0 0 14px var(--gold), 0 0 30px #c9a84c99; transform: scale(1.3); }
+}
+.ws-jack.tutorial-pulse .ws-jack-dot {
+  animation: ws-tut-pulse 1.1s ease-in-out infinite;
+  border-color: var(--gold) !important;
+}
+
   </style>
 </head>
 <body>
@@ -8361,6 +8385,7 @@ const Workshop = (() => {
   let _d20Raf       = null;
   let _d20State     = null;
   let _weaponRaf    = null;
+  let _tutorialActive = false;
 
   // ── Public ────────────────────────────────────────────────────────────────
 
@@ -8413,6 +8438,14 @@ const Workshop = (() => {
       Audio.startVoice(savedNote);
       _setStatusDot('vco', 'pulsing');
     }, 150);
+
+    // First-cable tutorial — fires once when VCO + VCF are both mastered
+    _tutorialActive = false;
+    if (!localStorage.getItem('nm2rpg_cable_tutorial') && State.progress['vco'] && State.progress['vcf']) {
+      localStorage.setItem('nm2rpg_cable_tutorial', '1');
+      setTimeout(() => _showCableTutorial(), 500);
+      return;
+    }
 
     // Show welcome card first time (or if workshop hint is enabled)
     const seen = sessionStorage.getItem('ws-welcome-seen');
@@ -8496,6 +8529,39 @@ const Workshop = (() => {
       <button class="btn btn-gold btn-sm" onclick="document.getElementById('ws-welcome-card').remove()">I'm ready — let me play</button>
     `;
     wrap.appendChild(card);
+  }
+
+  function _showCableTutorial() {
+    const wrap = document.getElementById('ws-body-wrap');
+    if (!wrap) return;
+    _tutorialActive = true;
+    const overlay = document.createElement('div');
+    overlay.className = 'ws-cable-tutorial';
+    overlay.id = 'ws-cable-tutorial';
+    overlay.innerHTML = `
+      <div class="ws-cable-tutorial-title">The modules know each other.</div>
+      <div class="ws-cable-tutorial-body">
+        But you must connect them.<br><br>
+        Click the <strong style="color:var(--gold)">VCO OUT</strong> jack —<br>
+        then click <strong style="color:var(--gold)">VCF IN</strong>.<br>
+        A cable will appear.
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="Workshop._dismissCableTutorial()">Show me →</button>
+    `;
+    wrap.appendChild(overlay);
+  }
+
+  function _dismissCableTutorial() {
+    document.getElementById('ws-cable-tutorial')?.remove();
+    if (_jackEls['vco-out']) _jackEls['vco-out'].classList.add('tutorial-pulse');
+    if (_jackEls['vcf-in'])  _jackEls['vcf-in'].classList.add('connectable');
+  }
+
+  function _onTutorialCableConnected() {
+    _tutorialActive = false;
+    if (_jackEls['vco-out']) _jackEls['vco-out'].classList.remove('tutorial-pulse');
+    if (_jackEls['vcf-in'])  _jackEls['vcf-in'].classList.remove('connectable');
+    _setHint(null, null, false, '✦ <strong>Signal flows.</strong> The filter hears the oscillator.');
   }
 
   // ── Signal-flow strip ─────────────────────────────────────────────────────
@@ -10055,6 +10121,7 @@ const Workshop = (() => {
     });
     _applyConnections();
     _redrawCables();
+    if (routeKey === 'vco-out→vcf-in' && _tutorialActive) _onTutorialCableConnected();
   }
 
   function _disconnect(routeKey) {
@@ -10256,7 +10323,7 @@ const Workshop = (() => {
     if (!document.fullscreenElement) { btn.textContent = '⛶'; btn.title = 'Toggle fullscreen'; }
   });
 
-  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen };
+  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen, _dismissCableTutorial };
 })();
 
 /* ============================================================
