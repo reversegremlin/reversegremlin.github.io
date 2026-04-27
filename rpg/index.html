@@ -2093,6 +2093,25 @@ canvas { display: block; }
   font-size: 1rem; margin-top: 1px; flex-shrink: 0;
 }
 
+/* ── Wing tabs ───────────────────────────────────────────── */
+.ws-wing-tabs {
+  display: flex; gap: 2px; align-items: flex-end;
+  padding: 0.2rem 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+  background: #0d0a07f0; flex-shrink: 0;
+}
+.ws-wing-tab {
+  padding: 0.28rem 1rem;
+  font-size: 0.68rem; letter-spacing: 0.14em;
+  text-transform: uppercase; font-family: var(--font-mono);
+  background: transparent; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim); cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ws-wing-tab:hover { color: var(--text); }
+.ws-wing-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
 /* ── First-cable tutorial ─────────────────────────────────── */
 .ws-cable-tutorial {
   position: absolute; inset: 0; z-index: 200;
@@ -2229,6 +2248,10 @@ canvas { display: block; }
       <canvas id="ws-wave-canvas"></canvas>
     </div>
     <div id="ws-signal-strip" class="ws-signal-strip"></div>
+    <div class="ws-wing-tabs" id="ws-wing-tabs">
+      <button class="ws-wing-tab active" id="ws-wing-tab-1" onclick="Workshop._setWingTab(1)">Wing I</button>
+      <button class="ws-wing-tab" id="ws-wing-tab-2" onclick="Workshop._setWingTab(2)">Wing II</button>
+    </div>
     <div class="ws-body-wrap" id="ws-body-wrap">
       <div class="ws-modules" id="ws-modules"></div>
       <svg id="ws-cables" class="ws-cables-svg"></svg>
@@ -8410,6 +8433,7 @@ const Workshop = (() => {
   let _d20State     = null;
   let _weaponRaf    = null;
   let _tutorialActive = false;
+  let _activeWing   = 1;
 
   // ── Public ────────────────────────────────────────────────────────────────
 
@@ -8425,6 +8449,12 @@ const Workshop = (() => {
     _lfoRunning   = false;
     _seqSteps     = Array(8).fill(7);
     _seqStepEls   = [];
+
+    // Default wing: Wing I if any Wing I modules mastered, else Wing II
+    const hasW1 = QUESTS.some(q => State.progress[q.id] && (!q.wing || q.wing === 1));
+    _activeWing = hasW1 ? 1 : 2;
+    document.getElementById('ws-wing-tab-1')?.classList.toggle('active', _activeWing === 1);
+    document.getElementById('ws-wing-tab-2')?.classList.toggle('active', _activeWing === 2);
 
     // Wire seq step callback for step highlighting
     Audio.setOnSeqStep(step => {
@@ -9347,9 +9377,28 @@ const Workshop = (() => {
       </div>`;
       return;
     }
-    mastered.forEach(quest => container.appendChild(_buildPanel(quest)));
+    const toShow = mastered.filter(q => _activeWing === 2 ? q.wing === 2 : (!q.wing || q.wing === 1));
+    if (toShow.length === 0) {
+      const wingName = _activeWing === 2 ? 'Wing II' : 'Wing I';
+      container.innerHTML = `<div style="padding:2rem;color:var(--text-dim);font-style:italic;font-size:0.85rem;">
+        No ${wingName} modules mastered yet.<br>Continue your hunt on the map.
+      </div>`;
+    } else {
+      toShow.forEach(quest => container.appendChild(_buildPanel(quest)));
+    }
     _buildWeapons(container);
     requestAnimationFrame(_redrawCables);
+  }
+
+  function _setWingTab(n) {
+    _activeWing = n;
+    _selectedJack = null;
+    _jackEls = {};
+    _statusDots = {};
+    document.getElementById('ws-wing-tab-1')?.classList.toggle('active', n === 1);
+    document.getElementById('ws-wing-tab-2')?.classList.toggle('active', n === 2);
+    _buildModules();
+    _redrawCables();
   }
 
   // ── Instruments of Mastery ───────────────────────────────────────────────────
@@ -10372,7 +10421,7 @@ const Workshop = (() => {
     if (!document.fullscreenElement) { btn.textContent = '⛶'; btn.title = 'Toggle fullscreen'; }
   });
 
-  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen, _dismissCableTutorial };
+  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen, _dismissCableTutorial, _setWingTab };
 })();
 
 /* ============================================================
