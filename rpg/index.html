@@ -8057,6 +8057,26 @@ const VALID_ROUTES = {
     desc:  'The sequencer\'s rhythm drives the sidechain pump. The pattern breathes at its own tempo.',
   },
 
+  // ── Tape output chains ───────────────────────────────────────────────────
+  'tape-out→reverb-in': {
+    enable:  ()=>{ Audio.setDrive(2.5); Audio.setReverb(0.35); },
+    disable: ()=>Audio.setReverb(0),
+    label: 'Tape → Reverb',
+    desc: 'Saturated tape signal blooms into reverb. Warmth meets space.',
+  },
+  'tape-out→delay-in': {
+    enable:  ()=>{ Audio.setDrive(2.5); Audio.setDelay(0.38); },
+    disable: ()=>Audio.setDelay(0),
+    label: 'Tape → Delay',
+    desc: 'Saturated echoes — each repeat carries the tape warmth forward.',
+  },
+  'tape-out→chorus-in': {
+    enable:  ()=>{ Audio.setDrive(2.5); Audio.setChorus(0.4); },
+    disable: ()=>Audio.setChorus(0),
+    label: 'Tape → Chorus',
+    desc: 'Tape saturation feeds chorus shimmer. Warm and wide.',
+  },
+
   // ── Wing 2 CV routes ──────────────────────────────────────────────────────
   'chaos-cv-out→vco-freq-in':   { label:'Chaos → VCO Pitch',      desc:'The chaotic attractor drifts the oscillator frequency — unpredictable, wandering melody.' },
   'chaos-cv-out→vcf-cutoff-in': { label:'Chaos → Filter Cutoff',  desc:'Chaotic CV modulates the filter — timbral instability from the attractor field.' },
@@ -8140,6 +8160,7 @@ const _ROUTE_SOURCE_LABELS = {
   'reverb-out': 'Reverb',
   'fold-out':  'Wavefolder',
   'ring-out':  'Ring Mod',
+  'tape-out':  'Tape',
   // Wing 2 audio outputs
   'fl-out':   'Flanger',
   'bc-out':   'Bitcrusher',
@@ -8168,6 +8189,7 @@ const _ROUTE_SOURCE_TEXT = {
   'reverb-out': 'the reverberant signal',
   'fold-out':   'the wavefolded signal',
   'ring-out':   'the ring-modulated signal',
+  'tape-out':   'the tape-saturated signal',
   // Wing 2 audio outputs
   'fl-out':     'the flanged signal',
   'bc-out':     'the bit-crushed signal',
@@ -8215,6 +8237,7 @@ for (const [fromId, sourceLabel] of Object.entries(_ROUTE_SOURCE_LABELS)) {
     if (VALID_ROUTES[routeKey]) continue;
     if ((fromId === 'vcf-out' || fromId === 'ladder-out') && (toId === 'vcf-in' || toId === 'ladder-in')) continue;
     if ((fromId === 'reverb-out' || fromId === 'delay-out' || fromId === 'chorus-out' || fromId === 'phaser-out' || fromId === 'formant-out') && toId === 'vcf-in') continue;
+    if (fromId === 'tape-out' && toId === 'tape-in') continue;
     VALID_ROUTES[routeKey] = {
       label: `${sourceLabel} → ${target.label}`,
       desc: target.desc(_ROUTE_SOURCE_TEXT[fromId]),
@@ -8245,7 +8268,8 @@ const JACK_DEFS = {
   formant:    [{ id:'formant-in',   dir:'in',  label:'IN',   tip:'Audio in — adds vowel resonance' },
                { id:'formant-out',  dir:'out', label:'OUT',  tip:'Vowel-filtered output — chain to reverb or delay' }],
   turing:     [{ id:'turing-cv-out', dir:'out', label:'CV', tip:'Turing Machine CV out — pseudo-random pitch steps driving the VCO. Patch to VCO FREQ or effects.' }],
-  tape:       [{ id:'tape-in',      dir:'in',  label:'IN',   tip:'Audio in — adds tape saturation and flutter' }],
+  tape:       [{ id:'tape-in',      dir:'in',  label:'IN',   tip:'Audio in — adds tape saturation and flutter' },
+               { id:'tape-out',     dir:'out', label:'OUT',  tip:'Tape-saturated output — chain to reverb or delay for warm spatial sound' }],
   wavefolder: [{ id:'fold-in',      dir:'in',  label:'IN',   tip:'Audio in — adds wavefolder harmonics' },
                { id:'fold-out',     dir:'out', label:'OUT',  tip:'Wavefolder output — route folded harmonics onward' }],
   noise:      [{ id:'noise-out',    dir:'out', label:'OUT',  tip:'Noise output — patch to VCF IN for shaped noise' }],
@@ -9877,6 +9901,8 @@ const Workshop = (() => {
   function _buildRouteState() {
     const state = {
       lfoTarget: null,
+      lfoRate: null,
+      lfoDepth: null,
       filterEnabled: false,
       drive: 1,
       reverbMix: 0,
@@ -9895,6 +9921,8 @@ const Workshop = (() => {
       chainFormantToReverb: false,
       chainFormantToDelay: false,
       tapeFlutter: false,
+      drunkPitch: null,
+      arpPitch: false,
     };
 
     for (const routeKey of _connections.keys()) {
@@ -9954,8 +9982,22 @@ const Workshop = (() => {
       // ADSR ENV → VCF cutoff: real audio routing handled by Audio.connectEnvToFilter
       if (routeKey === 'adsr-env-out→vcf-cutoff-in') { state.envToFilter = true; continue; }
 
-      // Conceptual CV routes — audio already implicit, cable is pedagogical
-      if (toId === 'vco-freq-in' && fromId !== 'lfo-out') continue;
+      // CV source → VCO pitch: map to drunkwalk or arp approximation
+      if (toId === 'vco-freq-in' && fromId !== 'lfo-out') {
+        if (fromId === 'chaos-cv-out')
+          state.drunkPitch = { steps: 5, bpm: 80 };
+        else if (fromId === 'sh-cv-out')
+          state.drunkPitch = { steps: 2, bpm: 95 };
+        else if (fromId === 'qtz-cv-out')
+          state.drunkPitch = { steps: 1, bpm: 75 };
+        else if (fromId === 'arp-cv-out' || fromId === 'ck-gate-out' || fromId === 'chd-out')
+          state.arpPitch = true;
+        else if (!state.lfoTarget) {
+          // av-out, xy-y-out: gentle LFO on VCO as approximation
+          state.lfoTarget = 'vco'; state.lfoRate = 0.5; state.lfoDepth = 0.08;
+        }
+        continue;
+      }
       // Sidechain trigger: enable pumping
       if (toId === 'sidechain-in') { state.sidechainEnabled = true; continue; }
 
@@ -9983,12 +10025,23 @@ const Workshop = (() => {
       if (fromId === 'sp-out' || fromId === 'af-out') state.formantMix = Math.max(state.formantMix, 0.5);
       if (fromId === 'fm-out' || fromId === 'li-out') state.ringMix = Math.max(state.ringMix, 0.5);
       if (fromId === 'res-out' || fromId === 'bc-out' || fromId === 'wt-out') state.filterEnabled = true;
+      if (fromId === 'tape-out') { state.drive = Math.max(state.drive, 2.5); state.tapeFlutter = true; }
       if (toId === 'mx-in') state.reverbMix = Math.max(state.reverbMix, 0.25);
       if (toId === 'mc-in') { state.reverbMix = Math.max(state.reverbMix, 0.35); state.chorusMix = Math.max(state.chorusMix, 0.3); state.filterEnabled = true; }
       if (fromId === 'mx-out') state.reverbMix = Math.max(state.reverbMix, 0.25);
       if (fromId === 'mc-out') { state.reverbMix = Math.max(state.reverbMix, 0.35); state.filterEnabled = true; }
-      // CV → VCF cutoff: enable filter so cutoff modulation is audible
-      if (toId === 'vcf-cutoff-in') state.filterEnabled = true;
+      // CV → VCF cutoff: enable filter; CV sources get LFO sim at appropriate rate
+      if (toId === 'vcf-cutoff-in') {
+        state.filterEnabled = true;
+        if (fromId !== 'adsr-env-out' && !state.lfoTarget) {
+          state.lfoTarget = 'vcf';
+          if (fromId === 'chaos-cv-out') { state.lfoRate = 5; state.lfoDepth = 0.15; }
+          else if (fromId === 'sh-cv-out') { state.lfoRate = 3; state.lfoDepth = 0.1; }
+          else if (fromId === 'xy-x-out') { state.lfoRate = 0.3; state.lfoDepth = 0.2; }
+          else if (fromId === 'arp-cv-out') { state.lfoRate = 2; state.lfoDepth = 0.1; }
+          else { state.lfoRate = 1; state.lfoDepth = 0.1; }
+        }
+      }
     }
 
     return state;
@@ -10025,6 +10078,7 @@ const Workshop = (() => {
 
     Audio.setLFOTarget('none');
     Audio.stopLFO();
+    Audio.stopDrunkWalk();
     Audio.enableVCF(false);
     Audio.setReverb(0);
     Audio.setDelay(0);
@@ -10055,6 +10109,8 @@ const Workshop = (() => {
     if (state.ringMix > 0) Audio.setRingMod(state.ringRatio, state.ringMix);
     if (state.envToFilter) Audio.connectEnvToFilter();
     if (state.sidechainEnabled) Audio.setSidechain(2, 0.7);
+    if (state.drunkPitch) Audio.setDrunkWalk(state.drunkPitch.steps, state.drunkPitch.bpm);
+    if (state.arpPitch && !_seqRunning) Audio.startSeq(130);
 
     for (const routeKey of _connections.keys()) {
       if (routeKey.startsWith('lfo-out→')) continue;
@@ -10068,27 +10124,20 @@ const Workshop = (() => {
       if (routeKey.startsWith('turing-cv-out→')) continue;
       if (routeKey.startsWith('drunk-out→')) continue;
       if (routeKey.startsWith('euclid-out→')) continue;
-      // Wing 2 CV routes — conceptual/pedagogical, no audio nodes
-      if (routeKey.startsWith('chaos-cv-out→')) continue;
-      if (routeKey.startsWith('arp-cv-out→')) continue;
-      if (routeKey.startsWith('ck-gate-out→')) continue;
-      if (routeKey.startsWith('sh-cv-out→')) continue;
-      if (routeKey.startsWith('qtz-cv-out→')) continue;
-      if (routeKey.startsWith('xy-x-out→')) continue;
-      if (routeKey.startsWith('xy-y-out→')) continue;
-      if (routeKey.startsWith('chd-out→')) continue;
-      if (routeKey.startsWith('mo-out→')) continue;
-      if (routeKey.startsWith('th-out→')) continue;
-      if (routeKey.startsWith('av-out→')) continue;
-      if (routeKey.endsWith('→vcf-cutoff-in')) continue;
-      if (routeKey.endsWith('→qtz-in')) continue;
-      if (routeKey.endsWith('→sh-in')) continue;
-      if (routeKey.endsWith('→av-in')) continue;
+      // CV sources: state already applied above, no audio node to patch
+      if (routeKey.startsWith('chaos-cv-out→') || routeKey.startsWith('arp-cv-out→') ||
+          routeKey.startsWith('ck-gate-out→')  || routeKey.startsWith('sh-cv-out→')  ||
+          routeKey.startsWith('qtz-cv-out→')   || routeKey.startsWith('xy-x-out→')   ||
+          routeKey.startsWith('xy-y-out→')     || routeKey.startsWith('chd-out→')    ||
+          routeKey.startsWith('av-out→')) continue;
+      // CV-only target jacks (no audio node)
+      if (routeKey.endsWith('→vcf-cutoff-in') || routeKey.endsWith('→qtz-in') ||
+          routeKey.endsWith('→sh-in') || routeKey.endsWith('→av-in')) continue;
       Audio.connectPatchRoute(routeKey);
     }
 
     if (state.lfoTarget) {
-      Audio.startLFO(1, 0.1);
+      Audio.startLFO(state.lfoRate || 1, state.lfoDepth || 0.1);
       Audio.setLFOTarget(state.lfoTarget);
       _lfoRunning = true;
     } else if (manualLfoEnabled) {
