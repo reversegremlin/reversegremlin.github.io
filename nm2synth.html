@@ -1515,7 +1515,7 @@ function makeVCO(instanceId = 1) {
     subOsc.frequency.setTargetAtTime(f/2, ctx.currentTime, 0.005);
   };
   // Type change via message port (AudioWorkletNode has no .type property)
-  m.setType = t => { m.type=t; osc.port.postMessage({ type: t }); };
+  m.setType = t => { m.type=t; osc.port.postMessage({ type: t }); gain.gain.setTargetAtTime({sine:0.82,sawtooth:1,triangle:1,square:0.6}[t]??1, ctx.currentTime, 0.05); };
   m.setOct = v => { m.oct=v; m.sync(); };
   m.setCoarse = v => { m.coarse=v; m.sync(); };
   m.setFine = v => { m.fine=v; m.sync(); };
@@ -1543,7 +1543,7 @@ function makeLFO(instanceId = 1) {
   const m = { osc, depth, type:'sine', rate:0.4, depthVal:150 };
   m.setType = t => { m.type=t; osc.type=t; };
   m.setRate = v => { m.rate=v; osc.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setDepth = v => { m.depthVal=v; depth.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setDepth = v => { m.depthVal=v; depth.gain.setTargetAtTime(v, ctx.currentTime, 0.08); };
   m.cleanup = () => { try { osc.stop(); } catch(e){} try { depth.disconnect(); } catch(e){} };
   mods[modsKey('lfo', instanceId)] = m; return m;
 }
@@ -1715,7 +1715,7 @@ function makeVCA(instanceId = 1) {
   inlet.connect(envGain);
   envGain.connect(outlet);
   const m = { inlet, envGain, outlet, gainVal:0.55 };
-  m.setGain = v => { m.gainVal=v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setGain = v => { m.gainVal=v; outlet.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.cleanup = () => { try { inlet.disconnect(); envGain.disconnect(); outlet.disconnect(); } catch(e){} };
   mods[modsKey('vca', instanceId)] = m; return m;
 }
@@ -1947,7 +1947,7 @@ class PolyBlepOscProcessor extends AudioWorkletProcessor {
         case 'triangle': {
           let sq = t<0.5 ? 1 : -1;
           sq += this.polyBlep(t,dt); sq -= this.polyBlep((t+0.5)%1,dt);
-          this._tri += 2*dt*sq; value=this._tri; break;
+          this._tri += 4*dt*sq; value=this._tri; break;
         }
         default: value=Math.sin(2*Math.PI*t); break;
       }
@@ -1995,7 +1995,7 @@ class SyncOscProcessor extends AudioWorkletProcessor {
       switch(this.type2){
         case 'sawtooth': value=2*t-1; value-=this.polyBlep(t,dt); break;
         case 'square':{value=t<0.5?1:-1;value+=this.polyBlep(t,dt);value-=this.polyBlep((t+0.5)%1,dt);break;}
-        case 'triangle':{let sq=t<0.5?1:-1;sq+=this.polyBlep(t,dt);sq-=this.polyBlep((t+0.5)%1,dt);this._tri+=2*dt*sq;value=this._tri;break;}
+        case 'triangle':{let sq=t<0.5?1:-1;sq+=this.polyBlep(t,dt);sq-=this.polyBlep((t+0.5)%1,dt);this._tri+=4*dt*sq;value=this._tri;break;}
         default:value=Math.sin(2*Math.PI*t);break;
       }
       out[i]=this.enabled?value:0; this.phase2=(this.phase2+dt)%1;
@@ -2524,6 +2524,7 @@ function makeVCO2() {
     m.type = t;
     osc.port.postMessage({ type: t }); // PolyBLEP worklet: type via message
     if (syncWorkletNode) syncWorkletNode.port.postMessage({ type2: t });
+    syncOut.gain.setTargetAtTime({sine:0.82,sawtooth:1,triangle:1,square:0.6}[t]??1, ctx.currentTime, 0.05);
   };
   m.setOct    = v => { m.oct=v;    m.syncFreq(); };
   m.setCoarse = v => { m.coarse=v; m.syncFreq(); };
@@ -2616,8 +2617,8 @@ function makeDelay(instanceId = 1) {
   const m = { inlet, driveNode, delayNode, feedback, dryGain, wetGain, outlet,
               timeVal:0.375, fbVal:0.35, mixVal:0.35, driveVal:0 };
   m.setTime     = v => { m.timeVal=v; delayNode.delayTime.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setFeedback = v => { m.fbVal=v;   feedback.gain.setTargetAtTime(Math.min(v,0.95), ctx.currentTime, 0.01); };
-  m.setMix      = v => { m.mixVal=v;  wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setFeedback = v => { m.fbVal=v;   feedback.gain.setTargetAtTime(Math.min(v,0.95), ctx.currentTime, 0.05); };
+  m.setMix      = v => { m.mixVal=v;  wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.setDrive    = v => {
     m.driveVal = v;
     const N=256, c=new Float32Array(N);
@@ -2664,7 +2665,7 @@ function makeReverb(instanceId = 1) {
   const m = { inlet, conv, dryGain, wetGain, outlet, sizeVal:2.0, decayVal:0.5, mixVal:0.3 };
   m.setSize  = v => { m.sizeVal=v;  conv.buffer = buildIR(v, m.decayVal); };
   m.setDecay = v => { m.decayVal=v; conv.buffer = buildIR(m.sizeVal, v); };
-  m.setMix   = v => { m.mixVal=v;   wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setMix   = v => { m.mixVal=v;   wetGain.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
   m.cleanup  = () => { try { inlet.disconnect(); outlet.disconnect(); } catch(e){} };
   conv.buffer = buildIR(2.0, 0.5);
   mods[modsKey('reverb', instanceId)] = m; return m;
@@ -2724,7 +2725,7 @@ function makeLFO2() {
   const m = { osc, depth, type:'sine', rate:0.5, depthVal:200 };
   m.setType = t => { m.type=t; osc.type=t; };
   m.setRate = v => { m.rate=v; osc.frequency.setTargetAtTime(v, ctx.currentTime, 0.01); };
-  m.setDepth = v => { m.depthVal=v; depth.gain.setTargetAtTime(v, ctx.currentTime, 0.01); };
+  m.setDepth = v => { m.depthVal=v; depth.gain.setTargetAtTime(v, ctx.currentTime, 0.08); };
   mods.lfo2 = m; return m;
 }
 
@@ -7315,6 +7316,7 @@ function openFactoryPicker() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function randomPatch() {
   if(!ctx){ setStatus('Power on first.'); return; }
+  masterOut.gain.setTargetAtTime(0, ctx.currentTime, 0.025);
   const sk = (id, v) => { if(knobRefs[id]) knobRefs[id].setVal(v); };
   const rnd = (a,b) => a + Math.random()*(b-a);
   const pick = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -7458,6 +7460,7 @@ function randomPatch() {
     const count = 3 + Math.floor(Math.random()*4);
     shuffled.slice(0, count).forEach(([f,t,c]) => addCable(f,t,c));
     updateCables();
+    masterOut.gain.setTargetAtTime(0.35, ctx.currentTime, 0.08);
   }, 80);
 
   setStatus('Patch randomized — explore!');
