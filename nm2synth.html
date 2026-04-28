@@ -733,6 +733,9 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
 #toolbar{display:flex;gap:6px;padding:10px 16px;background:var(--bg-toolbar);border-top:1px solid var(--border-bright);align-items:center;flex-wrap:wrap;position:sticky;bottom:0;backdrop-filter:blur(12px);}
 #toolbar .btn{font-size:var(--fs-lg);padding:5px 12px;}
 #status{color:var(--text-dim);font-size:var(--fs-md);margin-left:auto;letter-spacing:2px;}
+#clip-led{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border-soft);align-self:center;transition:background .08s,box-shadow .08s;}
+#clip-led.clip-hot{background:#ff4400;box-shadow:0 0 7px #ff4400;}
+#clip-led.clip-warn{background:#ffaa00;box-shadow:0 0 5px #ffaa00;}
 #site-footer{padding:14px 16px 28px;text-align:center;background:linear-gradient(180deg,color-mix(in srgb,var(--bg-toolbar) 72%, transparent),transparent);}
 .footer-link{display:inline-flex;align-items:center;gap:8px;color:var(--text-soft);font-family:var(--font-ui);font-size:var(--fs-sm);letter-spacing:.4px;text-decoration:none;padding:8px 14px;border:1px solid var(--border-soft);border-radius:999px;background:color-mix(in srgb,var(--bg-panel) 82%, transparent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 6%, transparent);transition:border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;}
 .footer-link:hover{color:var(--accent);border-color:var(--border-bright);box-shadow:0 0 16px color-mix(in srgb,var(--accent) 18%, transparent);transform:translateY(-1px);}
@@ -1043,6 +1046,7 @@ hr{border:none;border-top:1px solid var(--border-soft);margin:14px 0;}
   <div class="tb-sep"></div>
   <span class="tb-lbl">LIMITER:</span>
   <div id="lim-knobs" style="display:flex;gap:4px;align-items:flex-end;"></div>
+  <span id="clip-led" title="Output level — lights when limiter is working hard"></span>
   <div class="tb-sep"></div>
   <span class="tb-lbl">NOTES:</span>
   <textarea id="notes-area" class="notes-area" placeholder="Patch notes... (auto-saved with preset)"></textarea>
@@ -1588,8 +1592,8 @@ function makeVCF(instanceId = 1) {
   };
   m.setRes = v => {
     m.res = v;
-    resonanceParam.setTargetAtTime(v, ctx.currentTime, 0.01);
-    displayFilt.Q.value = v;  // immediate
+    resonanceParam.setTargetAtTime(v, ctx.currentTime, 0.08);
+    displayFilt.Q.value = v;  // immediate (display only, not audio path)
   };
   m.setType = t => {
     m.ftype = t;
@@ -1598,7 +1602,7 @@ function makeVCF(instanceId = 1) {
   };
   m.setDrive = v => {
     m.driveVal = v;
-    driveParam.setValueAtTime(v, ctx.currentTime);
+    driveParam.setTargetAtTime(v, ctx.currentTime, 0.05);
   };
   m.trackNote = (semi, atTime) => {
     if (!m.kbTrack) return;
@@ -1641,11 +1645,11 @@ function makeLadder() {
   };
   m.setRes = v => {
     m.res = v;
-    worklet.parameters.get('resonance').setTargetAtTime(v, ctx.currentTime, 0.01);
+    worklet.parameters.get('resonance').setTargetAtTime(v, ctx.currentTime, 0.08);
   };
   m.setDrive = v => {
     m.driveVal = v;
-    worklet.parameters.get('drive').setTargetAtTime(v, ctx.currentTime, 0.01);
+    worklet.parameters.get('drive').setTargetAtTime(v, ctx.currentTime, 0.05);
   };
   m.trackNote = (semi, atTime) => {
     if (!m.kbTrack) return;
@@ -6164,8 +6168,9 @@ function getConfig() {
   };
 }
 
-function applyConfig(cfg) {
+function applyConfig(cfg, { noFade=false }={}) {
   if(!cfg||cfg.v!==1) return;
+  if(!noFade && ctx) masterOut.gain.setTargetAtTime(0, ctx.currentTime, 0.025);
   const sk = (id, v) => { if(knobRefs[id]) knobRefs[id].setVal(v); };
   // Tear down any extra module instances (id > 1) before applying
   DUPLICATABLE_TYPES.forEach(type => {
@@ -6373,6 +6378,7 @@ function applyConfig(cfg) {
     } else {
       updateCables();
     }
+    if(ctx) masterOut.gain.setTargetAtTime(0.35, ctx.currentTime, 0.08);
   }, 200);
   setStatus('Patch loaded ✓');
 }
@@ -8477,7 +8483,7 @@ function startMorph(sceneIdx) {
       const t = Math.min(1, (now - startTs) / duration);
       applyMorphT(fromCfg, toCfg, t);
       if (t < 1) { requestAnimationFrame(loop); }
-      else { applyConfig(toCfg); stopMorph(); setStatus(`Morphed to Scene ${'ABCD'[sceneIdx]}`); }
+      else { applyConfig(toCfg, {noFade:true}); stopMorph(); setStatus(`Morphed to Scene ${'ABCD'[sceneIdx]}`); }
     }
     loop(startTs);
   });
@@ -12446,6 +12452,33 @@ const nm2Mobile = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PEAK / CLIP MONITOR
+// Reads analyserNode (post-limiter) every 4 frames and drives the clip LED.
+// Thresholds are relative to the limiter's postGain ceiling (~0.65):
+//   warn  ≥ 0.45 — limiter noticeably engaged (yellow)
+//   hot   ≥ 0.58 — limiter near saturation (red)
+// ═══════════════════════════════════════════════════════════════════════════════
+function initPeakMonitor() {
+  const led = document.getElementById('clip-led');
+  if (!led) return;
+  const buf = new Float32Array(analyserNode.frequencyBinCount);
+  let peakHold = 0;
+  registerDraw(() => {
+    if (_masterFrameCount % 4 !== 0) return;
+    analyserNode.getFloatTimeDomainData(buf);
+    let peak = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const a = Math.abs(buf[i]);
+      if (a > peak) peak = a;
+    }
+    peakHold = Math.max(peakHold * 0.92, peak);
+    if      (peakHold >= 0.58) { led.className = 'clip-hot';  }
+    else if (peakHold >= 0.45) { led.className = 'clip-warn'; }
+    else                       { led.className = '';           }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 async function init() {
@@ -12455,6 +12488,7 @@ async function init() {
   // Signal chain: masterOut → limiter → analyserNode → destination
   mods.limiter = makeLimiter();
   masterOut.connect(mods.limiter.inlet);
+  initPeakMonitor();
   mods.limiter.outlet.connect(analyserNode);
   analyserNode.connect(ctx.destination);
 
