@@ -11152,13 +11152,44 @@ const Microcosm = (() => {
    Requires a local server (not file://).
    ============================================================ */
 async function _loadTextData() {
-  const base = './data/';
+  async function fetchJsonWithFallback(filename) {
+    const candidateBases = ['./data/', './rpg/data/', '../rpg/data/'];
+    const tried = new Set();
+    const errors = [];
+
+    for (const base of candidateBases) {
+      const url = new URL(base + filename, window.location.href).href;
+      if (tried.has(url)) continue;
+      tried.add(url);
+
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) {
+          errors.push(`${url} -> HTTP ${res.status}`);
+          continue;
+        }
+
+        const text = await res.text();
+        if (text.trimStart().startsWith('<')) {
+          errors.push(`${url} -> received HTML instead of JSON`);
+          continue;
+        }
+
+        return JSON.parse(text);
+      } catch (e) {
+        errors.push(`${url} -> ${e.message}`);
+      }
+    }
+
+    throw new Error(`Failed to load ${filename}. Tried: ${errors.join(' | ')}`);
+  }
+
   const [quests, theory, classes, routing, chaosPresets] = await Promise.all([
-    fetch(base + 'quests.json').then(r => r.json()),
-    fetch(base + 'theory.json').then(r => r.json()),
-    fetch(base + 'classes.json').then(r => r.json()),
-    fetch(base + 'routing.json').then(r => r.json()),
-    fetch(base + 'chaos_presets.json').then(r => r.json()),
+    fetchJsonWithFallback('quests.json'),
+    fetchJsonWithFallback('theory.json'),
+    fetchJsonWithFallback('classes.json'),
+    fetchJsonWithFallback('routing.json'),
+    fetchJsonWithFallback('chaos_presets.json'),
   ]);
 
   // Patch QUESTS
