@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Gehrman's Sequence",
+    "lore": "D G A G D A C G — eight steps. He set the tempo to 95 BPM and left the workshop running when the Hunt started. It is still running."
+  },
+  {
+    "name": "Cathedral Fog",
+    "lore": "A slow vibrato breathes through vast reverb. Like standing inside a tolling bell."
+  },
+  {
+    "name": "Blood Resonance",
+    "lore": "The ladder filter screams at high resonance — a frequency only the mad can hear."
+  },
+  {
+    "name": "The Hunter's Tremor",
+    "lore": "An LFO sweeps the filter open and shut. The darkness pulses like a heartbeat."
+  },
+  {
+    "name": "Echo Wraith",
+    "lore": "Whatever you play, it repeats. And repeats. Slightly quieter each time. Until it isn't."
+  },
+  {
+    "name": "The Bell Tolls",
+    "lore": "A pure tone decays through reverb and delay. The church bells of a dead city."
+  },
+  {
+    "name": "The Ritual Cantor",
+    "lore": "A sequencer pattern loops endlessly. Filtered. Saturated. Eternal."
+  },
+  {
+    "name": "Nightmare Sweep",
+    "lore": "The filter opens then closes, then opens. You can't stop it. You don't want to."
+  },
+  {
+    "name": "Void Drone",
+    "lore": "Sub-bass with slow vibrato. The ground beneath Moogham, still trembling."
+  },
+  {
+    "name": "Pale Sequence",
+    "lore": "A fast arpeggiated pattern, bright as a blade, through the filter and into delay."
+  },
+  {
+    "name": "Hollow Pulse",
+    "lore": "A square wave with a punchy envelope and heavy drive. Industrial. Relentless."
+  },
+  {
+    "name": "Ghost Choir",
+    "lore": "Triangle wave through chorus — a hundred voices made from one, shimmering in the dark."
+  },
+  {
+    "name": "Drowned Tongue",
+    "lore": "A sawtooth through formant shaping — the sound of a drowned entity trying to speak."
+  },
+  {
+    "name": "Phase Haunting",
+    "lore": "A slowly sweeping phaser on a sine wave. The sound seems to move without moving."
+  },
+  {
+    "name": "Dream Sequence",
+    "lore": "The Turing Machine generates a pattern that sounds intentional but came from mathematics."
+  },
+  {
+    "name": "Tape Séance",
+    "lore": "One oscillator, two destinations simultaneously — this is parallel routing. Warm tape saturation on one path, vast reverb on the other. Neither interferes with the other. The signal splits."
+  },
+  {
+    "name": "Modulated Ladder",
+    "lore": "An LFO sweeps the Ladder filter open and closed as the sequencer plays. Four poles of resonant silk, sculpted by a wave at 0.3 Hz. This is what Moog dreamed about."
+  },
+  {
+    "name": "The Haunted Choir",
+    "lore": "Serial and parallel at once. VCO through filter, filter through chorus for shimmer — while raw VCO also feeds reverb for bloom. Two separate paths from one source. This is the architecture of everything."
+  },
+  {
+    "name": "Folded Nightmare",
+    "lore": "A sawtooth folded past itself four times. Each fold mirrors the waveform back, adding dense odd harmonics the original signal never contained. Then into reverb. Metallic. Vast. Alive."
+  },
+  {
+    "name": "Bell Wraith",
+    "lore": "Ring modulation multiplies two frequencies together, producing sum and difference tones that neither source contains. At ratio 3.5:1, the result is an inharmonic bell. Into reverb and delay — it decays like a memory."
+  },
+  {
+    "name": "Sweep and Echo",
+    "lore": "LFO sweeps the filter. The filtered signal branches: reverb on one side, delay on the other. Four cables. The sweep breathes. The reverb blooms. The delay leaves ghosts. This is a full patch."
+  },
+  {
+    "name": "Three-Path Drone",
+    "lore": "Filtered signal feeds both reverb and delay simultaneously — two effects sharing one chain. Sub-bass triangle, slow envelope, high resonance. Watch the waveform: the filter makes the sound physical."
+  },
+  {
+    "name": "The Wound Sequence",
+    "lore": "The LFO modulates pitch instead of the filter this time. A slow warble across each sequenced note. The melody breathes unevenly, as if in pain. A minor, 72 BPM — melancholy with a pulse."
+  },
+  {
+    "name": "Vowel Apparition",
+    "lore": "Formant filters carve vocal resonances from a sine wave. Three bandpass peaks positioned where human vocal cavities resonate. At Q=18, each vowel shape rings on its own. Select vowels live."
+  },
+  {
+    "name": "The Architect's Sequence",
+    "lore": "Three cables. Ladder filter under LFO modulation. Filtered signal into delay. Sequencer at 104 BPM. This is what a complete patch sounds like — each module doing one job, all jobs interlocking."
+  }
+]

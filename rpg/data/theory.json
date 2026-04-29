@@ -1,0 +1,57 @@
+{
+  "notes": [
+    { "wsName": "The Void",    "desc": "The lowest root. A subsonic rumble — the city's heartbeat." },
+    { "wsName": "The Maw",    "desc": "A fifth. Ancient, open. The sound of empty cathedral halls." },
+    { "wsName": "Sorrow",     "desc": "The minor sixth. Melancholy and bottomless." },
+    { "wsName": "Hollow",     "desc": "The root, one octave higher. Grounded but present." },
+    { "wsName": "Restless",   "desc": "The major second. Restless — a step without resolution." },
+    { "wsName": "Bright",     "desc": "The major third. Brightness seeping through the dark." },
+    { "wsName": "Hunter",     "desc": "The fifth. Stable. The hunter stands firm." },
+    { "wsName": "The Bell",   "desc": "The sixth. Sorrowful. The bell of a dead church." },
+    { "wsName": "Middle",     "desc": "Middle C. The human voice's center. Familiar, haunting." },
+    { "wsName": "Yearning",   "desc": "A whole tone up from the root. Forward motion, yearning." },
+    { "wsName": "Nightmare",  "desc": "The major third again, brighter. Recognition in the nightmare." },
+    { "wsName": "The Blade",  "desc": "The fifth, high. Pure, cutting. The hunter's blade." }
+  ],
+  "waveforms": [
+    { "desc": "Sine: pure tone, no harmonics. The void itself — simple and terrifying." },
+    { "desc": "Triangle: odd harmonics, soft buzz. Like a voice filtered through a wall." },
+    { "desc": "Square: hollow, reedy. The breath of something ancient and claustrophobic." },
+    { "desc": "Sawtooth: all harmonics, full-bodied. The classic synth roar — raw and alive." }
+  ],
+  "cutoffs": [
+    { "desc": "120 Hz: nearly closed. Only the fundamental survives — pure, blind tone." },
+    { "desc": "250 Hz: low rumble passes. The body of the sound, without voice." },
+    { "desc": "500 Hz: warmth and mud. The chest resonance of something enormous." },
+    { "desc": "800 Hz: the formant zone. Where vowels live — the suggestion of speech." },
+    { "desc": "1.2 kHz: presence. The filter opens its eye. Sound gains clarity." },
+    { "desc": "2 kHz: the harsh midrange. Edge, aggression. The wound begins to scream." },
+    { "desc": "3.5 kHz: bright and cutting. The Sieve lets the upper harmonics speak." },
+    { "desc": "6 kHz: nearly open. All frequencies admitted. The Sieve has yielded." },
+    { "desc": "10 kHz: fully open. Air and presence. The veil has been torn." }
+  ],
+  "resonances": [
+    { "desc": "Q=0.5: gentle shelf. Smooth, gradual roll-off. Nothing unusual." },
+    { "desc": "Q=1: neutral. The default — no emphasis at the cutoff frequency." },
+    { "desc": "Q=2: mild peak. The filter begins to sing at its cutoff frequency." },
+    { "desc": "Q=4: pronounced resonance. A vowel-like emphasis. The flesh sings." },
+    { "desc": "Q=8: strong resonance. Nasal, intense — the creature finds its voice." },
+    { "desc": "Q=15: near self-oscillation. The filter screams back at the signal." }
+  ],
+  "reverbSizes": [
+    { "name": "Small Room",     "desc": "A tight space — stone walls, close. Presence without wash." },
+    { "name": "Chamber",        "desc": "A burial chamber. The dead hear your sound and remember." },
+    { "name": "Hall",           "desc": "A great hall, emptied. Your tone hangs in the air." },
+    { "name": "Cathedral",      "desc": "Cathedral stone. The decay outlives the note itself." },
+    { "name": "Vast Cathedral", "desc": "The Grand Cathedral. Seconds of tail. Time dissolves." },
+    { "name": "The Nightmare",  "desc": "Infinite echo. Sound loops back from places that don't exist." }
+  ],
+  "delayTimes": [
+    { "name": "1/8 note",      "desc": "Sixteenth rest then echo. Rhythmic, nervous." },
+    { "name": "1/4 note",      "desc": "Quarter note delay. Steady, walking repetition." },
+    { "name": "1/4 triplet",   "desc": "Triplet feel — shuffling, slightly drunk." },
+    { "name": "Dotted 1/8",    "desc": "Dotted eighth. Syncopated, pushed forward." },
+    { "name": "1/2 note",      "desc": "Half note delay. Spacious, breathing." },
+    { "name": "3/4 note",      "desc": "Three quarter note. Off-kilter, strange meter." }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "key": "drone_witch",
+    "name": "The Drone Witch",
+    "archetype": "Ambient / Drone",
+    "desc": "You dwell in sustained tones, reverb, and the slow movement of frequency. Time is irrelevant. Only the endless present matters.",
+    "bonus": "+2 to VCF, Reverb, and Chorus rolls"
+  },
+  {
+    "key": "melodic_hunter",
+    "name": "The Melodic Hunter",
+    "archetype": "Melodic / Sequencer",
+    "desc": "You hunt with melody. Every note is intentional, every sequence a plan. You hear the song inside the noise and you will drag it into the light.",
+    "bonus": "+2 to Pitch, Sequencer, and Turing rolls"
+  },
+  {
+    "key": "rhythmic_beast",
+    "name": "The Rhythmic Beast",
+    "archetype": "Rhythmic / Industrial",
+    "desc": "You move to a beat that others cannot hear. Rhythm is law. The body knows before the mind does.",
+    "bonus": "+2 to Tempo, Delay, and Formant rolls"
+  },
+  {
+    "key": "scholar_madness",
+    "name": "The Scholar of Madness",
+    "archetype": "Modulation / Complex",
+    "desc": "You have read too much. The books showed you how sound works at a level that the others cannot access. It cost you something, but what you gained is extraordinary.",
+    "bonus": "+2 to LFO, Ladder, and Phaser rolls"
+  }
+]
