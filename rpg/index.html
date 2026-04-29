@@ -9037,6 +9037,7 @@ const Workshop = (() => {
       seqStart: true,
     },
   ];
+  globalThis.__RPG_CHAOS_PRESETS = _CHAOS_PRESETS;
 
   const _D20_VERTICES = (() => {
     const phi = (1 + Math.sqrt(5)) / 2;
@@ -11236,12 +11237,15 @@ async function _loadTextData() {
   if (routing.sourceText)   Object.assign(_ROUTE_SOURCE_TEXT,   routing.sourceText);
 
   // Patch _CHAOS_PRESETS
-  chaosPresets.forEach((cp, i) => {
-    if (_CHAOS_PRESETS[i]) {
-      if (cp.name) _CHAOS_PRESETS[i].name = cp.name;
-      if (cp.lore) _CHAOS_PRESETS[i].lore = cp.lore;
-    }
-  });
+  const chaosPresetStore = globalThis.__RPG_CHAOS_PRESETS;
+  if (Array.isArray(chaosPresetStore)) {
+    chaosPresets.forEach((cp, i) => {
+      if (chaosPresetStore[i]) {
+        if (cp.name) chaosPresetStore[i].name = cp.name;
+        if (cp.lore) chaosPresetStore[i].lore = cp.lore;
+      }
+    });
+  }
 }
 
 /* ============================================================
