@@ -10508,8 +10508,12 @@ const Workshop = (() => {
   function _disconnect(routeKey) {
     if (!_connections.has(routeKey)) return;
     _connections.delete(routeKey);
+    // Only remove 'connected' class when the jack has no remaining cables
     routeKey.split('→').forEach(id => {
-      _jackEls[id]?.classList.remove('connected');
+      const still = [..._connections.keys()].some(k => {
+        const [f, t] = k.split('→'); return f === id || t === id;
+      });
+      if (!still) _jackEls[id]?.classList.remove('connected');
     });
     _applyConnections();
     _redrawCables();
@@ -10549,6 +10553,26 @@ const Workshop = (() => {
       p2.setAttribute('stroke-width','2'); p2.setAttribute('fill','none');
       p2.setAttribute('stroke-linecap','round');
       svg.appendChild(p2);
+      // Hit area — wide invisible path that accepts clicks/touches to remove cable
+      const hit = document.createElementNS('http://www.w3.org/2000/svg','path');
+      hit.setAttribute('d', d); hit.setAttribute('stroke', 'transparent');
+      hit.setAttribute('stroke-width','20'); hit.setAttribute('fill','none');
+      hit.setAttribute('stroke-linecap','round'); hit.style.cursor = 'pointer';
+      hit.addEventListener('mouseenter', () => {
+        p1.setAttribute('stroke', '#ff444488'); p1.setAttribute('stroke-width', '10');
+        p2.setAttribute('stroke', '#ff6666');   p2.setAttribute('stroke-width', '2.5');
+      });
+      hit.addEventListener('mouseleave', () => {
+        p1.setAttribute('stroke', mc.primary + '55'); p1.setAttribute('stroke-width', '8');
+        p2.setAttribute('stroke', mc.secondary);      p2.setAttribute('stroke-width', '2');
+      });
+      const _doDisconnect = () => {
+        _disconnect(routeKey);
+        _setHint(null, null, false, `✂ <strong>${route?.label || routeKey}</strong> removed.`);
+      };
+      hit.addEventListener('click', _doDisconnect);
+      hit.addEventListener('touchend', (e) => { e.preventDefault(); _doDisconnect(); }, { passive: false });
+      svg.appendChild(hit);
       // Endpoint dots
       [[x1,y1],[x2,y2]].forEach(([cx,cy2]) => {
         const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
