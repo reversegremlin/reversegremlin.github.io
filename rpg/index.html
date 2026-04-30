@@ -4147,15 +4147,15 @@ const Audio = (() => {
     _ensureRunning();
     const { attack, decay, sustain, release } = adsrVals;
     const now  = ctx.currentTime;
-    const PEAK = 0.72;
-    const sus  = PEAK * Math.max(0.05, sustain);
+    const peak = _correctedGain();
+    const sus  = peak * Math.max(0.05, sustain);
     // Hold sustain for at least 0.4 s so you can hear it before the release
     const holdDur = Math.max(0.4, decay * 2);
     const holdEnd = now + Math.max(0.003, attack) + holdDur;
 
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setValueAtTime(0, now);
-    envGain.gain.linearRampToValueAtTime(PEAK, now + Math.max(0.003, attack));
+    envGain.gain.linearRampToValueAtTime(peak, now + Math.max(0.003, attack));
     envGain.gain.setTargetAtTime(sus, now + attack, Math.max(0.005, decay / 4));
     // Clamp to sustain level at holdEnd, then release
     envGain.gain.setValueAtTime(sus, holdEnd);
@@ -4301,10 +4301,11 @@ const Audio = (() => {
     vco.parameters.get('frequency').value = freq;
 
     const t = ctx.currentTime;
+    const peak = _correctedGain();
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setValueAtTime(0, t);
-    envGain.gain.linearRampToValueAtTime(0.68, t + 0.012);
-    envGain.gain.setValueAtTime(0.68, t + gateS);
+    envGain.gain.linearRampToValueAtTime(peak, t + 0.012);
+    envGain.gain.setValueAtTime(peak, t + gateS);
     envGain.gain.setTargetAtTime(0, t + gateS, 0.035);
 
     seqStep = (seqStep + 1) & 7;
@@ -4373,10 +4374,11 @@ const Audio = (() => {
     vco.parameters.get('frequency').cancelScheduledValues(0);
     vco.parameters.get('frequency').value = freq;
     const t = ctx.currentTime;
+    const peak = _correctedGain();
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setValueAtTime(0, t);
-    envGain.gain.linearRampToValueAtTime(0.68, t + 0.012);
-    envGain.gain.setValueAtTime(0.68, t + gateS);
+    envGain.gain.linearRampToValueAtTime(peak, t + 0.012);
+    envGain.gain.setValueAtTime(peak, t + gateS);
     envGain.gain.setTargetAtTime(0, t + gateS, 0.035);
     seqStep = (seqStep + 1) & 7;
     noteOn = true;
@@ -4565,10 +4567,11 @@ const Audio = (() => {
       _drunkFreq = scale[idx];
       vco.parameters.get('frequency').cancelScheduledValues(0);
       vco.parameters.get('frequency').setTargetAtTime(_drunkFreq, ctx.currentTime, 0.02);
+      const peak = _correctedGain();
       envGain.gain.cancelScheduledValues(0);
       envGain.gain.setValueAtTime(0, ctx.currentTime);
-      envGain.gain.linearRampToValueAtTime(0.65, ctx.currentTime + 0.01);
-      envGain.gain.setValueAtTime(0.65, ctx.currentTime + stepS*0.6);
+      envGain.gain.linearRampToValueAtTime(peak, ctx.currentTime + 0.01);
+      envGain.gain.setValueAtTime(peak, ctx.currentTime + stepS*0.6);
       envGain.gain.setTargetAtTime(0, ctx.currentTime + stepS*0.6, 0.03);
       noteOn = true;
       _drunkTimer = setTimeout(_step, stepS * 1000);
