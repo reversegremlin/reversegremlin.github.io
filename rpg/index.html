@@ -2069,6 +2069,7 @@ canvas { display: block; }
   background: rgba(6,3,2,0.92);
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 0.8rem; padding: 2rem;
+  overflow-y: auto;
 }
 .ws-welcome-card h3 {
   color: var(--gold); font-size: 1.35rem; letter-spacing: 0.1em; text-align: center;
@@ -2091,6 +2092,43 @@ canvas { display: block; }
 .ws-welcome-step-num {
   color: var(--gold); font-family: var(--font-mono);
   font-size: 1rem; margin-top: 1px; flex-shrink: 0;
+}
+
+/* ── Inner Chamber (Study mode) card ────────────────────── */
+.ws-study-card {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(6,3,2,0.94);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; gap: 0.8rem;
+  padding: 2.5rem 2rem 2rem;
+  overflow-y: auto;
+}
+.ws-study-card h3 {
+  color: var(--gold); font-size: 1.3rem; letter-spacing: 0.1em;
+  text-align: center; text-shadow: 0 0 12px #c9a84c55; margin: 0;
+}
+.ws-study-card .ws-study-sub {
+  color: #6b4a20; font-size: 0.78rem; letter-spacing: 0.18em;
+  text-transform: uppercase; text-align: center; margin-top: -0.4rem;
+}
+.ws-study-steps {
+  display: flex; flex-direction: column; gap: 0.4rem;
+  max-width: 380px; width: 100%;
+}
+
+/* ── Map choice overlay ─────────────────────────────────── */
+#map-choice-overlay {
+  position: fixed; z-index: 500;
+  background: #120e0a; border: 1px solid var(--gold);
+  padding: 0.8rem 1rem; min-width: 200px;
+  box-shadow: 0 4px 24px #000a, 0 0 16px #c9a84c22;
+}
+.map-choice-title {
+  color: var(--gold); font-size: 0.85rem; font-weight: bold;
+  letter-spacing: 0.08em; margin-bottom: 0.55rem; text-align: center;
+}
+.map-choice-btns {
+  display: flex; gap: 0.4rem; justify-content: center;
 }
 
 /* ── Wing tabs ───────────────────────────────────────────── */
@@ -2350,8 +2388,10 @@ canvas { display: block; }
     <h2 class="victory-title" id="victory-title">Module Mastered</h2>
     <div class="victory-lore" id="victory-lore"></div>
     <div class="victory-theory" id="victory-theory"></div>
+    <button class="btn btn-gold" id="btn-victory-study" onclick="UI.goStudy()" style="display:none;">✦ Enter The Inner Chamber →</button>
     <button class="btn btn-secondary" onclick="UI.goMap()">← Return to Moogham</button>
-    <button class="btn btn-gold" id="btn-victory-workshop" onclick="Workshop.open()" style="display:none;">Experiment in Workshop →</button>
+    <button class="btn btn-secondary" id="btn-victory-rebattle" onclick="UI.reBattle()" style="display:none; font-size:0.78rem; opacity:0.75;">↺ Re-battle</button>
+    <button class="btn btn-gold" id="btn-victory-workshop" onclick="Workshop.open()" style="display:none; font-size:0.78rem; opacity:0.7;">Open Full Workshop</button>
   </div>
 </div>
 
@@ -3671,6 +3711,11 @@ const Audio = (() => {
   let _patchRoutes = new Map();
   let worklotsLoaded = false;
   let noteOn = false;
+  let _rawGain = 0.65; // user-intended gain before waveform correction
+
+  // Perceptual loudness correction per waveform type.
+  // Sawtooth/square are much louder than sine due to harmonic energy.
+  const _WAVE_GAIN = { sine: 1.0, triangle: 0.90, square: 0.67, sawtooth: 0.62 };
 
   async function loadWorklet(source, name) {
     const blob = new Blob([source], { type: 'application/javascript' });
@@ -3875,6 +3920,7 @@ const Audio = (() => {
     vco.parameters.get('frequency').cancelScheduledValues(0);
     vco.parameters.get('frequency').value = freq;
     if (wave) vco.port.postMessage({ type: wave });
+    _rawGain = 0.65;
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.08);
     noteOn = true;
@@ -3913,15 +3959,20 @@ const Audio = (() => {
     if (!vco) return;
     _ensureRunning();
     vco.port.postMessage({ type });
+    // Compensate for perceived loudness: sawtooth/square have far more
+    // harmonic energy than sine, so scale gain down to normalise levels.
+    const factor = _WAVE_GAIN[type] ?? 1.0;
+    envGain.gain.cancelScheduledValues(0);
+    envGain.gain.setTargetAtTime(_rawGain * factor, ctx.currentTime, 0.05);
     _ensureVoiceOn();
   }
 
   function setVolume(v) {
     if (!envGain) return;
     _ensureRunning();
-    const target = Math.max(0.15, v);
+    _rawGain = Math.max(0.15, v);
     envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(target, ctx.currentTime, 0.02);
+    envGain.gain.setTargetAtTime(_rawGain, ctx.currentTime, 0.02);
     noteOn = true;
   }
 
@@ -5875,6 +5926,106 @@ const QUEST_AUDIO_SETUP = {
 };
 
 /* ============================================================
+   STUDY MODE — per-module guided prompts shown in The Inner Chamber
+   Each entry: { title, steps: [{num, html}] }
+   ============================================================ */
+const STUDY_HINTS = {
+  vco: {
+    title: 'The Oscillator Speaks',
+    steps: [
+      { num: '①', html: 'Press any key on the keyboard below to trigger a note. The VCO produces the raw waveform — the voice of everything.' },
+      { num: '②', html: 'Use the waveform buttons on the VCO panel to switch between <strong style="color:var(--gold)">SINE</strong>, <strong style="color:var(--gold)">SQUARE</strong>, <strong style="color:var(--gold)">SAW</strong>, and <strong style="color:var(--gold)">TRI</strong>. Hear how each one has a different texture.' },
+      { num: '③', html: 'Turn the <strong style="color:var(--gold)">FREQ</strong> knob on the VCO to shift the pitch up or down. The higher the frequency, the higher the note.' },
+    ]
+  },
+  vcf: {
+    title: 'The Filter Shapes the Wound',
+    steps: [
+      { num: '①', html: 'Click the <strong style="color:var(--gold)">VCO OUT</strong> jack, then click <strong style="color:var(--gold)">VCF IN</strong>. A cable connects them — now the filter can sculpt the sound.' },
+      { num: '②', html: 'Turn the <strong style="color:var(--gold)">CUTOFF</strong> knob left to close the filter. The bright tone becomes muffled and dark, like a sound heard through water.' },
+      { num: '③', html: 'Push <strong style="color:var(--gold)">RESONANCE</strong> up for a sharp peak at the cutoff frequency. At extremes, the filter self-oscillates — it becomes its own instrument.' },
+    ]
+  },
+  adsr: {
+    title: 'The Shape of a Note',
+    steps: [
+      { num: '①', html: 'Press and hold a key. The note fades in over the <strong style="color:var(--gold)">Attack</strong> time, then settles at the <strong style="color:var(--gold)">Sustain</strong> level.' },
+      { num: '②', html: 'Release the key and hear the <strong style="color:var(--gold)">Release</strong> tail. Drag it long for a slow fade, short for an abrupt cut.' },
+      { num: '③', html: 'Try a long Attack (3s) with a short Release — a sound that breathes in slowly and cuts off sharp. Then reverse it.' },
+    ]
+  },
+  lfo: {
+    title: 'The Slow Oscillation',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">LFO MOD</strong> → <strong style="color:var(--gold)">VCO FREQ</strong>. The pitch begins to wobble — that is vibrato. The LFO moves the oscillator.' },
+      { num: '②', html: 'Try connecting <strong style="color:var(--gold)">LFO MOD</strong> → <strong style="color:var(--gold)">VCF IN</strong> instead. Now the filter opens and closes on a cycle — an auto-wah.' },
+      { num: '③', html: 'Adjust the <strong style="color:var(--gold)">RATE</strong> knob on the LFO panel to slow down or speed up the sweep. Very slow rates (below 1 Hz) feel like breathing.' },
+    ]
+  },
+  reverb: {
+    title: 'The Space Remembers',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">VCO OUT</strong> → <strong style="color:var(--gold)">REVERB IN</strong>. Play a short note. The reverb carries it forward, extending it into space.' },
+      { num: '②', html: 'Turn the <strong style="color:var(--gold)">SIZE</strong> knob up — the space grows larger. The echo becomes a cathedral. Turn it down — it becomes a small room.' },
+      { num: '③', html: 'Adjust the <strong style="color:var(--gold)">WET</strong> knob to blend how much reverb you hear against the dry signal.' },
+    ]
+  },
+  delay: {
+    title: 'Echoes in the Fog',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">VCO OUT</strong> → <strong style="color:var(--gold)">DELAY IN</strong>. Trigger a note and listen — the echo arrives after the sound, then again, then again.' },
+      { num: '②', html: 'Adjust the <strong style="color:var(--gold)">TIME</strong> knob to change how long the gap is between echoes. Match it to a musical tempo for rhythmic delay.' },
+      { num: '③', html: 'Push the <strong style="color:var(--gold)">FEEDBACK</strong> knob high and the echoes feed back on themselves — a cascading spiral that fades slowly.' },
+    ]
+  },
+  seq: {
+    title: 'The Pattern Repeats',
+    steps: [
+      { num: '①', html: 'Press <strong style="color:var(--gold)">▶ Start</strong> in the SEQ panel. The sequencer begins cycling through its 8 steps automatically.' },
+      { num: '②', html: 'Click any of the step buttons to change which note plays on that step. The pattern updates in real time.' },
+      { num: '③', html: 'Adjust the <strong style="color:var(--gold)">TEMPO</strong> knob to make the sequence run faster or slower. Try connecting SEQ OUT → VCO FREQ for pitch sequencing.' },
+    ]
+  },
+  ladder: {
+    title: 'The Transistor Ladder',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">VCO OUT</strong> → <strong style="color:var(--gold)">LADDER IN</strong>. The ladder filter wraps around the signal with warm, saturated resonance.' },
+      { num: '②', html: 'Turn <strong style="color:var(--gold)">CUTOFF</strong> slowly from high to low. Notice how it sounds warmer and more musical than a standard filter — that is the Moog character.' },
+      { num: '③', html: 'Push <strong style="color:var(--gold)">DRIVE</strong> up. The ladder overdrives and the sound becomes fat and distorted. This is how bass patches are born.' },
+    ]
+  },
+  chorus: {
+    title: 'Many Voices, One Source',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">VCO OUT</strong> → <strong style="color:var(--gold)">CHORUS IN</strong>. The sound spreads wide — many slightly detuned copies stacked together.' },
+      { num: '②', html: 'Adjust <strong style="color:var(--gold)">DEPTH</strong> to control how far the copies drift from centre. High depth gives a lush, underwater shimmer.' },
+      { num: '③', html: 'Turn <strong style="color:var(--gold)">RATE</strong> up to make the detuning pulse faster — becoming vibrato-like at high speeds.' },
+    ]
+  },
+  phaser: {
+    title: 'Phase Cancellation',
+    steps: [
+      { num: '①', html: 'Connect <strong style="color:var(--gold)">VCO OUT</strong> → <strong style="color:var(--gold)">PHASER IN</strong>. The signal passes through all-pass filters that comb the frequency spectrum.' },
+      { num: '②', html: 'Adjust <strong style="color:var(--gold)">RATE</strong> to control the sweep speed. Slow rates feel like a gentle wobble; fast rates become metallic. ' },
+      { num: '③', html: 'Turn <strong style="color:var(--gold)">FEEDBACK</strong> up to push the notches deeper — the phaser becomes more pronounced and resonant.' },
+    ]
+  },
+};
+// Fallback for modules without dedicated study hints
+function _getStudyHints(questId) {
+  if (STUDY_HINTS[questId]) return STUDY_HINTS[questId];
+  const q = QUESTS.find(q => q.id === questId);
+  return {
+    title: `${(q?.entityName) || questId.toUpperCase()} — Tinkered`,
+    steps: [
+      { num: '①', html: 'The module is ready. Explore its controls and listen to what changes.' },
+      { num: '②', html: 'Try connecting its IN or OUT jacks to other modules in your workshop.' },
+      { num: '③', html: 'Press keys on the keyboard below to trigger notes through the signal chain.' },
+    ]
+  };
+}
+
+/* ============================================================
    GAME STATE
    ============================================================ */
 const State = {
@@ -7186,7 +7337,13 @@ const UI = {
 
       if (!quest.locked) {
         g.style.cursor = 'pointer';
-        g.addEventListener('click', () => UI.startEncounter(quest.id));
+        g.addEventListener('click', (e) => {
+          if (complete && !isFinale) {
+            UI._showMapChoice(quest.id, quest.entityName, e.clientX, e.clientY);
+          } else {
+            UI.startEncounter(quest.id);
+          }
+        });
         // Hover tooltip: entity name + location + NPC quote
         g.addEventListener('mouseenter', (e) => {
           let tip = document.getElementById('map-npc-tip');
@@ -7423,6 +7580,7 @@ const UI = {
   },
 
   showVictory(quest) {
+    this._victoryQuestId = quest.id;
     Audio.stopVoice(2.0);
     document.getElementById('victory-icon').innerHTML    = renderSprite(SPRITES[quest.spriteKey], 12);
     document.getElementById('victory-title').textContent = `${quest.entityName} — Mastered`;
@@ -7430,14 +7588,51 @@ const UI = {
     const _vh  = (t) => t.replace(/\n\n/g,'<br><br>').replace(/\{hunter\}/g,`<em style="color:var(--gold);font-style:normal;font-weight:bold;">${_hn2}</em>`);
     document.getElementById('victory-lore').innerHTML    = _vh(quest.victoryLore);
     document.getElementById('victory-theory').textContent = quest.victoryTheory;
-    // Show "Experiment in Workshop" after any first mastery
-    const wsBtn = document.getElementById('btn-victory-workshop');
-    if (wsBtn) wsBtn.style.display = 'inline-block';
+    const studyBtn   = document.getElementById('btn-victory-study');
+    const rebattleBtn = document.getElementById('btn-victory-rebattle');
+    const wsBtn      = document.getElementById('btn-victory-workshop');
+    if (studyBtn)    studyBtn.style.display    = 'inline-block';
+    if (rebattleBtn) rebattleBtn.style.display = 'inline-block';
+    if (wsBtn)       wsBtn.style.display       = 'inline-block';
     Viz.stop();
     this.show('screen-victory');
-    // Particle system + fanfare kick off after screen is visible
     requestAnimationFrame(() => Victory.start(quest.id));
     setTimeout(() => BGMusic.fadeIn(3.0), 2800);
+  },
+
+  goStudy() {
+    const questId = this._victoryQuestId;
+    if (!questId) { Workshop.open(); return; }
+    Victory.stop();
+    Workshop.openStudy(questId);
+  },
+
+  reBattle() {
+    const questId = this._victoryQuestId;
+    if (!questId) return;
+    Victory.stop();
+    this.startEncounter(questId);
+  },
+
+  _showMapChoice(questId, entityName, cx, cy) {
+    document.getElementById('map-choice-overlay')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'map-choice-overlay';
+    ov.innerHTML = `
+      <div class="map-choice-title">${entityName}</div>
+      <div class="map-choice-btns">
+        <button class="btn btn-sm btn-gold" onclick="UI._dismissMapChoice();Workshop.openStudy('${questId}')">✦ The Inner Chamber</button>
+        <button class="btn btn-sm btn-secondary" onclick="UI._dismissMapChoice();UI.startEncounter('${questId}')">↺ Re-battle</button>
+      </div>`;
+    ov.style.left = Math.min(cx, window.innerWidth - 230) + 'px';
+    ov.style.top  = (cy + 12) + 'px';
+    document.body.appendChild(ov);
+    const dismiss = (e) => { if (!ov.contains(e.target)) { ov.remove(); document.removeEventListener('click', dismiss, true); } };
+    setTimeout(() => document.addEventListener('click', dismiss, true), 10);
+  },
+
+  _dismissMapChoice() {
+    document.getElementById('map-choice-overlay')?.remove();
   },
 
   goMap() {
@@ -8581,6 +8776,78 @@ const Workshop = (() => {
         </div>
       </div>
       <button class="btn btn-gold btn-sm" onclick="document.getElementById('ws-welcome-card').remove()">I'm ready — let me play</button>
+    `;
+    wrap.appendChild(card);
+  }
+
+  async function openStudy(questId) {
+    BGMusic.fadeOut(1.0);
+    if (!Audio.isReady()) await Audio.init();
+    Audio.resetChain();
+    _connections  = new Map();
+    _selectedJack = null;
+    _jackEls      = {};
+    _statusDots   = {};
+    _seqRunning   = false;
+    _lfoRunning   = false;
+    _seqSteps     = Array(8).fill(7);
+    _seqStepEls   = [];
+    const hasW1 = QUESTS.some(q => State.progress[q.id] && (!q.wing || q.wing === 1));
+    _activeWing = hasW1 ? 1 : 2;
+    document.getElementById('ws-wing-tab-1')?.classList.toggle('active', _activeWing === 1);
+    document.getElementById('ws-wing-tab-2')?.classList.toggle('active', _activeWing === 2);
+    Audio.setOnSeqStep(step => {
+      _seqStepEls.forEach((el, i) => el?.classList.toggle('playing', i === step));
+    });
+    _buildModules();
+    _buildKeyboard();
+    _buildSignalStrip();
+    _startWaveViz();
+    UI.show('screen-workshop');
+    _initD20();
+    const _scrollArea = document.getElementById('ws-body-wrap');
+    if (_scrollArea) {
+      _scrollArea.removeEventListener('scroll', _redrawCables);
+      _scrollArea.addEventListener('scroll', _redrawCables);
+    }
+    const vcoSaved  = State.questParams['vco']  || {};
+    const adsrSaved = State.questParams['adsr'] || {};
+    const savedWave = vcoSaved.wave?.value  || 'sine';
+    const savedNote = parseFloat(vcoSaved.note?.value) || 220;
+    setTimeout(() => {
+      if (!Audio.isReady()) return;
+      Audio.setWaveform(savedWave);
+      if (adsrSaved.attack)  Audio.setAttack(parseFloat(adsrSaved.attack.value));
+      if (adsrSaved.decay)   Audio.setDecay(parseFloat(adsrSaved.decay.value));
+      if (adsrSaved.sustain) Audio.setSustain(parseFloat(adsrSaved.sustain.value));
+      if (adsrSaved.release) Audio.setRelease(parseFloat(adsrSaved.release.value));
+      Audio.startVoice(savedNote);
+      _setStatusDot('vco', 'pulsing');
+    }, 150);
+    _tutorialActive = false;
+    // Always show the module-specific study card, bypassing generic welcome/tutorial logic
+    setTimeout(() => _showStudyCard(questId), 400);
+  }
+
+  function _showStudyCard(questId) {
+    const wrap = document.getElementById('ws-body-wrap');
+    if (!wrap) return;
+    document.getElementById('ws-study-card')?.remove();
+    const hints = _getStudyHints(questId);
+    const card = document.createElement('div');
+    card.className = 'ws-study-card';
+    card.id = 'ws-study-card';
+    card.innerHTML = `
+      <h3>${hints.title}</h3>
+      <div class="ws-study-sub">The Inner Chamber — ${questId.toUpperCase()}</div>
+      <div class="ws-study-steps">
+        ${hints.steps.map(s => `
+          <div class="ws-welcome-step">
+            <span class="ws-welcome-step-num">${s.num}</span>
+            <span>${s.html}</span>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="document.getElementById('ws-study-card').remove()">Begin Exploring →</button>
     `;
     wrap.appendChild(card);
   }
@@ -10422,7 +10689,7 @@ const Workshop = (() => {
     if (!document.fullscreenElement) { btn.textContent = '⛶'; btn.title = 'Toggle fullscreen'; }
   });
 
-  return { open, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen, _dismissCableTutorial, _setWingTab };
+  return { open, openStudy, close, suggestPatch, masterRandom, rollD20, unlockAll, openGrimoire, closeGrimoire, refreshAdsrViz: _refreshAdsrViz, toggleFullscreen, _dismissCableTutorial, _setWingTab };
 })();
 
 /* ============================================================
