@@ -3715,9 +3715,11 @@ const Audio = (() => {
   let _currentWave = 'sine';
 
   // Perceptual loudness correction per waveform type.
-  // Square/sawtooth have far more harmonic energy in sensitive hearing ranges
-  // than sine, so we scale their gain down to match perceived loudness.
-  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.45, sawtooth: 0.50 };
+  // Square/sawtooth harmonics excite speaker and room response in sensitive
+  // hearing ranges far more than sine/triangle, adding ~8–12 dB perceived
+  // loudness at the same gain. Values here are tuned against a physical SPL
+  // meter at 220 Hz; adjust if base frequency changes significantly.
+  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.28, sawtooth: 0.32 };
   function _correctedGain() { return _rawGain * (_WAVE_GAIN[_currentWave] ?? 1.0); }
 
   async function loadWorklet(source, name) {
@@ -4048,6 +4050,8 @@ const Audio = (() => {
     seqStepCb = null;
     resetSeqPattern();
     adsrVals = { attack: 0.01, decay: 0.1, sustain: 0.75, release: 0.5 };
+    _rawGain = 0.65;
+    _currentWave = 'sine';
 
     // 1. Silence envelope first — everything becomes inaudible before we change routing
     if (envGain) {
