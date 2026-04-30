@@ -3711,11 +3711,14 @@ const Audio = (() => {
   let _patchRoutes = new Map();
   let worklotsLoaded = false;
   let noteOn = false;
-  let _rawGain = 0.65; // user-intended gain before waveform correction
+  let _rawGain = 0.65;    // user-intended gain, before waveform correction
+  let _currentWave = 'sine';
 
   // Perceptual loudness correction per waveform type.
-  // Sawtooth/square are much louder than sine due to harmonic energy.
-  const _WAVE_GAIN = { sine: 1.0, triangle: 0.90, square: 0.67, sawtooth: 0.62 };
+  // Square/sawtooth have far more harmonic energy in sensitive hearing ranges
+  // than sine, so we scale their gain down to match perceived loudness.
+  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.45, sawtooth: 0.50 };
+  function _correctedGain() { return _rawGain * (_WAVE_GAIN[_currentWave] ?? 1.0); }
 
   async function loadWorklet(source, name) {
     const blob = new Blob([source], { type: 'application/javascript' });
@@ -3919,10 +3922,10 @@ const Audio = (() => {
     if (ctx.state === 'suspended') await ctx.resume();
     vco.parameters.get('frequency').cancelScheduledValues(0);
     vco.parameters.get('frequency').value = freq;
-    if (wave) vco.port.postMessage({ type: wave });
+    if (wave) { vco.port.postMessage({ type: wave }); _currentWave = wave; }
     _rawGain = 0.65;
     envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.08);
+    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.08);
     noteOn = true;
   }
 
@@ -3938,7 +3941,7 @@ const Audio = (() => {
     if (!envGain || noteOn) return;
     _ensureRunning();
     envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.08);
+    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.08);
     noteOn = true;
   }
 
@@ -3958,13 +3961,11 @@ const Audio = (() => {
   function setWaveform(type) {
     if (!vco) return;
     _ensureRunning();
+    _currentWave = type;
     vco.port.postMessage({ type });
-    // Compensate for perceived loudness: sawtooth/square have far more
-    // harmonic energy than sine, so scale gain down to normalise levels.
-    const factor = _WAVE_GAIN[type] ?? 1.0;
     envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(_rawGain * factor, ctx.currentTime, 0.05);
-    _ensureVoiceOn();
+    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.05);
+    noteOn = true; // mark on directly — don't call _ensureVoiceOn or it overwrites
   }
 
   function setVolume(v) {
@@ -3972,7 +3973,7 @@ const Audio = (() => {
     _ensureRunning();
     _rawGain = Math.max(0.15, v);
     envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(_rawGain, ctx.currentTime, 0.02);
+    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.02);
     noteOn = true;
   }
 
