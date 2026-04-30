@@ -3948,7 +3948,14 @@ const Audio = (() => {
   }
 
   function triggerNote(freq, wave) {
-    startVoice(freq, wave);
+    if (!vco || !envGain) return;
+    _ensureRunning();
+    vco.parameters.get('frequency').cancelScheduledValues(0);
+    vco.parameters.get('frequency').value = freq;
+    if (wave) { vco.port.postMessage({ type: wave }); _currentWave = wave; }
+    envGain.gain.cancelScheduledValues(0);
+    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.08);
+    noteOn = true;
   }
 
   function setFrequency(hz) {
@@ -4230,12 +4237,12 @@ const Audio = (() => {
     vco.parameters.get('frequency').value = freq;
     if (seqTimer !== null) return; // seq owns the envelope
     const { attack, decay, sustain } = adsrVals;
-    const PEAK = 0.72;
-    const sus  = PEAK * Math.max(0.05, sustain);
+    const peak = _correctedGain();
+    const sus  = peak * Math.max(0.05, sustain);
     const now  = ctx.currentTime;
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setValueAtTime(0, now);
-    envGain.gain.linearRampToValueAtTime(PEAK, now + Math.max(0.003, attack));
+    envGain.gain.linearRampToValueAtTime(peak, now + Math.max(0.003, attack));
     envGain.gain.setTargetAtTime(sus, now + attack, Math.max(0.005, decay / 4));
     noteOn = true;
   }
