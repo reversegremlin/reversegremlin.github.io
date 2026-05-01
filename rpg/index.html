@@ -967,10 +967,10 @@ canvas { display: block; }
 #screen-victory {
   background: #000;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
   padding: 0;
   align-items: stretch;
-  justify-content: stretch;
+  justify-content: flex-start;
 }
 
 #victory-canvas {
@@ -989,9 +989,9 @@ canvas { display: block; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1.4rem;
-  padding: 3rem 2rem 2.5rem;
+  padding: 2.5rem 2rem 3rem;
   min-height: 100%;
 }
 
@@ -1020,9 +1020,8 @@ canvas { display: block; }
 }
 
 .victory-lore {
-  max-width: 540px;
-  max-height: 28vh;
-  overflow-y: auto;
+  max-width: 600px;
+  width: 100%;
   font-size: 1rem;
   line-height: 1.85;
   color: var(--text);
@@ -2174,6 +2173,285 @@ canvas { display: block; }
   border-color: var(--gold) !important;
 }
 
+
+/* ── YOU DIED screen ─────────────────────────────────────────────────────── */
+#screen-you-died {
+  background: #000;
+  overflow: hidden;
+  gap: 0;
+}
+.youdied-text {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: clamp(3.5rem, 13vw, 8rem);
+  font-weight: 700;
+  font-style: italic;
+  color: #8b0000;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 40px rgba(139,0,0,0.95), 0 0 120px rgba(139,0,0,0.35);
+  opacity: 0;
+  animation: yd-appear 2s ease-out 0.2s forwards;
+  line-height: 1;
+}
+@keyframes yd-appear {
+  0%   { opacity: 0; letter-spacing: 0.5em; transform: scale(1.08); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; letter-spacing: 0.12em; transform: scale(1); }
+}
+.youdied-lore {
+  color: #4a4a4a;
+  font-style: italic;
+  font-size: 0.92rem;
+  text-align: center;
+  max-width: 380px;
+  margin-top: 2rem;
+  line-height: 1.75;
+  opacity: 0;
+  animation: yd-fadein 1.5s ease-out 2s forwards;
+}
+.youdied-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 3rem;
+  opacity: 0;
+  animation: yd-fadein 1.5s ease-out 3.2s forwards;
+}
+@keyframes yd-fadein {
+  to { opacity: 1; }
+}
+
+/* ── Phase 2: Patch Bay — full-screen overlay below header ──────────────── */
+#enc-patch-area {
+  position: absolute;
+  top: 54px;
+  left: 0; right: 0; bottom: 0;
+  z-index: 8;
+  background: #090705;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+.enc-patch-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.7rem 1.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  background: #0d0a07;
+}
+.enc-patch-phase-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  color: #8b0000;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.enc-patch-instruction {
+  font-style: italic;
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  flex: 1;
+}
+.enc-patch-feedback {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-style: italic;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Mini-module patch bay ───────────────────────────────────────────────── */
+.enc-patch-bay {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 2.5rem;
+  gap: 2rem;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.enc-patch-bay-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Workshop-style module panels */
+.enc-mini-module {
+  background: #111009;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-top: 3px solid var(--mod-accent, #c9a84c);
+  border-radius: 4px;
+  padding: 0.9rem 1rem 1.1rem;
+  width: 150px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.enc-mini-mod-name {
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: var(--mod-accent, #c9a84c);
+  text-align: center;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  opacity: 0.9;
+}
+.enc-mini-mod-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.enc-mini-jacks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.enc-mini-jack {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+}
+.enc-mini-jack[data-dir="out"] { cursor: grab; }
+.enc-mini-jack[data-dir="in"]  { flex-direction: row-reverse; }
+.enc-mini-jack-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  flex-shrink: 0;
+  transition: box-shadow 0.15s, transform 0.15s;
+  position: relative;
+  background: #0a0805;
+}
+.enc-mini-jack-dot::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+}
+.enc-mini-jack[data-dir="out"] .enc-mini-jack-dot { border-color: #c9a84c; color: #c9a84c; }
+.enc-mini-jack[data-dir="in"]  .enc-mini-jack-dot { border-color: #3dd;    color: #3dd; }
+.enc-mini-jack.dragging-from .enc-mini-jack-dot {
+  box-shadow: 0 0 0 3px #fff4, 0 0 18px #c9a84c88;
+  transform: scale(1.25);
+}
+.enc-mini-jack.connected .enc-mini-jack-dot {
+  border-color: #4d4; color: #4d4;
+  box-shadow: 0 0 10px #4d47;
+}
+.enc-mini-jack.wrong .enc-mini-jack-dot {
+  border-color: #f44; color: #f44;
+  animation: enc-patch-wrong 0.35s ease-out;
+}
+@keyframes enc-patch-wrong {
+  0%,100% { transform: translateX(0); }
+  25%  { transform: translateX(-5px); }
+  75%  { transform: translateX(5px); }
+}
+.enc-mini-jack-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+@keyframes enc-out-breathe {
+  0%,100% { box-shadow: 0 0 4px #c9a84c33; }
+  50%      { box-shadow: 0 0 12px #c9a84c99, 0 0 24px #c9a84c22; }
+}
+.enc-patch-bay .enc-mini-jack[data-dir="out"]:not(.connected) .enc-mini-jack-dot {
+  animation: enc-out-breathe 2s ease-in-out infinite;
+}
+
+/* ── Param challenge (VCO waveform pick) ─────────────────────────────────── */
+.enc-param-choices {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: 2rem;
+  flex-wrap: wrap;
+}
+.enc-param-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  background: #111009;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 1.2rem 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  min-width: 110px;
+  -webkit-tap-highlight-color: transparent;
+}
+.enc-param-choice:hover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.07);
+  box-shadow: 0 0 18px rgba(201,168,76,0.15);
+}
+.enc-param-choice-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.enc-param-choice.wrong {
+  border-color: #f44;
+  animation: enc-patch-wrong 0.35s ease-out;
+}
+.enc-param-choice-lore {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-style: italic;
+  text-align: center;
+  max-width: 100px;
+  line-height: 1.5;
+}
+
+/* ── SVG cables ──────────────────────────────────────────────────────────── */
+.enc-cable-drag {
+  fill: none;
+  stroke: rgba(201,168,76,0.75);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px #c9a84c77);
+}
+.enc-cable-permanent {
+  fill: none;
+  stroke: #4d4;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px #4d4b);
+}
+
   </style>
 </head>
 <body>
@@ -2359,7 +2637,7 @@ canvas { display: block; }
         <div class="enc-theory-text" id="enc-theory-text">Roll the dice to hear the truth...</div>
       </div>
     </div>
-    <div class="enc-hud-dice">
+    <div class="enc-hud-dice" id="enc-hud-dice">
       <div class="enc-param-name" id="enc-param-name">—</div>
       <div class="enc-param-value" id="enc-param-value">—</div>
       <div class="dice-tray" id="dice-tray"></div>
@@ -2376,6 +2654,31 @@ canvas { display: block; }
     </div>
   </div>
 
+  <!-- Phase 2 patch bay — full-screen overlay (below header) -->
+  <div id="enc-patch-area" style="display:none;">
+    <div class="enc-patch-header">
+      <div class="enc-patch-phase-label">— THE PROOF —</div>
+      <div class="enc-patch-instruction" id="enc-patch-instruction"></div>
+      <div class="enc-patch-feedback" id="enc-patch-feedback"></div>
+    </div>
+    <div class="enc-patch-bay" id="enc-patch-bay">
+      <svg class="enc-patch-bay-svg" id="enc-patch-svg"></svg>
+    </div>
+    <div class="enc-param-choices" id="enc-param-choices" style="display:none;"></div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     YOU DIED SCREEN
+     ============================================================ -->
+<div id="screen-you-died" class="screen">
+  <div class="youdied-text">YOU DIED</div>
+  <div class="youdied-lore" id="youdied-lore"></div>
+  <div class="youdied-actions">
+    <button class="btn btn-danger" style="font-size:1rem;padding:0.75rem 2.5rem;letter-spacing:0.15em;" onclick="Game.riseAgain()">↺ Rise Again</button>
+    <button class="btn btn-secondary" style="font-size:0.78rem;opacity:0.6;" onclick="UI.goMap()">← Retreat to Map</button>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -5889,6 +6192,368 @@ const QUESTS = [
 ];
 
 /* ============================================================
+   MINI-MODULE DEFINITIONS — lore names + jack layouts for patch bay
+   ============================================================ */
+const MINI_MODULE_DEFS = {
+  vco:     { loreName:'The Wound',      color:'#c45040', jacks:{ 'vco-out':{ dir:'out', label:'OUT' }, 'vco-freq-in':{ dir:'in', label:'FREQ' } } },
+  vcf:     { loreName:'The Sieve',      color:'#3a93a8', jacks:{ 'vcf-in':{ dir:'in', label:'IN' }, 'vcf-out':{ dir:'out', label:'OUT' }, 'vcf-cutoff-in':{ dir:'in', label:'CUT' } } },
+  adsr:    { loreName:'The Hollow',     color:'#c89040', jacks:{ 'adsr-env-out':{ dir:'out', label:'ENV' } } },
+  lfo:     { loreName:'The Shivering',  color:'#3d93d9', jacks:{ 'lfo-out':{ dir:'out', label:'OUT' } } },
+  reverb:  { loreName:'The Cathedral',  color:'#7a5ea8', jacks:{ 'reverb-in':{ dir:'in', label:'IN' } } },
+  delay:   { loreName:'Memory Chamber', color:'#3d9070', jacks:{ 'delay-in':{ dir:'in', label:'IN' } } },
+  seq:     { loreName:'The Ritual',     color:'#c84848', jacks:{ 'seq-cv-out':{ dir:'out', label:'CV' } } },
+  ladder:  { loreName:'The Ladder',     color:'#8a5028', jacks:{ 'ladder-in':{ dir:'in', label:'IN' } } },
+  chorus:  { loreName:'The Choir',      color:'#3888a8', jacks:{ 'chorus-in':{ dir:'in', label:'IN' } } },
+  phaser:  { loreName:'The Sweep',      color:'#507878', jacks:{ 'phaser-in':{ dir:'in', label:'IN' } } },
+  formant: { loreName:'The Tongue',     color:'#a05830', jacks:{ 'formant-in':{ dir:'in', label:'IN' } } },
+  turing:  { loreName:'Dream Engine',   color:'#4858a0', jacks:{ 'turing-cv-out':{ dir:'out', label:'CV' } } },
+  fold:    { loreName:'The Folder',     color:'#a07840', jacks:{ 'fold-in':{ dir:'in', label:'IN' }, 'fold-out':{ dir:'out', label:'OUT' } } },
+  noise:   { loreName:'The Static',     color:'#606060', jacks:{ 'noise-out':{ dir:'out', label:'OUT' } } },
+  ring:    { loreName:'The Ring',       color:'#a04878', jacks:{ 'ring-in':{ dir:'in', label:'IN' }, 'ring-out':{ dir:'out', label:'OUT' } } },
+  drunk:   { loreName:'The Wanderer',   color:'#6888a8', jacks:{ 'drunk-out':{ dir:'out', label:'OUT' } } },
+  stutter: { loreName:'The Stutter',    color:'#b04030', jacks:{ 'stutter-out':{ dir:'out', label:'OUT' } } },
+  euclid:  { loreName:'Eucl. Clock',    color:'#305878', jacks:{ 'euclid-out':{ dir:'out', label:'OUT' } } },
+};
+
+/* ============================================================
+   PATCH CHALLENGES  —  Phase 2 of each encounter
+   type:'param' → waveform-choice UI (VCO special case)
+   type:'patch' → drag-cable UI
+   entities: array of { mod, jacks[] } or mod-key strings
+   ============================================================ */
+const PATCH_CHALLENGES = {
+  vco: {
+    type: 'param',
+    paramType: 'waveform',
+    instruction: 'The Wound vibrates. Choose its voice — the raw, buzzing shape that carries every harmonic.',
+    deathLore: 'You chose the wrong shape. The Wound consumed you in silence.',
+    choices: [
+      { label:'SINE',  value:'sine',     lore:'Pure. One frequency. No body.' },
+      { label:'TRI',   value:'triangle', lore:'Soft edges. Muted harmonics.' },
+      { label:'SAW',   value:'sawtooth', lore:'Every harmonic blazing. The full wound.' },
+      { label:'SQR',   value:'square',   lore:'Hollow. Odd harmonics only.' },
+    ],
+    correct: 'sawtooth',
+    onChoose(v) { Audio.setWaveform(v); },
+  },
+  vcf: {
+    type: 'patch',
+    instruction: 'The Sieve is dormant. Drag a cable from the Wound\'s output — push the raw signal through its mesh.',
+    deathLore: 'You wired it backwards. The Sieve\'s teeth closed around you.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→vcf-in'],
+    prepare() { Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) { Audio.connectPatchRoute(rk); Audio.enableVCF(true); },
+  },
+  adsr: {
+    type: 'patch',
+    instruction: 'Two cables. Route the Wound through the Sieve — then teach the Sieve to breathe with the Hollow\'s envelope.',
+    deathLore: 'The Hollow held its breath. Your cables found only silence.',
+    entities: [
+      { mod:'vco',   jacks:['vco-out'] },
+      { mod:'vcf',   jacks:['vcf-in', 'vcf-cutoff-in'] },
+      { mod:'adsr',  jacks:['adsr-env-out'] },
+      { mod:'delay', jacks:['delay-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'adsr-env-out→vcf-cutoff-in'],
+    prepare() { Audio.enableVCF(true); Audio.setCutoff(400); Audio.disconnectEnvToFilter(); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      if (rk === 'vco-out→vcf-in') Audio.connectPatchRoute(rk);
+      if (rk === 'adsr-env-out→vcf-cutoff-in') Audio.connectEnvToFilter();
+    },
+  },
+  lfo: {
+    type: 'patch',
+    instruction: 'The Shivering runs freely. Drag its output into the Wound\'s pitch — make the signal tremble with vibrato.',
+    deathLore: 'The Shivering recoiled. You fed it the wrong mouth.',
+    entities: [
+      { mod:'lfo',    jacks:['lfo-out'] },
+      { mod:'vco',    jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['lfo-out→vco-freq-in'],
+    prepare() { Audio.setLFOTarget('none'); },
+    onConnect(rk) { if (rk === 'lfo-out→vco-freq-in') { Audio.setLFOTarget('vco'); Audio.startLFO(); } },
+  },
+  reverb: {
+    type: 'patch',
+    instruction: 'The Cathedral waits. Route the Wound through the Sieve first — then send the shaped signal into the sacred space.',
+    deathLore: 'The Cathedral closed its doors. Wrong signal, wrong door.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'vcf-out→reverb-in'],
+    prepare() { Audio.setReverb(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→reverb-in') Audio.setReverb(0.45);
+    },
+  },
+  delay: {
+    type: 'patch',
+    instruction: 'The Memory Chamber is hungry. Route the filtered signal into it — let each note echo forward in time.',
+    deathLore: 'The echo found no source. It waited. You did not return.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'delay',  jacks:['delay-in'] },
+      { mod:'chorus', jacks:['chorus-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'vcf-out→delay-in'],
+    prepare() { Audio.setDelay(0, 0, 0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→delay-in') Audio.setDelay(0.38, 0.375, 0.5);
+    },
+  },
+  seq: {
+    type: 'patch',
+    instruction: 'The Ritual steps. Route its pattern into the Wound\'s pitch — then send the Wound into the Cathedral.',
+    deathLore: 'The Ritual faltered. Your cable broke the step.',
+    entities: [
+      { mod:'seq',    jacks:['seq-cv-out'] },
+      { mod:'vco',    jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'vcf',    jacks:['vcf-in'] },
+    ],
+    required: ['seq-cv-out→vco-freq-in', 'vco-out→reverb-in'],
+    prepare() { Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      if (rk === 'vco-out→reverb-in') { Audio.connectPatchRoute(rk); Audio.setReverb(0.4); }
+    },
+  },
+  ladder: {
+    type: 'patch',
+    instruction: 'The Ladder looms. Drive the Wound through its four poles — then feed the Shivering into the pitch. Weight and trembling together.',
+    deathLore: 'The Ladder rejected your signal. It crumbled beneath you.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'ladder', jacks:['ladder-in'] },
+      { mod:'lfo',    jacks:['lfo-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→ladder-in', 'lfo-out→vco-freq-in'],
+    prepare() { Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none'); },
+    onConnect(rk) {
+      if (rk === 'vco-out→ladder-in') { Audio.connectPatchRoute(rk); Audio.enableVCF(true); }
+      if (rk === 'lfo-out→vco-freq-in') { Audio.setLFOTarget('vco'); Audio.startLFO(); }
+    },
+  },
+  chorus: {
+    type: 'patch',
+    instruction: 'The Choir is silent. Route the filtered signal into it — hear the single voice multiply into shimmer.',
+    deathLore: 'The chorus fell silent. You gave it the wrong voice.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'chorus', jacks:['chorus-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'vcf-out→chorus-in'],
+    prepare() { Audio.setChorus(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→chorus-in') Audio.setChorus(0.4);
+    },
+  },
+  phaser: {
+    type: 'patch',
+    instruction: 'The Sweep awaits. Route the Wound through the Sieve — then push the filtered voice through the Phaser. Hear the comb breathe.',
+    deathLore: 'The phases cancelled each other. Your signal arrived at the wrong notch.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'phaser', jacks:['phaser-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'vcf-out→phaser-in'],
+    prepare() { Audio.setPhaser(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→phaser-in') Audio.setPhaser(0.5);
+    },
+  },
+  formant: {
+    type: 'patch',
+    instruction: 'The Tongue is mute. Route the Wound directly into it — give the machine a vowel.',
+    deathLore: 'The Formant spoke a word you did not intend. It consumed you.',
+    entities: [
+      { mod:'vco',     jacks:['vco-out'] },
+      { mod:'formant', jacks:['formant-in'] },
+      { mod:'vcf',     jacks:['vcf-in'] },
+      { mod:'reverb',  jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→formant-in'],
+    prepare() { Audio.setFormant(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) { Audio.connectPatchRoute(rk); Audio.setFormant(0.5); },
+  },
+  turing: {
+    type: 'patch',
+    instruction: 'The Dream Engine composes in the dark. Route its pattern into the Wound\'s pitch — then send the Wound into the Cathedral.',
+    deathLore: 'The machine asked if you could think. You could not.',
+    entities: [
+      { mod:'turing', jacks:['turing-cv-out'] },
+      { mod:'vco',    jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'vcf',    jacks:['vcf-in'] },
+    ],
+    required: ['turing-cv-out→vco-freq-in', 'vco-out→reverb-in'],
+    prepare() { Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      if (rk === 'vco-out→reverb-in') { Audio.connectPatchRoute(rk); Audio.setReverb(0.35); }
+    },
+  },
+  tape: {
+    type: 'patch',
+    instruction: 'Tape is two things: saturation and flutter. Route the Wound through the Sieve — then feed the Shivering into the pitch.',
+    deathLore: 'The tape snapped. You fed it to the wrong head.',
+    entities: [
+      { mod:'vco', jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'vcf', jacks:['vcf-in'] },
+      { mod:'lfo', jacks:['lfo-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'lfo-out→vco-freq-in'],
+    prepare() { Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none'); },
+    onConnect(rk) {
+      if (rk === 'vco-out→vcf-in') { Audio.connectPatchRoute(rk); Audio.enableVCF(true); }
+      if (rk === 'lfo-out→vco-freq-in') { Audio.setLFOTarget('vco'); Audio.setLFORate(0.15); Audio.setLFODepth(0.04); Audio.startLFO(); }
+    },
+  },
+  wavefolder: {
+    type: 'patch',
+    instruction: 'Route the Wound into the Folder — then send the folded wave into the Cathedral. Two cables. Let harmonic destruction bloom in space.',
+    deathLore: 'The wave folded the wrong way. It folded around you.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'fold',   jacks:['fold-in', 'fold-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'vcf',    jacks:['vcf-in'] },
+    ],
+    required: ['vco-out→fold-in', 'fold-out→reverb-in'],
+    prepare() { Audio.setFold(3); Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'fold-out→reverb-in') Audio.setReverb(0.4);
+    },
+  },
+  noise: {
+    type: 'patch',
+    instruction: 'The Static roars unfiltered. Route the noise through the Sieve — then send the shaped chaos into the Cathedral.',
+    deathLore: 'The static consumed you. You gave it no filter.',
+    entities: [
+      { mod:'noise',  jacks:['noise-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+    ],
+    required: ['noise-out→vcf-in', 'vcf-out→reverb-in'],
+    prepare() { Audio.enableVCF(false); Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'noise-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→reverb-in') Audio.setReverb(0.4);
+    },
+  },
+  ringmod: {
+    type: 'patch',
+    instruction: 'The Ring produces sum and difference. Route the Wound through it — then send the metallic result into the Memory Chamber.',
+    deathLore: 'The Ring produced only silence. Your signal missed the modulator.',
+    entities: [
+      { mod:'vco',   jacks:['vco-out'] },
+      { mod:'ring',  jacks:['ring-in', 'ring-out'] },
+      { mod:'delay', jacks:['delay-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['vco-out→ring-in', 'ring-out→delay-in'],
+    prepare() { Audio.setRingMod(2.2, 0); Audio.setDelay(0, 0, 0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'ring-out→delay-in') { Audio.setDelay(0.38, 0.375, 0.5); Audio.setRingMod(2.2, 0.5); }
+    },
+  },
+  drunk: {
+    type: 'patch',
+    instruction: 'The Wanderer drifts without purpose. Route its walk into the Wound\'s pitch — let the signal drift without destination.',
+    deathLore: 'The wanderer walked off the edge. You sent it nowhere.',
+    entities: [
+      { mod:'drunk',  jacks:['drunk-out'] },
+      { mod:'vco',    jacks:['vco-out', 'vco-freq-in'] },
+      { mod:'vcf',    jacks:['vcf-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+    ],
+    required: ['drunk-out→vco-freq-in'],
+    prepare() { Audio.stopDrunkWalk(); },
+    onConnect(rk) { if (rk === 'drunk-out→vco-freq-in') Audio.setDrunkWalk(3, 85); },
+  },
+  stutter: {
+    type: 'patch',
+    instruction: 'The Stutter scatters fragments. Route the Wound into the Cathedral AND the Memory Chamber — let the glitch bloom and echo simultaneously.',
+    deathLore: 'The stutter found no echo. The fragments fell in silence.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+      { mod:'chorus', jacks:['chorus-in'] },
+    ],
+    required: ['vco-out→reverb-in', 'vco-out→delay-in'],
+    prepare() { Audio.setReverb(0); Audio.setDelay(0, 0, 0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→reverb-in') Audio.setReverb(0.45);
+      if (rk === 'vco-out→delay-in') Audio.setDelay(0.38, 0.375, 0.5);
+    },
+  },
+  euclid: {
+    type: 'patch',
+    instruction: 'The geometry breathes. Route the Wound through the Sieve and into the Cathedral — the Euclidean rhythm colors the whole chain.',
+    deathLore: 'The rhythm distributed itself into your chest. Nothing survived.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'vcf',    jacks:['vcf-in', 'vcf-out'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+    ],
+    required: ['vco-out→vcf-in', 'vcf-out→reverb-in'],
+    prepare() { Audio.setReverb(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→vcf-in') Audio.enableVCF(true);
+      if (rk === 'vcf-out→reverb-in') Audio.setReverb(0.35);
+    },
+  },
+  sidechain: {
+    type: 'patch',
+    instruction: 'The pump needs sources to work against. Route the Wound into the Choir AND the Cathedral — the compression pumps through both.',
+    deathLore: 'The pump compressed your heart instead. Wrong jack.',
+    entities: [
+      { mod:'vco',    jacks:['vco-out'] },
+      { mod:'chorus', jacks:['chorus-in'] },
+      { mod:'reverb', jacks:['reverb-in'] },
+      { mod:'delay',  jacks:['delay-in'] },
+    ],
+    required: ['vco-out→chorus-in', 'vco-out→reverb-in'],
+    prepare() { Audio.setReverb(0); Audio.setChorus(0); Audio.clearPatchRoutes(); },
+    onConnect(rk) {
+      Audio.connectPatchRoute(rk);
+      if (rk === 'vco-out→chorus-in') Audio.setChorus(0.3);
+      if (rk === 'vco-out→reverb-in') { Audio.setReverb(0.3); Audio.setSidechain(2, 0.7); }
+    },
+  },
+};
+
+/* ============================================================
    PER-QUEST AUDIO SETUP
    Configures the audio specifically for each module's lesson.
    Called after resetChain() settles (~130 ms).
@@ -7490,6 +8155,11 @@ const UI = {
     document.getElementById('enc-sprite').innerHTML        = renderSprite(SPRITES[quest.spriteKey], 9);
     document.getElementById('enc-theory-text').textContent = 'Roll the dice to hear the truth...';
     document.getElementById('enc-params-list').innerHTML   = '';
+    // Reset phase visibility (in case returning from a patch challenge or YOU DIED)
+    const _hudDice = document.getElementById('enc-hud-dice');
+    const _patchArea = document.getElementById('enc-patch-area');
+    if (_hudDice)   _hudDice.style.display = '';
+    if (_patchArea) { _patchArea.style.display = 'none'; _patchArea.classList.remove('jack-selected'); }
 
     // Hero sprite (player class, facing right toward monster)
     const cls = CLASSES.find(c => c.key === State.player.classKey);
@@ -7761,21 +8431,345 @@ const Game = {
     State.lockCurrentParam(result);
 
     if (State.isQuestComplete()) {
-      // Victory!
       document.getElementById('enc-sprite').classList.add('defeated');
-      setTimeout(() => {
-        State.completeQuest();
-        UI.showVictory(quest);
-      }, 1300);
+      const challenge = PATCH_CHALLENGES[quest.id];
+      if (challenge) {
+        setTimeout(() => Game._startPatchPhase(quest, challenge), 1100);
+      } else {
+        setTimeout(() => { State.completeQuest(); UI.showVictory(quest); }, 1300);
+      }
     } else {
-      // Next param
       document.getElementById('btn-keep').style.display = 'none';
       document.getElementById('btn-reroll').style.display = 'none';
       document.getElementById('enc-roll-result').textContent = '✓ Locked. Proceeding...';
       setTimeout(() => UI._loadQuestParam(State.currentParamIdx), 700);
     }
   },
+
+  _patchQuest: null,
+  _patchChallenge: null,
+
+  _startPatchPhase(quest, challenge) {
+    this._patchQuest      = quest;
+    this._patchChallenge  = challenge;
+    const sprite = document.getElementById('enc-sprite');
+    if (sprite) { sprite.classList.remove('defeated', 'hurt'); }
+    PatchBay.init(quest, challenge);
+  },
+
+  youDied(lore) {
+    document.getElementById('youdied-lore').textContent = lore || 'The connection was wrong.';
+    const sprite = document.getElementById('enc-sprite');
+    if (sprite) sprite.classList.remove('defeated', 'hurt');
+    UI.show('screen-you-died');
+    _playDeathRumble();
+  },
+
+  riseAgain() {
+    const quest     = this._patchQuest;
+    const challenge = this._patchChallenge;
+    if (!quest || !challenge) { UI.goMap(); return; }
+    const sprite = document.getElementById('enc-sprite');
+    if (sprite) sprite.classList.remove('defeated', 'hurt');
+    UI.show('screen-encounter');
+    setTimeout(() => PatchBay.init(quest, challenge), 300);
+  },
 };
+
+/* ============================================================
+   PATCH BAY — drag-cable phase 2 interaction
+   ============================================================ */
+const PatchBay = {
+  _challenge: null,
+  _quest: null,
+  _dragFrom: null,
+  _made: [],
+  _svgEl: null,
+  _bayEl: null,
+  _dragPath: null,
+  _listenersAttached: false,
+
+  init(quest, challenge) {
+    this._challenge = challenge;
+    this._quest     = quest;
+    this._made      = [];
+    this._dragFrom  = null;
+
+    const hudDice   = document.getElementById('enc-hud-dice');
+    const patchArea = document.getElementById('enc-patch-area');
+    if (hudDice)   hudDice.style.display = 'none';
+    if (patchArea) patchArea.style.display = 'flex';
+
+    document.getElementById('enc-patch-instruction').textContent = challenge.instruction;
+
+    try { challenge.prepare(); } catch(e) {}
+
+    if (challenge.type === 'param') {
+      this._buildParamUI(challenge);
+    } else {
+      this._buildBayUI(challenge);
+    }
+  },
+
+  _buildParamUI(challenge) {
+    const paramEl = document.getElementById('enc-param-choices');
+    const bayEl   = document.getElementById('enc-patch-bay');
+    paramEl.style.display = 'flex';
+    bayEl.style.display   = 'none';
+    document.getElementById('enc-patch-feedback').textContent = 'Choose the correct waveform.';
+
+    paramEl.innerHTML = '';
+    challenge.choices.forEach(ch => {
+      const btn = document.createElement('button');
+      btn.className = 'enc-param-choice';
+      btn.innerHTML = `<div class="enc-param-choice-label">${ch.label}</div><div class="enc-param-choice-lore">${ch.lore}</div>`;
+      btn.addEventListener('click', () => this._handleParamChoice(ch.value, challenge, btn));
+      paramEl.appendChild(btn);
+    });
+  },
+
+  _handleParamChoice(value, challenge, btn) {
+    try { challenge.onChoose(value); } catch(e) {}
+    if (value === challenge.correct) {
+      document.getElementById('enc-patch-feedback').textContent = '✓ The Wound speaks the right shape.';
+      document.getElementById('enc-sprite').classList.add('defeated');
+      setTimeout(() => { State.completeQuest(); UI.showVictory(this._quest); }, 1000);
+    } else {
+      btn.classList.add('wrong');
+      setTimeout(() => Game.youDied(challenge.deathLore), 500);
+    }
+  },
+
+  _buildBayUI(challenge) {
+    const paramEl = document.getElementById('enc-param-choices');
+    const bayEl   = document.getElementById('enc-patch-bay');
+    paramEl.style.display = 'none';
+    bayEl.style.display   = '';
+    document.getElementById('enc-patch-feedback').textContent = 'Drag a cable from an OUT jack (gold) to an IN jack (cyan).';
+
+    this._bayEl = bayEl;
+    this._svgEl = document.getElementById('enc-patch-svg');
+    this._svgEl.innerHTML = '';
+    this._dragPath = null;
+
+    // Clear old module panels (keep the SVG)
+    bayEl.querySelectorAll('.enc-mini-module').forEach(el => el.remove());
+
+    challenge.entities.forEach(entSpec => {
+      const modKey  = typeof entSpec === 'string' ? entSpec : entSpec.mod;
+      const def     = MINI_MODULE_DEFS[modKey];
+      if (!def) return;
+      const jackIds = typeof entSpec === 'string' ? Object.keys(def.jacks) : (entSpec.jacks || Object.keys(def.jacks));
+
+      const mod = document.createElement('div');
+      mod.className = 'enc-mini-module';
+      mod.style.cssText += `--mod-primary:${def.color};border-top:2px solid ${def.color};`;
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'enc-mini-mod-name';
+      nameEl.textContent = def.loreName;
+      mod.appendChild(nameEl);
+
+      const div = document.createElement('div');
+      div.className = 'enc-mini-mod-divider';
+      mod.appendChild(div);
+
+      const jacksWrap = document.createElement('div');
+      jacksWrap.className = 'enc-mini-jacks';
+      jackIds.forEach(jid => {
+        const jDef = def.jacks[jid];
+        if (!jDef) return;
+        const jack = document.createElement('div');
+        jack.className = 'enc-mini-jack';
+        jack.dataset.dir    = jDef.dir;
+        jack.dataset.jackId = jid;
+        const dot = document.createElement('div');
+        dot.className = 'enc-mini-jack-dot';
+        dot.dataset.jackId = jid;
+        dot.dataset.dir    = jDef.dir;
+        const label = document.createElement('div');
+        label.className = 'enc-mini-jack-label';
+        label.textContent = jDef.label;
+        jack.appendChild(dot);
+        jack.appendChild(label);
+        jacksWrap.appendChild(jack);
+      });
+      mod.appendChild(jacksWrap);
+      bayEl.appendChild(mod);
+    });
+
+    // Attach drag listeners once
+    if (!this._listenersAttached) {
+      this._listenersAttached = true;
+      this._bayEl.addEventListener('mousedown',  e => this._onDragStart(e));
+      this._bayEl.addEventListener('touchstart', e => this._onDragStart(e), { passive: false });
+      window.addEventListener('mousemove', e => this._onDragMove(e));
+      window.addEventListener('touchmove', e => this._onDragMove(e), { passive: false });
+      window.addEventListener('mouseup',   e => this._onDragEnd(e));
+      window.addEventListener('touchend',  e => this._onDragEnd(e));
+    }
+  },
+
+  _getClientXY(e) {
+    if (e.touches?.length)        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
+    if (e.changedTouches?.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  },
+
+  _jackCenter(dot) {
+    const r   = dot.getBoundingClientRect();
+    const svg = this._svgEl.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - svg.left, y: r.top + r.height / 2 - svg.top };
+  },
+
+  _bezier(x1, y1, x2, y2) {
+    const dx = Math.abs(x2 - x1) * 0.55;
+    return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+  },
+
+  _onDragStart(e) {
+    if (!this._challenge || this._challenge.type !== 'patch') return;
+    const dot = e.target?.closest('[data-jack-id]');
+    if (!dot || dot.dataset.dir !== 'out') return;
+    e.preventDefault();
+
+    this._dragFrom = { jackId: dot.dataset.jackId, dot };
+    dot.closest('.enc-mini-jack')?.classList.add('dragging-from');
+    this._svgEl.classList.add('dragging');
+
+    this._dragPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    this._dragPath.classList.add('enc-cable-drag');
+    this._svgEl.appendChild(this._dragPath);
+
+    const { x, y } = this._jackCenter(dot);
+    this._dragPath.setAttribute('d', this._bezier(x, y, x, y));
+  },
+
+  _onDragMove(e) {
+    if (!this._dragFrom) return;
+    e.preventDefault();
+    const { x, y } = this._getClientXY(e);
+    const svg = this._svgEl.getBoundingClientRect();
+    const from = this._jackCenter(this._dragFrom.dot);
+    this._dragPath?.setAttribute('d', this._bezier(from.x, from.y, x - svg.left, y - svg.top));
+  },
+
+  _onDragEnd(e) {
+    if (!this._dragFrom) return;
+    const { x, y } = this._getClientXY(e);
+
+    this._svgEl.classList.remove('dragging');
+    this._dragFrom.dot.closest('.enc-mini-jack')?.classList.remove('dragging-from');
+
+    // Temporarily hide SVG so elementFromPoint hits the jack dot beneath it
+    this._svgEl.style.pointerEvents = 'none';
+    const hit = document.elementFromPoint(x, y)?.closest('[data-jack-id]');
+    this._svgEl.style.pointerEvents = '';
+
+    if (hit && hit !== this._dragFrom.dot && hit.dataset.dir === 'in') {
+      const routeKey = `${this._dragFrom.jackId}→${hit.dataset.jackId}`;
+      this._attemptConnection(routeKey, this._dragFrom.dot, hit);
+    } else {
+      this._dragPath?.remove();
+      this._dragPath = null;
+    }
+    this._dragFrom = null;
+  },
+
+  _attemptConnection(routeKey, fromDot, toDot) {
+    const ch = this._challenge;
+    if (ch.required.includes(routeKey) && !this._made.includes(routeKey)) {
+      this._made.push(routeKey);
+      fromDot.closest('.enc-mini-jack')?.classList.add('connected');
+      toDot.closest('.enc-mini-jack')?.classList.add('connected');
+
+      // Freeze drag cable as permanent cable
+      if (this._dragPath) {
+        this._dragPath.classList.remove('enc-cable-drag');
+        this._dragPath.classList.add('enc-cable-permanent');
+        // Snap endpoints exactly to jack centers
+        const from = this._jackCenter(fromDot);
+        const to   = this._jackCenter(toDot);
+        this._dragPath.setAttribute('d', this._bezier(from.x, from.y, to.x, to.y));
+        this._dragPath = null;
+      }
+
+      try { ch.onConnect(routeKey); } catch(err) {}
+
+      if (this._made.length >= ch.required.length) {
+        document.getElementById('enc-patch-feedback').textContent = '✓ Signal path complete.';
+        document.getElementById('enc-sprite').classList.add('defeated');
+        setTimeout(() => { State.completeQuest(); UI.showVictory(this._quest); }, 1000);
+      } else {
+        const rem = ch.required.length - this._made.length;
+        document.getElementById('enc-patch-feedback').textContent = `✓ Connected. ${rem} more cable${rem > 1 ? 's' : ''} needed.`;
+      }
+    } else {
+      // WRONG
+      this._dragPath?.remove();
+      this._dragPath = null;
+      fromDot.closest('.enc-mini-jack')?.classList.add('wrong');
+      toDot.closest('.enc-mini-jack')?.classList.add('wrong');
+      setTimeout(() => {
+        fromDot.closest('.enc-mini-jack')?.classList.remove('wrong');
+        toDot.closest('.enc-mini-jack')?.classList.remove('wrong');
+      }, 600);
+      setTimeout(() => Game.youDied(ch.deathLore), 500);
+    }
+  },
+};
+
+/* ============================================================
+   DEATH RUMBLE
+   ============================================================ */
+function _playDeathRumble() {
+  const analyser = Audio.getAnalyser();
+  if (!analyser) return;
+  const ctx = analyser.context;
+  if (!ctx || ctx.state === 'closed') return;
+
+  const now = ctx.currentTime;
+  const out  = ctx.createGain();
+  out.gain.setValueAtTime(0, now);
+  out.gain.linearRampToValueAtTime(0.55, now + 1.1);
+  out.gain.setValueAtTime(0.55, now + 3.5);
+  out.gain.linearRampToValueAtTime(0, now + 7);
+  out.connect(ctx.destination);
+
+  // Sub-bass sine pair, slowly descending
+  [[22, 16], [38, 28], [60, 44]].forEach(([start, end], i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(start, now);
+    osc.frequency.linearRampToValueAtTime(end, now + 7);
+    g.gain.value = [0.6, 0.35, 0.15][i];
+    osc.connect(g); g.connect(out);
+    osc.start(now); osc.stop(now + 7);
+  });
+
+  // Low noise layer
+  const bufLen = ctx.sampleRate * 7;
+  const buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const data   = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+  const noise  = ctx.createBufferSource();
+  noise.buffer = buf;
+  const nFilt  = ctx.createBiquadFilter();
+  nFilt.type = 'lowpass'; nFilt.frequency.value = 55; nFilt.Q.value = 0.8;
+  const nGain  = ctx.createGain();
+  nGain.gain.value = 0.18;
+  noise.connect(nFilt); nFilt.connect(nGain); nGain.connect(out);
+  noise.start(now);
+
+  // Slow tremolo via LFO on output gain
+  const lfo  = ctx.createOscillator();
+  const lfoG = ctx.createGain();
+  lfo.frequency.value = 0.9; lfo.type = 'sine';
+  lfoG.gain.value = 0.12;
+  lfo.connect(lfoG); lfoG.connect(out.gain);
+  lfo.start(now); lfo.stop(now + 7);
+}
 
 /* ============================================================
    SANDBOX MODE
