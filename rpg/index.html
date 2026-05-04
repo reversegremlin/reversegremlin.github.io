@@ -5245,18 +5245,18 @@ const Dice = {
     return Math.floor(Math.random() * sides) + 1;
   },
 
-  // Fun roll: avoid close repeats, bias toward mid-to-high values
+  // Fun roll: avoid close repeats, bias toward low-to-mid values (gentle first)
   funRoll(sides, paramKey) {
     const hist = paramKey ? (this._history[paramKey] || []) : [];
     let best = null;
-    // Try up to 8 candidates; pick first one that avoids recent history
-    // Use a mild mid-bias: generate extra candidates around the middle third
+    // Try up to 8 candidates; pick first one that avoids recent history.
+    // Bias toward the lower 75%: sine before sawtooth, warm notes before bright.
     for (let attempt = 0; attempt < 8; attempt++) {
       let candidate;
       if (attempt < 4) {
-        // Biased toward mid-to-high: pick from [ceil(sides/4) .. sides]
-        const lo = Math.max(1, Math.ceil(sides * 0.25));
-        candidate = lo + Math.floor(Math.random() * (sides - lo + 1));
+        // Biased toward low-to-mid: pick from [1 .. floor(sides*0.75)]
+        const hi = Math.max(1, Math.floor(sides * 0.75));
+        candidate = Math.floor(Math.random() * hi) + 1;
       } else {
         candidate = Math.floor(Math.random() * sides) + 1;
       }
@@ -5772,8 +5772,8 @@ const QUESTS = [
         return { label:`${hzs} Hz`, value:hzs, display:`${hzs} Hz`, theory:`Stutter at ${hzs}Hz. Higher frequencies combined with fast stutter rates create higher buzz tones. Lower frequencies produce a deeper, more rhythmic quality.` };
       }},
       { key:'stutter_wave', name:'', dice:4, instruction:'', roll(r){
-        const ws=['square','sawtooth','triangle','sine'][r-1];
-        const ts=['Square wave stutter: hollow and digital. Each fragment hits hard and cuts clean.','Sawtooth stutter: buzzy and aggressive. The brightness makes each fragment distinct.','Triangle stutter: soft gates. The repetition is felt more than heard.','Sine stutter: pure pitch fragments. Almost innocent — until the rate goes up.'][r-1];
+        const ws=['sine','triangle','square','sawtooth'][r-1];
+        const ts=['Sine stutter: pure pitch fragments. Almost innocent — until the rate goes up.','Triangle stutter: soft gates. The repetition is felt more than heard.','Square wave stutter: hollow and digital. Each fragment hits hard and cuts clean.','Sawtooth stutter: buzzy and aggressive. The brightness makes each fragment distinct.'][r-1];
         Audio.setWaveform(ws);
         return { label:ws.charAt(0).toUpperCase()+ws.slice(1), value:ws, display:ws.toUpperCase(), theory:ts };
       }},
@@ -6130,7 +6130,7 @@ const QUESTS = [
     victoryLore: ``,
     victoryTheory: ``,
     params: [
-      { key:'ch_root', name:'', dice:12, instruction:'', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setWaveform('sawtooth'); Audio.setFrequency(n.freq); Audio.setReverbSize(2.5); Audio.setReverb(0.35); return { label:n.name, value:n.freq, display:n.name, theory:`Root: ${n.name} at ${n.freq.toFixed(1)} Hz. The construct builds upward from this.` }; } },
+      { key:'ch_root', name:'', dice:12, instruction:'', roll(r){ const n=Theory.notes[r-1]||Theory.notes[r%Theory.notes.length]; Audio.setWaveform('triangle'); Audio.setFrequency(n.freq); Audio.setReverbSize(2.5); Audio.setReverb(0.35); return { label:n.name, value:n.freq, display:n.name, theory:`Root: ${n.name} at ${n.freq.toFixed(1)} Hz. The construct builds upward from this.` }; } },
       { key:'ch_qual', name:'', dice:6, instruction:'', roll(r){ const qs=[{n:'Major',s:4},{n:'Minor',s:3},{n:'Dom 7th',s:10},{n:'Maj 7th',s:11},{n:'Sus 4',s:5},{n:'Diminished',s:3}]; const q=qs[r-1]; Audio.setSeqInterval(q.s); return { label:q.n, value:q.s, display:q.n, theory:`${q.n} quality (+${q.s} semitones). ${q.n==='Major'?'Bright, stable.':q.n==='Minor'?'Dark, introspective.':q.n==='Dom 7th'?'Tension — wants to resolve.':q.n==='Maj 7th'?'Lush, bittersweet.':q.n==='Sus 4'?'Ambiguous, unresolved.':'Unstable, diminished — maximum tension.'}` }; } },
     ],
   },
