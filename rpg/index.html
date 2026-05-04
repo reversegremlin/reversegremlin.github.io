@@ -4558,8 +4558,10 @@ const Audio = (() => {
     vco.parameters.get('frequency').value = freq;
     if (seqTimer !== null) return; // seq owns the envelope
     const { attack, decay, sustain } = adsrVals;
-    const peak = _correctedGain();
-    const sus  = peak * Math.max(0.05, sustain);
+    // sus = continuous voice level so held keys match slider-fiddling volume.
+    // peak overshoots slightly (punchy attack), capped at 1.5× to avoid harshness.
+    const sus  = _correctedGain();
+    const peak = Math.min(sus * 1.5, sus / Math.max(0.1, sustain));
     const now  = ctx.currentTime;
     envGain.gain.cancelScheduledValues(0);
     envGain.gain.setValueAtTime(0, now);
