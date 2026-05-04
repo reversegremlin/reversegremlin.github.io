@@ -2426,6 +2426,17 @@ canvas { display: block; }
   line-height: 1.5;
 }
 .ws-challenge-goal::before { content: '▶ '; opacity: 0.7; }
+.ws-challenge-howto {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  background: rgba(80,110,140,0.07);
+  border: 1px solid rgba(80,110,140,0.2);
+  border-radius: 3px;
+  padding: 0.3rem 0.6rem;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}
+.ws-challenge-howto::before { content: '⚙ '; opacity: 0.5; font-size: 0.65rem; }
 .ws-challenge-feedback {
   font-size: 0.78rem;
   min-height: 1.3em;
@@ -6239,9 +6250,13 @@ const PATCH_CHALLENGES = {
     mods: ['vco'],
     instruction: 'The Wound has been forged in battle. Its shape echoes in the air. You know the four waveforms — their texture, their harmonics, their character. Now prove it: configure the Wound for its fullest, rawest voice.',
     goal: 'Set the waveform to SAWTOOTH — every harmonic blazing. Press a key to hear each shape before deciding.',
+    howto: 'Click SIN, TRI, SQU, or SAW to change the waveform. Use the keyboard at the bottom to audition each shape before you submit.',
     deathLore: 'Wrong shape. The harmonics collapsed. The Wound swallowed you in silence.',
     successMsg: 'The full spectrum blazes. Every harmonic burns. The Wound knows its name.',
-    prepare() { Audio.setWaveform(State.questParams['vco']?.wave?.value || 'sine'); },
+    prepare() {
+      // Always start from sine so the goal is never pre-satisfied
+      document.querySelector('.ws-choice-btn[data-key="wave"][data-idx="0"]')?.click();
+    },
     check() {
       return { pass: Audio.getWaveform() === 'sawtooth', failHint: 'The waveform is not SAWTOOTH yet — try each shape and listen before submitting.' };
     },
@@ -6250,12 +6265,17 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf'],
     instruction: 'The Sieve waits, dormant. The oscillator blazes unfiltered through the room. You know what the filter does — now prove you can wire the signal through it and shape the tone.',
     goal: 'Connect VCO OUT → VCF IN, then drag Cutoff below 800 Hz to darken the sound.',
+    howto: 'To connect: click the OUT jack (orange dot) on the VCO panel, then click the IN jack (yellow dot) on the VCF panel — a cable appears. Click a cable to remove it. Then drag the Cutoff slider left.',
     deathLore: 'The Sieve found no signal. You wired nothing. The full spectrum consumed you.',
     successMsg: 'Signal flows through the filter. The tone yields to the cutoff — shaped and held.',
-    prepare() { Audio.enableVCF(false); Audio.clearPatchRoutes(); Audio.setCutoff(6000); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="cutoff"]');
+      if (s) { s.value = 8000; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       if (!Workshop.hasConnection('vco-out→vcf-in')) return { pass: false, failHint: 'VCO OUT → VCF IN is not connected yet.' };
-      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 6000);
+      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 8000);
       return { pass: cutoff <= 800, failHint: `Cutoff is at ${cutoff} Hz. Drag it below 800 Hz.` };
     },
   },
@@ -6263,9 +6283,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'adsr'],
     instruction: 'The Hollow has shape now. Two cables. Route the oscillator through the filter — then teach the filter to breathe with the envelope. The attack must have time to bloom.',
     goal: 'Connect VCO OUT → VCF IN and ADSR ENV → VCF CUTOFF. Then set Attack above 300 ms.',
+    howto: 'Connect cables by clicking an OUT jack then an IN jack on each module. Then drag the Attack slider right until the filter swells slowly when you press a key.',
     deathLore: 'The Hollow held its breath. The envelope found no filter to move.',
     successMsg: 'The envelope speaks. The filter opens with each note — alive, breathing.',
-    prepare() { Audio.enableVCF(true); Audio.setCutoff(400); Audio.disconnectEnvToFilter(); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(true); Audio.setCutoff(400); Audio.disconnectEnvToFilter(); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="attack"]');
+      if (s) { s.value = 0.01; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('adsr-env-out→vcf-cutoff-in');
@@ -6279,9 +6304,14 @@ const PATCH_CHALLENGES = {
     mods: ['lfo', 'vco'],
     instruction: 'The Shivering moves in slow cycles. The Wound holds one pitch. You know how to wire one to the other — now do it. Route the modulation into the oscillator\'s pitch and bring it to life.',
     goal: 'Connect LFO OUT → VCO FREQ. Then enable the LFO and set Rate between 2–8 Hz for audible vibrato.',
+    howto: 'Click the OUT jack on the LFO panel, then click the FREQ jack on the VCO panel. Then press the LFO toggle to start it, and drag Rate until the pitch wobbles noticeably.',
     deathLore: 'The Shivering recoiled. You fed it the wrong mouth — no trembling arrived.',
     successMsg: 'The pitch trembles. Vibrato woven from slow oscillation into the signal.',
-    prepare() { Audio.stopLFO(); Audio.setLFOTarget('none'); },
+    prepare() {
+      Audio.stopLFO(); Audio.setLFOTarget('none');
+      const s = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (s) { s.value = 0.2; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 0);
@@ -6292,9 +6322,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'reverb'],
     instruction: 'The Cathedral is silent. The signal flows dry and close. Route the oscillator through the filter — then open the door to the sacred space and bring the wet mix up.',
     goal: 'Connect VCO OUT → VCF IN and VCF OUT → REVERB IN. Then set Wet Mix above 25%.',
+    howto: 'Click OUT on VCO → IN on VCF for the first cable. Then click OUT on VCF → IN on REVERB for the second. Drag Wet Mix right to open the space.',
     deathLore: 'The Cathedral closed its doors. Wrong signal, wrong door — the space stayed empty.',
     successMsg: 'The signal enters the Cathedral. Space blooms around the filtered tone.',
-    prepare() { Audio.setReverb(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="reverb_mix"]');
+      if (s) { s.value = 0; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→reverb-in');
@@ -6308,9 +6343,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'delay'],
     instruction: 'The Memory Chamber waits to hold each note. Route the filtered signal into it — then build up enough feedback that the echo multiplies and lingers forward in time.',
     goal: 'Connect VCO OUT → VCF IN and VCF OUT → DELAY IN. Then set Feedback above 40%.',
+    howto: 'Click OUT on VCO → IN on VCF. Then click OUT on VCF → IN on DELAY. Drag Feedback right until echoes multiply and layer.',
     deathLore: 'The echo found no source. It waited. You did not return.',
     successMsg: 'The echo holds each note. Time folds back — each repetition trailing into silence.',
-    prepare() { Audio.setDelay(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="delay_fb"]');
+      if (s) { s.value = 0.1; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→delay-in');
@@ -6324,6 +6364,7 @@ const PATCH_CHALLENGES = {
     mods: ['seq', 'vco', 'reverb'],
     instruction: 'The Ritual steps through eight positions. The Wound holds a single pitch and waits. Route the pattern — let the sequence drive the oscillator\'s pitch, then send it into the Cathedral.',
     goal: 'Connect SEQ CV → VCO FREQ and VCO OUT → REVERB IN. Press ▶ Start on the SEQ to hear it run.',
+    howto: 'Click the CV OUT jack on the SEQ, then the FREQ jack on the VCO. Then click VCO OUT → REVERB IN for the second cable. Press ▶ Start to run the sequence.',
     deathLore: 'The Ritual faltered. Your cable broke the step — the pattern walked into silence.',
     successMsg: 'The pattern speaks. The Cathedral receives each note — the sequence unfolds.',
     prepare() { Audio.setReverb(0); Audio.clearPatchRoutes(); },
@@ -6339,9 +6380,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'ladder', 'lfo'],
     instruction: 'The Ladder looms — four poles of warm, saturated filtering. Drive the Wound through it. Then wire the Shivering into the pitch. Weight and trembling together.',
     goal: 'Connect VCO OUT → LADDER IN and LFO OUT → VCO FREQ. Set Drive above 1.5×.',
+    howto: 'Click VCO OUT → LADDER IN for the first cable. Then LFO OUT → VCO FREQ for the second. Drag Drive on the Ladder panel right past 1.5×.',
     deathLore: 'The Ladder rejected your signal. The four poles crumbled beneath you.',
     successMsg: 'The signal descends the Ladder. The pitch trembles through saturation — warm, heavy, alive.',
-    prepare() { Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none'); Audio.setDrive(1); },
+    prepare() {
+      Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none'); Audio.setDrive(1);
+      const s = document.querySelector('input.ws-slider[data-key="ladder_drive"]');
+      if (s) { s.value = 1; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→ladder-in');
       const has2 = Workshop.hasConnection('lfo-out→vco-freq-in');
@@ -6355,9 +6401,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'chorus'],
     instruction: 'The Choir is silent. The single voice needs doubling. Route the filtered signal into the Choir — then push the wet mix high enough to hear the shimmer multiply.',
     goal: 'Connect VCO OUT → VCF IN and VCF OUT → CHORUS IN. Set Wet Mix above 35%.',
+    howto: 'Click VCO OUT → VCF IN. Then VCF OUT → CHORUS IN. Drag Wet Mix on the Chorus panel right until the shimmer fills in.',
     deathLore: 'The Choir fell silent. You gave it the wrong voice — no shimmer arrived.',
     successMsg: 'The single voice multiplies. The Choir shimmers — copies drifting apart in time.',
-    prepare() { Audio.setChorus(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="chorus_mix"]');
+      if (s) { s.value = 0; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→chorus-in');
@@ -6371,9 +6422,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'phaser'],
     instruction: 'The Sweep awaits. Route the Wound through the Sieve first — then push the filtered voice through the Phaser. Slow the sweep rate until you can hear each notch breathe.',
     goal: 'Connect VCO OUT → VCF IN and VCF OUT → PHASER IN. Set Rate below 0.5 Hz.',
+    howto: 'Click VCO OUT → VCF IN. Then VCF OUT → PHASER IN. Drag Rate on the Phaser panel left — slowly — until the sweeping notch becomes audible.',
     deathLore: 'The phases cancelled each other. Your signal arrived at the wrong notch.',
     successMsg: 'The comb filter breathes. Each phase notch sweeps slowly across the spectrum.',
-    prepare() { Audio.setPhaser(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="phaser_rate"]');
+      if (s) { s.value = 2; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→phaser-in');
@@ -6387,9 +6443,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'formant'],
     instruction: 'The Tongue is mute. Three resonant peaks, shaped like vowels, waiting for a signal. Route the Wound directly into the Formant — then choose a vowel and bring the mix up.',
     goal: 'Connect VCO OUT → FORMANT IN. Set Wet Mix above 40% and choose any vowel.',
+    howto: 'Click VCO OUT, then FORMANT IN. Then drag Wet Mix right and click any vowel button (AH, EH, IH…) to hear the resonance shift.',
     deathLore: 'The Formant spoke a word you did not intend. It consumed you — no signal, no voice.',
     successMsg: 'The machine gains a vowel. The Tongue speaks — vocal resonance wraps the oscillator.',
-    prepare() { Audio.setFormant(0); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="formant_mix"]');
+      if (s) { s.value = 0; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       if (!Workshop.hasConnection('vco-out→formant-in')) return { pass: false, failHint: 'VCO OUT → FORMANT IN not connected.' };
       const mix = parseFloat(document.querySelector('input.ws-slider[data-key="formant_mix"]')?.value || 0);
@@ -6400,6 +6461,7 @@ const PATCH_CHALLENGES = {
     mods: ['turing', 'vco', 'reverb'],
     instruction: 'The Dream Engine composes in the dark. It generates pseudo-random pitch patterns — route its CV output into the Wound\'s pitch, send the result into the Cathedral, then run the engine.',
     goal: 'Connect TURING CV → VCO FREQ and VCO OUT → REVERB IN. Press ▶ Run Engine.',
+    howto: 'Click the CV OUT jack on TURING, then the FREQ jack on VCO. Then VCO OUT → REVERB IN. Press ▶ Run Engine on the Turing panel to start the pattern.',
     deathLore: 'The machine asked if you could think. You wired nothing. It answered for you.',
     successMsg: 'The machine composes. Pseudo-random melody dissolves into Cathedral space.',
     prepare() { Audio.setReverb(0); Audio.clearPatchRoutes(); },
@@ -6415,9 +6477,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'vcf', 'lfo'],
     instruction: 'Tape is saturation and flutter together. Route the oscillator through the filter for warmth — then wire the LFO into the pitch at a very slow rate to simulate the wow of a tape transport.',
     goal: 'Connect VCO OUT → VCF IN and LFO OUT → VCO FREQ. Set LFO Rate below 0.3 Hz.',
+    howto: 'Click VCO OUT → VCF IN. Then LFO OUT → VCO FREQ. Drag Rate on the LFO panel all the way left — below 0.3 Hz — until the pitch drifts very slowly.',
     deathLore: 'The tape snapped. You fed saturation with no flutter — or flutter with no signal.',
     successMsg: 'Warmth and wobble together. The pitch drifts like magnetic oxide — slow, organic, aged.',
-    prepare() { Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none'); },
+    prepare() {
+      Audio.clearPatchRoutes(); Audio.enableVCF(false); Audio.setLFOTarget('none');
+      const s = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (s) { s.value = 1; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('lfo-out→vco-freq-in');
@@ -6431,9 +6498,14 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'fold', 'reverb'],
     instruction: 'The Folder multiplies harmonics by folding the waveform back on itself. Route the Wound into it — then send the folded result into the Cathedral. Increase the Folds until the sound hardens.',
     goal: 'Connect VCO OUT → FOLD IN and FOLD OUT → REVERB IN. Set Folds above 3×.',
+    howto: 'Click VCO OUT → FOLD IN. Then FOLD OUT → REVERB IN. Drag the Folds slider right past 3× and listen to the harmonics multiply.',
     deathLore: 'The wave folded the wrong way. Harmonic destruction without destination — it collapsed.',
     successMsg: 'Harmonic destruction blooms in space. The waveform folds back — metallic, complex, vast.',
-    prepare() { Audio.setFold(1); Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.setReverb(0); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="fold_amount"]');
+      if (s) { s.value = 1; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→fold-in');
       const has2 = Workshop.hasConnection('fold-out→reverb-in');
@@ -6447,42 +6519,57 @@ const PATCH_CHALLENGES = {
     mods: ['noise', 'vcf', 'reverb'],
     instruction: 'The Static roars with every frequency at once. Shape it — route the noise through the Sieve so the filter can carve a frequency window from the chaos. Then send it into the Cathedral.',
     goal: 'Connect NOISE OUT → VCF IN and VCF OUT → REVERB IN. Set Cutoff below 1500 Hz.',
+    howto: 'Click NOISE OUT → VCF IN. Then VCF OUT → REVERB IN. Drag Cutoff left — you\'ll hear the noise narrow from hiss to a breathy band.',
     deathLore: 'The static consumed you. You gave it no filter — everything arrived at once.',
     successMsg: 'The chaos yields to the filter. Shaped noise rises through Cathedral space — wind, breath, texture.',
-    prepare() { Audio.enableVCF(false); Audio.setReverb(0); Audio.clearPatchRoutes(); Audio.setCutoff(6000); },
+    prepare() {
+      Audio.enableVCF(false); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="cutoff"]');
+      if (s) { s.value = 8000; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('noise-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→reverb-in');
       if (!has1) return { pass: false, failHint: 'NOISE OUT → VCF IN not connected.' };
       if (!has2) return { pass: false, failHint: 'VCF OUT → REVERB IN not connected.' };
-      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 6000);
+      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 8000);
       return { pass: cutoff <= 1500, failHint: `Cutoff is ${cutoff} Hz. Drag it below 1500 Hz.` };
     },
   },
   ringmod: {
     mods: ['vco', 'ring', 'delay'],
     instruction: 'The Ring produces sum and difference frequencies — not harmonics, but sidebands. Route the Wound through it — then send the metallic result into the Memory Chamber. Set a non-integer ratio.',
-    goal: 'Connect VCO OUT → RING IN and RING OUT → DELAY IN. Set Ratio to a non-integer value (e.g. 2.2).',
+    goal: 'Connect VCO OUT → RING IN and RING OUT → DELAY IN. Set Ratio to a non-integer value (e.g. 2.3).',
+    howto: 'Click VCO OUT → RING IN. Then RING OUT → DELAY IN. Drag Ratio off a whole number — try 2.3 or 3.7 — and listen for the metallic bell-like tones.',
     deathLore: 'The Ring produced only silence. Your signal missed the modulator — no sidebands formed.',
     successMsg: 'Sidebands emerge. The metallic inharmonic tones multiply forward into echo.',
-    prepare() { Audio.setRingMod(2.2, 0); Audio.setDelay(0); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.setDelay(0); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="ring_ratio"]');
+      if (s) { s.value = 2; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→ring-in');
       const has2 = Workshop.hasConnection('ring-out→delay-in');
       if (!has1) return { pass: false, failHint: 'VCO OUT → RING IN not connected.' };
       if (!has2) return { pass: false, failHint: 'RING OUT → DELAY IN not connected.' };
-      const ratio = parseFloat(document.querySelector('input.ws-slider[data-key="ring_ratio"]')?.value || 1);
+      const ratio = parseFloat(document.querySelector('input.ws-slider[data-key="ring_ratio"]')?.value || 2);
       const isNonInt = Math.abs(ratio - Math.round(ratio)) > 0.05;
-      return { pass: isNonInt, failHint: `Ratio is ${ratio.toFixed(2)}. Set it to a non-integer (like 2.2, 3.7) for metallic sidebands.` };
+      return { pass: isNonInt, failHint: `Ratio is ${ratio.toFixed(2)}. Set it to a non-integer (like 2.3, 3.7) for metallic sidebands.` };
     },
   },
   drunk: {
     mods: ['drunk', 'vco', 'reverb'],
     instruction: 'The Wanderer drifts without purpose through pitch space. Wire its walk into the Wound\'s frequency — then send the result into the Cathedral. The pitch should wander, never landing twice.',
     goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 3.',
+    howto: 'Click DRUNK OUT → VCO FREQ. Then VCO OUT → REVERB IN. Drag Step Size right past 3 — the pitch will leap between notes rather than creeping.',
     deathLore: 'The wanderer walked off the edge. You sent it nowhere — the pitch sat still.',
     successMsg: 'The pitch drifts. Each step leads somewhere else — directionless, wandering, alive.',
-    prepare() { Audio.stopDrunkWalk(); Audio.setReverb(0); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.stopDrunkWalk(); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="drunk_step"]');
+      if (s) { s.value = 1; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('drunk-out→vco-freq-in');
       const has2 = Workshop.hasConnection('vco-out→reverb-in');
@@ -6496,6 +6583,7 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'reverb', 'delay'],
     instruction: 'The Stutter scatters fragments of signal. Wire the Wound into both the Cathedral AND the Memory Chamber simultaneously — the glitch blooms in space while its fragments echo forward.',
     goal: 'Connect VCO OUT → REVERB IN and VCO OUT → DELAY IN.',
+    howto: 'Click VCO OUT → REVERB IN. Then click VCO OUT again → DELAY IN. One source, two destinations — both cables from the same OUT jack.',
     deathLore: 'The stutter found no echo. The fragments fell in silence — one destination, not two.',
     successMsg: 'The glitch blooms and echoes. Reverb gives it space; delay gives it time.',
     prepare() { Audio.setReverb(0); Audio.setDelay(0); Audio.clearPatchRoutes(); },
@@ -6511,9 +6599,14 @@ const PATCH_CHALLENGES = {
     mods: ['euclid', 'vco', 'vcf', 'reverb'],
     instruction: 'The Euclidean Clock distributes pulses across a grid — mathematically even, rhythmically alive. Route the oscillator through the filter and into the Cathedral. The clock gates the notes automatically.',
     goal: 'Connect VCO OUT → VCF IN and VCF OUT → REVERB IN. Set Hits to 5 and Steps to 8.',
+    howto: 'Click VCO OUT → VCF IN, then VCF OUT → REVERB IN. Drag the Hits slider to exactly 5. The Euclidean algorithm spaces them across 8 steps automatically.',
     deathLore: 'The rhythm distributed itself into your chest. The geometry found no signal.',
     successMsg: 'The geometry breathes. Five pulses across eight steps — the rhythm carves space from silence.',
-    prepare() { Audio.setReverb(0); Audio.enableVCF(false); Audio.clearPatchRoutes(); },
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const s = document.querySelector('input.ws-slider[data-key="euclid_hits"]');
+      if (s) { s.value = 3; s.dispatchEvent(new Event('input')); }
+    },
     check() {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('vcf-out→reverb-in');
@@ -6527,6 +6620,7 @@ const PATCH_CHALLENGES = {
     mods: ['vco', 'chorus', 'reverb'],
     instruction: 'The sidechain pump needs two sources to work against. Route the Wound into both the Choir AND the Cathedral simultaneously — the compressor will duck both when each note hits.',
     goal: 'Connect VCO OUT → CHORUS IN and VCO OUT → REVERB IN.',
+    howto: 'Click VCO OUT → CHORUS IN. Then click VCO OUT again → REVERB IN. The same oscillator feeds both effects — one OUT jack, two cables.',
     deathLore: 'The pump compressed your heart instead. Only one cable — the pump needs two.',
     successMsg: 'The pump breathes between notes. Two sends, one compressor — the signature of dance music.',
     prepare() { Audio.setReverb(0); Audio.setChorus(0); Audio.clearPatchRoutes(); },
@@ -10663,6 +10757,7 @@ const Workshop = (() => {
       <div class="ws-challenge-phase">— The Proof —</div>
       <div class="ws-challenge-instruction">${challenge.instruction}</div>
       <div class="ws-challenge-goal">${challenge.goal}</div>
+      ${challenge.howto ? `<div class="ws-challenge-howto">${challenge.howto}</div>` : ''}
       <div class="ws-challenge-feedback" id="ws-challenge-feedback"></div>
       <div class="ws-challenge-actions">
         <button class="btn btn-gold" onclick="Workshop.submitChallenge()">✓ Submit Proof</button>
