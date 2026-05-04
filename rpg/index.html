@@ -6641,48 +6641,58 @@ const PATCH_CHALLENGES = {
    ============================================================ */
 const QUEST_AUDIO_SETUP = {
   vco:    () => { Audio.setWaveform('sine');     Audio.setFrequency(220); },
-  vcf:    () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(8000); },
+  // VCF: triangle keeps harmonics for a clear filter sweep without raw buzz
+  vcf:    () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(3000); },
   adsr:   () => { Audio.setWaveform('sine');     Audio.setFrequency(220); Audio.setAttack(0.01); Audio.setDecay(0.1); Audio.setSustain(0.75); Audio.setRelease(0.5); },
-  lfo:    () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.startLFO(0.5, 0.05); },
-  // Pulsed notes so tails/echoes are audible in the gaps between hits
-  reverb: () => { Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('sawtooth'); Audio.setReverbSize(2.5); Audio.setReverb(0.5); Audio.setSeqInterval(0); Audio.startSeq(35); },
-  delay:  () => { Audio.connectPatchRoute('vco-out→delay-in'); Audio.setWaveform('sawtooth'); Audio.setDelay(0.38, 0.375, 0.5); Audio.setSeqInterval(7); Audio.startSeq(80); },
+  // LFO: triangle so vibrato demo doesn't start with a harsh buzz
+  lfo:    () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.startLFO(0.5, 0.05); },
+  // Pulsed notes so reverb tails are audible in gaps; triangle is warm here
+  reverb: () => { Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('triangle'); Audio.setReverbSize(2.5); Audio.setReverb(0.5); Audio.setSeqInterval(0); Audio.startSeq(35); },
+  delay:  () => { Audio.connectPatchRoute('vco-out→delay-in'); Audio.setWaveform('triangle'); Audio.setDelay(0.38, 0.375, 0.5); Audio.setSeqInterval(7); Audio.startSeq(80); },
   seq:    () => { Audio.setWaveform('sine');     Audio.setFrequency(220); /* sequencer starts on first tempo roll */ },
-  ladder:  () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(4000); Audio.setDrive(1); },
+  // Ladder: warm filtered tone — start dark so rolls reveal the sweep upward
+  ladder:  () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(1200); Audio.setDrive(1); },
   chorus:     () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setChorus(0.4, 0.6, 0.5); },
-  phaser:     () => { Audio.connectPatchRoute('vco-out→phaser-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setPhaser(0.45, 0.4, 0.5); },
+  phaser:     () => { Audio.connectPatchRoute('vco-out→phaser-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setPhaser(0.45, 0.4, 0.5); },
+  // Formant: keep sawtooth — harmonics are needed for the vowel effect; low pitch (130 Hz) keeps it gentle
   formant:    () => { Audio.connectPatchRoute('vco-out→formant-in'); Audio.setFormant(0.5, 0); Audio.setWaveform('sawtooth'); Audio.setFrequency(130); },
-  turing:     () => { Audio.setWaveform('square'); Audio.setTuringPattern(7, 0.3); Audio.startSeq(95); },
-  tape:       () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(2200); Audio.setDrive(2.5); Audio.setLFORate(0.15); Audio.setLFODepth(0.05); Audio.startLFO(); },
+  // Turing: triangle — the algorithmic pitch movement is the interesting part
+  turing:     () => { Audio.setWaveform('triangle'); Audio.setTuringPattern(7, 0.3); Audio.startSeq(95); },
+  // Tape: triangle + reduced drive so saturation is felt, not harsh
+  tape:       () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(1200); Audio.setDrive(1.5); Audio.setLFORate(0.15); Audio.setLFODepth(0.05); Audio.startLFO(); },
   wavefolder: () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setFold(3); Audio.connectPatchRoute('vco-out→fold-in'); },
   noise:      () => { Audio.setNoise(0.45, 'white'); Audio.connectPatchRoute('noise-out→vcf-in'); Audio.enableVCF(true); Audio.setCutoff(2000); Audio.setResonance(4); },
   ringmod:    () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setRingMod(2.2, 0.5); Audio.connectPatchRoute('vco-out→ring-in'); },
   drunk:      () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setDrunkWalk(3, 85); },
-  stutter:    () => { Audio.setWaveform('square'); Audio.setFrequency(220); Audio.setStutter(320); },
+  // Stutter: triangle — the gate effect is the harsh element, not the waveform
+  stutter:    () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setStutter(320); },
   euclid:     () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setSeqInterval(7); Audio.setEuclid(5, 8); Audio.startSeq(100); },
-  sidechain:  () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setChorus(0.15); Audio.setSidechain(4, 0.7); },
+  sidechain:  () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setChorus(0.15); Audio.setSidechain(4, 0.7); },
   finale:     () => { /* handled entirely by Finale.start() */ },
   // Wing 2 audio setups
-  withered:   () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(3000); Audio.setReverb(0.3); },
-  flanger:    () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setChorus(0.5, 0.3, 0.9); },
-  bitcrush:   () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setDrive(2); Audio.enableVCF(true); Audio.setCutoff(3500); },
-  spectral:   () => { Audio.connectPatchRoute('vco-out→formant-in'); Audio.setFormant(0.5, 2); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setLFORate(0.3); Audio.setLFODepth(0.15); Audio.startLFO(); },
-  resonator:  () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(880); Audio.setResonance(12); },
+  withered:   () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(1000); Audio.setReverb(0.3); },
+  flanger:    () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setChorus(0.5, 0.3, 0.9); },
+  // Bitcrush: triangle softens entry; drive alone carries the crushing character
+  bitcrush:   () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setDrive(2); Audio.enableVCF(true); Audio.setCutoff(1800); },
+  // Spectral: triangle + lower LFO depth so formant vowels are the focus
+  spectral:   () => { Audio.connectPatchRoute('vco-out→formant-in'); Audio.setFormant(0.5, 2); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setLFORate(0.3); Audio.setLFODepth(0.05); Audio.startLFO(); },
+  // Resonator: Q reduced from 12 to 5 — still audible peak without screaming
+  resonator:  () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(880); Audio.setResonance(5); },
   fm:         () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setRingMod(2, 0.5); Audio.connectPatchRoute('vco-out→ring-in'); },
-  arpeggio:   () => { Audio.setWaveform('square'); Audio.setFrequency(220); Audio.setSeqInterval(7); },
+  arpeggio:   () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setSeqInterval(7); },
   quantize:   () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setSeqInterval(5); },
-  clock:      () => { Audio.setWaveform('square'); Audio.setFrequency(220); Audio.setSeqInterval(0); },
+  clock:      () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setSeqInterval(0); },
   chaos:      () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setDrunkWalk(5, 80); },
-  samplehold: () => { Audio.setWaveform('square'); Audio.setTuringPattern(7, 0.0); Audio.startSeq(90); },
-  attenuvtr:  () => { Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setVolume(0.5); Audio.startLFO(0.3, 0.1); },
-  mixer:      () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setVolume(0.6); Audio.setChorus(0.2); Audio.setReverb(0.2); },
-  xy:         () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(2000); Audio.setLFORate(0.5); Audio.setLFODepth(0.1); Audio.startLFO(); },
+  samplehold: () => { Audio.setWaveform('triangle'); Audio.setTuringPattern(7, 0.0); Audio.startSeq(90); },
+  attenuvtr:  () => { Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setVolume(0.5); Audio.startLFO(0.3, 0.1); },
+  mixer:      () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setVolume(0.6); Audio.setChorus(0.2); Audio.setReverb(0.2); },
+  xy:         () => { Audio.connectPatchRoute('vco-out→vcf-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.enableVCF(true); Audio.setCutoff(1000); Audio.setLFORate(0.5); Audio.setLFODepth(0.1); Audio.startLFO(); },
   theremin:   () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.startLFO(3, 0.015); },
   poly:       () => { Audio.connectPatchRoute('vco-out→chorus-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setChorus(0.35, 0.3, 0.6); },
-  chord:      () => { Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setReverbSize(2.5); Audio.setReverb(0.4); Audio.setSeqInterval(4); },
+  chord:      () => { Audio.connectPatchRoute('vco-out→reverb-in'); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setReverbSize(2.5); Audio.setReverb(0.4); Audio.setSeqInterval(4); },
   morph:      () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setFold(2); Audio.connectPatchRoute('vco-out→fold-in'); },
   lissajous:  () => { Audio.setWaveform('sine'); Audio.setFrequency(220); Audio.setRingMod(2, 0.6); Audio.connectPatchRoute('vco-out→ring-in'); },
-  affect:     () => { Audio.connectPatchRoute('vco-out→formant-in'); Audio.setFormant(0.5, 2); Audio.setWaveform('sawtooth'); Audio.setFrequency(220); Audio.setAttack(0.3); Audio.setRelease(1.5); },
+  affect:     () => { Audio.connectPatchRoute('vco-out→formant-in'); Audio.setFormant(0.5, 2); Audio.setWaveform('triangle'); Audio.setFrequency(220); Audio.setAttack(0.3); Audio.setRelease(1.5); },
   microcosm:  () => { /* handled entirely by Microcosm.start() */ },
 };
 
@@ -8376,7 +8386,7 @@ const UI = {
     if (!Audio.isReady()) await Audio.init();
     Audio.resetChain();
     await new Promise(r => setTimeout(r, 130));
-    await Audio.startVoice(220, 'sawtooth');
+    await Audio.startVoice(220, 'sine');
     Sandbox.init();
     Viz.start('sb-canvas');
     this.show('screen-sandbox');
@@ -12165,7 +12175,7 @@ const Microcosm = (() => {
       instruction: 'ROLL TO IDENTIFY THE SIGNAL',
       spriteScale: 6,
       baseAudio() {
-        Audio.setWaveform('sawtooth'); Audio.setFrequency(220);
+        Audio.setWaveform('triangle'); Audio.setFrequency(220);
         Audio.enableVCF(true); Audio.setCutoff(700); Audio.setResonance(5);
         Audio.setDrunkWalk(3, 70); Audio.setReverb(0.3); Audio.setVolume(0.55);
       },
@@ -12173,13 +12183,13 @@ const Microcosm = (() => {
         const opts = [
           { label: 'OSCILLATOR CORE', display: 'VCO dominant',
             theory: 'The oscillator is the origin — a single waveform generates the entire harmonic series. Everything in synthesis begins here, at the fundamental frequency.',
-            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(3000); Audio.setResonance(2); Audio.stopDrunkWalk(); } },
+            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(1800); Audio.setResonance(2); Audio.stopDrunkWalk(); } },
           { label: 'FILTER BREATH', display: 'VCF dominant',
             theory: 'The filter shapes timbre by removing frequencies. High resonance at the cutoff frequency creates a singing peak — the filter becomes its own voice.',
-            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(380); Audio.setResonance(18); Audio.stopDrunkWalk(); } },
+            audio() { Audio.setWaveform('sine'); Audio.enableVCF(true); Audio.setCutoff(380); Audio.setResonance(12); Audio.stopDrunkWalk(); } },
           { label: 'LFO PULSE', display: 'Modulation dominant',
             theory: 'The LFO is the pulse of the machine — a slow oscillator that modulates parameters, creating movement and life where there would only be stasis.',
-            audio() { Audio.setWaveform('sawtooth'); Audio.enableVCF(true); Audio.setCutoff(1800); Audio.startLFO(1.4, 0.22); Audio.stopDrunkWalk(); } },
+            audio() { Audio.setWaveform('triangle'); Audio.enableVCF(true); Audio.setCutoff(1800); Audio.startLFO(1.4, 0.22); Audio.stopDrunkWalk(); } },
           { label: 'PERCUSSIVE DECAY', display: 'ADSR dominant',
             theory: 'The envelope is time given to sound — how it arrives, how it sustains, how it dies. Shape is character. Duration is meaning. The ADSR envelope is the voice\'s biography.',
             audio() { Audio.setWaveform('sine'); Audio.enableVCF(false); Audio.setAttack(0.001); Audio.setDecay(1.1); Audio.setSustain(0.0); Audio.setRelease(0.6); Audio.stopDrunkWalk(); } },
@@ -12188,7 +12198,7 @@ const Microcosm = (() => {
             audio() { Audio.setWaveform('sine'); Audio.enableVCF(false); Audio.setAttack(0.9); Audio.setReverbSize(7); Audio.setReverb(0.85); Audio.stopDrunkWalk(); } },
           { label: 'LADDER DRIVE', display: 'Saturation dominant',
             theory: 'The transistor ladder filter adds harmonic richness through saturation — warmth and weight that no purely linear filter can produce. The Moog sound.',
-            audio() { Audio.setWaveform('sawtooth'); Audio.setDrive(4.5); Audio.enableVCF(true); Audio.setCutoff(900); Audio.setResonance(9); Audio.stopDrunkWalk(); } },
+            audio() { Audio.setWaveform('sawtooth'); Audio.setDrive(4.5); Audio.enableVCF(true); Audio.setCutoff(900); Audio.setResonance(5); Audio.stopDrunkWalk(); } },
           { label: 'RING FRACTURE', display: 'Ring Mod dominant',
             theory: 'Ring modulation multiplies two signals, producing sum and difference sidebands — inharmonic, metallic, alien. Sounds that have no counterpart in the natural world.',
             audio() { Audio.setWaveform('sine'); Audio.setRingMod(3.14, 0.78); Audio.enableVCF(false); Audio.stopDrunkWalk(); } },
@@ -12208,7 +12218,7 @@ const Microcosm = (() => {
       instruction: 'ROLL TO TUNE THE RESONANT NODE',
       spriteScale: 8,
       baseAudio() {
-        Audio.enableVCF(true); Audio.setCutoff(1400); Audio.setResonance(11);
+        Audio.enableVCF(true); Audio.setCutoff(1400); Audio.setResonance(8);
         Audio.setLFORate(0.14); Audio.setLFODepth(0.06); Audio.startLFO();
         Audio.setReverb(0.35); Audio.setVolume(0.6);
       },
@@ -12277,7 +12287,7 @@ const Microcosm = (() => {
             audio() { Audio.setWaveform('sine'); Audio.setRingMod(2.73, 0.48); Audio.setReverb(0.55); Audio.setReverbSize(6); } },
           { label: 'NOISE CATHEDRAL', display: 'The Spectral Cloud',
             theory: 'White noise contains all frequencies at equal amplitude. Narrow VCF resonance shapes it into pitched breath — the synthesizer approximating the wind, the crowd, the living city.',
-            audio() { Audio.setNoise(0.38, 'white'); Audio.enableVCF(true); Audio.setCutoff(760); Audio.setResonance(17); Audio.setReverb(0.65); Audio.setReverbSize(7); } },
+            audio() { Audio.setNoise(0.38, 'white'); Audio.enableVCF(true); Audio.setCutoff(760); Audio.setResonance(12); Audio.setReverb(0.65); Audio.setReverbSize(7); } },
         ][r - 1];
         forms.audio();
         return { label: forms.label, display: forms.display, theory: forms.theory };
