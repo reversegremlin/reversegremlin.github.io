@@ -327,19 +327,6 @@ canvas { display: block; }
   line-height: 1.6;
   margin-bottom: 0.8rem;
 }
-.char-bonus {
-  font-size: 0.78rem;
-  color: var(--cyan);
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
-}
-.char-bonus-detail {
-  font-size: 0.72rem;
-  color: var(--gold);
-  opacity: 0.85;
-  letter-spacing: 0.04em;
-  margin-top: 0.2rem;
-}
 
 /* ============================================================
    WORLD MAP SCREEN
@@ -837,37 +824,6 @@ canvas { display: block; }
   white-space: nowrap;
 }
 
-.die-bonus-tag {
-  position: absolute;
-  top: -10px;
-  right: -8px;
-  font-size: 0.6rem;
-  font-family: var(--font-mono);
-  color: var(--bg);
-  background: var(--gold);
-  padding: 0.05em 0.3em;
-  letter-spacing: 0.05em;
-  line-height: 1.4;
-  pointer-events: none;
-}
-
-.class-bonus-badge {
-  display: inline-block;
-  margin-left: 0.5em;
-  font-size: 0.72rem;
-  color: var(--gold);
-  background: rgba(201,168,76,0.12);
-  border: 1px solid rgba(201,168,76,0.4);
-  padding: 0.1em 0.45em;
-  letter-spacing: 0.1em;
-  vertical-align: middle;
-  animation: bonus-pop 0.4s ease-out;
-}
-@keyframes bonus-pop {
-  0%   { transform: scale(0.6); opacity: 0; }
-  60%  { transform: scale(1.2); }
-  100% { transform: scale(1);   opacity: 1; }
-}
 
 .enc-roll-result {
   min-height: 2.5rem;
@@ -5285,7 +5241,7 @@ const Dice = {
   _AVOID_WINDOW: 3,  // don't repeat within this many rolls
 
   roll(sides, paramKey) {
-    // Pure roll (no bias) — used when paramKey not provided or for bonus math
+    // Pure roll (no bias) — used when paramKey not provided
     return Math.floor(Math.random() * sides) + 1;
   },
 
@@ -6890,8 +6846,6 @@ const CLASSES = [
     archetype: '',
     spriteKey: 'drone_witch',
     desc: '',
-    bonus: '',
-    bonusKeys: ['vcf', 'reverb', 'chorus'],
   },
   {
     key: 'melodic_hunter',
@@ -6899,8 +6853,6 @@ const CLASSES = [
     archetype: '',
     spriteKey: 'melodic_hunter',
     desc: '',
-    bonus: '',
-    bonusKeys: ['vco', 'seq', 'turing'],
   },
   {
     key: 'rhythmic_beast',
@@ -6908,8 +6860,6 @@ const CLASSES = [
     archetype: '',
     spriteKey: 'rhythmic_beast',
     desc: '',
-    bonus: '',
-    bonusKeys: ['seq', 'delay', 'formant'],
   },
   {
     key: 'scholar_madness',
@@ -6917,8 +6867,6 @@ const CLASSES = [
     archetype: '',
     spriteKey: 'scholar_madness',
     desc: '',
-    bonus: '',
-    bonusKeys: ['lfo', 'ladder', 'phaser'],
   },
 ];
 
@@ -7764,16 +7712,11 @@ const UI = {
       const card = document.createElement('div');
       card.className = 'char-card';
       card.dataset.key = cls.key;
-      const bonusEntities = cls.bonusKeys
-        .map(k => QUESTS.find(q => q.id === k)?.entityName || k)
-        .join(' · ');
       card.innerHTML = `
         <div class="char-sprite">${renderSprite(SPRITES[cls.spriteKey], 4)}</div>
         <div class="char-name">${cls.name}</div>
         <div class="char-archetype">${cls.archetype}</div>
         <div class="char-desc">${cls.desc}</div>
-        <div class="char-bonus">${cls.bonus}</div>
-        <div class="char-bonus-detail">★ ${bonusEntities}</div>
       `;
       card.addEventListener('click', () => {
         document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
@@ -7956,7 +7899,6 @@ const UI = {
       const x = px/100*W, y = py/100*H;
       const complete   = State.progress[quest.id];
       const unlocked   = !quest.locked;
-      const isFavoured = playerCls?.bonusKeys.includes(quest.id);
       const spriteRows = SPRITES[quest.spriteKey];
       const isFinale   = !!quest.isFinale || !!quest.isFinalBoss;
 
@@ -8034,17 +7976,7 @@ const UI = {
       idLabel.textContent = modId;
       g.appendChild(idLabel);
 
-      // Class bonus star
-      if (isFavoured && unlocked) {
-        const star = document.createElementNS('http://www.w3.org/2000/svg','text');
-        star.setAttribute('x', String(R - 2));
-        star.setAttribute('y', String(-R + 4));
-        star.setAttribute('text-anchor','middle');
-        star.setAttribute('fill','#c9a84c');
-        star.setAttribute('font-size','11');
-        star.textContent = '★';
-        g.appendChild(star);
-      }
+
 
       if (!quest.locked) {
         g.style.cursor = 'pointer';
@@ -8234,20 +8166,9 @@ const UI = {
     document.getElementById('btn-reroll').style.display = 'none';
     document.getElementById('btn-next-param').style.display = 'none';
 
-    // Build dice tray — mark die if class bonus applies
-    const cls      = CLASSES.find(c => c.key === State.player.classKey);
-    const hasBonus = cls?.bonusKeys.includes(quest.id);
     const tray = document.getElementById('dice-tray');
     tray.innerHTML = '';
-    const die = this._makeDie(`d${param.dice}`, param.dice, () => Game.rollParam());
-    if (hasBonus) {
-      die.title = `+2 ${cls.name} bonus applies`;
-      const bonusTag = document.createElement('span');
-      bonusTag.className = 'die-bonus-tag';
-      bonusTag.textContent = '+2';
-      die.appendChild(bonusTag);
-    }
-    tray.appendChild(die);
+    tray.appendChild(this._makeDie(`d${param.dice}`, param.dice, () => Game.rollParam()));
   },
 
   _makeDie(label, sides, onClick) {
@@ -8257,12 +8178,7 @@ const UI = {
   updateParamResult(result) {
     const resultEl = document.getElementById('enc-roll-result');
     resultEl.textContent = result.display;
-    if (result._bonus > 0) {
-      const badge = document.createElement('span');
-      badge.className = 'class-bonus-badge';
-      badge.textContent = `+${result._bonus} class`;
-      resultEl.appendChild(badge);
-    }
+
     resultEl.classList.remove('flash');
     void resultEl.offsetWidth;
     resultEl.classList.add('flash');
@@ -8426,15 +8342,9 @@ const Game = {
       setTimeout(() => dmgEl.remove(), 1300);
     }
 
-    // Class bonus: +2 to rolls on favoured quest types
-    const cls   = CLASSES.find(c => c.key === State.player.classKey);
-    const bonus = (cls?.bonusKeys.includes(quest.id)) ? 2 : 0;
-    let   roll  = Dice.funRoll(param.dice, param.key);
-    if (bonus) roll = Math.min(param.dice, roll + bonus);
-
+    const roll   = Dice.funRoll(param.dice, param.key);
     const result = param.roll(roll);
     result._roll  = roll;
-    result._bonus = bonus;
     State.lastRoll = result;
 
     UI.updateParamResult(result);
@@ -12712,7 +12622,6 @@ async function _loadTextData() {
     if (c.name)      cls.name      = c.name;
     if (c.archetype) cls.archetype = c.archetype;
     if (c.desc)      cls.desc      = c.desc;
-    if (c.bonus)     cls.bonus     = c.bonus;
   });
 
   // Patch routing labels/text
