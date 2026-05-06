@@ -7205,29 +7205,34 @@ const EarTraining = (() => {
       wrongLore(ci) { return `It was ${['Still','Slow sway','Vibrato','Flutter'][ci]}. An LFO gently shakes the pitch — slow shakes feel dreamy, fast ones feel electric.`; },
     },
     reverb: {
-      lore: 'Now listen — what kind of space is this sound in?',
-      question: 'How big is the room?',
-      listenMs: 4200,
+      lore: 'Now listen — how long does the sound ring after each note?',
+      question: 'How big is the space?',
+      listenMs: 5000,
       teach: [
-        { label: '📦 Tiny room',  desc: 'sound stops the moment it ends',           play() { Audio.setReverb(0);    } },
-        { label: '🚿 Bathroom',   desc: 'a quick bounce off the walls',              play() { Audio.setReverb(0.15); } },
-        { label: '🏀 Gymnasium',  desc: 'you can hear the room around the sound',    play() { Audio.setReverb(0.5);  } },
-        { label: '🦇 Cave',       desc: 'echoes for a long time after each note',    play() { Audio.setReverb(0.92); } },
+        { label: '📦 Dead room',  desc: 'no echo at all — sound stops the instant it ends',      play() { Audio.setReverbSize(0.1); Audio.setReverb(0);    } },
+        { label: '🚿 Bathroom',   desc: 'a short, bright bounce — done in under a second',        play() { Audio.setReverbSize(0.4); Audio.setReverb(0.6);  } },
+        { label: '🏀 Gymnasium',  desc: 'a full second of tail — you hear the room breathing',    play() { Audio.setReverbSize(2.0); Audio.setReverb(0.75); } },
+        { label: '🦇 Cave',       desc: 'echoes for many seconds after the note stops',           play() { Audio.setReverbSize(8.0); Audio.setReverb(0.92); } },
       ],
       setup() {
-        const opts = [{mix:0},{mix:0.15},{mix:0.5},{mix:0.92}];
+        const opts = [
+          { size:0.1, mix:0    },
+          { size:0.4, mix:0.6  },
+          { size:2.0, mix:0.75 },
+          { size:8.0, mix:0.92 },
+        ];
         const idx = Math.floor(Math.random() * 4);
-        Audio.setReverb(opts[idx].mix);
+        Audio.setReverbSize(opts[idx].size); Audio.setReverb(opts[idx].mix);
         return idx;
       },
       choices: [
-        '📦 Tiny room — sound stops the moment it ends',
-        '🚿 Bathroom — a quick bounce off the walls',
-        '🏀 Gymnasium — you can hear the room around it',
-        '🦇 Cave — echoes for a long time after each note',
+        '📦 Dead room — no echo, sound stops instantly',
+        '🚿 Bathroom — short bright bounce, done quickly',
+        '🏀 Gymnasium — full second of tail, room is breathing',
+        '🦇 Cave — echoes for many seconds after the note',
       ],
       bonusLore: 'You heard the room. The Cathedral is mapped.',
-      wrongLore(ci) { return `It was ${['Tiny room','Bathroom','Gymnasium','Cave'][ci]}. Reverb is the echo of a space — a big room makes longer, slower echoes.`; },
+      wrongLore(ci) { return `It was ${['Dead room','Bathroom','Gymnasium','Cave'][ci]}. Reverb tail length is what makes a space feel big or small — a cave holds sound for seconds, a closet kills it instantly.`; },
     },
     delay: {
       lore: 'Now listen — does the sound repeat after the note?',
