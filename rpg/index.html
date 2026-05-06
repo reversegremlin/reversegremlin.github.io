@@ -7031,14 +7031,15 @@ const EarTraining = (() => {
       wrongLore(ci) { return `It was ${['wide open','warm','muffled','almost gone'][ci]}. A filter is like a blanket for sound — pull it tighter and the bright parts disappear first.`; },
     },
     adsr: {
-      lore: 'Listen to how the note starts and ends. Does it jump at you, or creep in slowly?',
-      question: 'Which instrument does this note feel most like?',
+      lore: 'Listen carefully — does the note jump at you or creep in? And when it ends, does it stop suddenly or fade away?',
+      question: 'What does the note do at the START and at the END?',
       setup() {
+        // 4 combos of fast/slow attack × fast/slow release so the contrast is obvious
         const archetypes = [
-          { a:0.003, d:0.07,  s:0.05, r:0.08 },  // drum
-          { a:0.008, d:0.28,  s:0.22, r:0.18 },  // guitar pluck
-          { a:0.01,  d:0.05,  s:0.95, r:0.12 },  // organ key
-          { a:0.85,  d:0.6,   s:0.85, r:1.6  },  // string pad
+          { a:0.003, d:0.1, s:0.7, r:0.08 },  // instant start, instant stop
+          { a:0.003, d:0.1, s:0.7, r:2.2  },  // instant start, slow fade
+          { a:1.1,   d:0.2, s:0.8, r:0.08 },  // slow swell, instant stop
+          { a:1.1,   d:0.2, s:0.8, r:2.2  },  // slow swell, slow fade
         ];
         const idx = Math.floor(Math.random() * 4);
         const arc = archetypes[idx];
@@ -7047,13 +7048,16 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'A drum hit — POW, then gone',
-        'A guitar string — quick bloom, then slowly fades',
-        'An organ key — on the moment you press it, off the moment you let go',
-        'A string pad — swells in like a wave, lingers after it ends',
+        'Starts instantly — stops instantly (like a clap)',
+        'Starts instantly — then slowly fades away (like a bell)',
+        'Slowly swells in — then suddenly stops',
+        'Slowly swells in — then slowly breathes out (like a whale)',
       ],
-      bonusLore: 'You felt the shape of the note. The Hollow opens.',
-      wrongLore(ci) { return `It was the ${['drum hit','guitar string','organ key','string pad'][ci]}. Every note has a shape — how it starts, how long it holds, how it ends. That shape makes a drum sound nothing like a violin.`; },
+      bonusLore: 'You heard the shape of the note. The Hollow is known.',
+      wrongLore(ci) {
+        const names = ['instant start + instant stop','instant start + slow fade','slow swell + sudden stop','slow swell + slow fade'];
+        return `It was ${names[ci]}. The START of a note is called the attack — fast attack = snappy, slow attack = swells in. The END is called the release — fast release = cuts off, slow release = fades away.`;
+      },
     },
     lfo: {
       lore: 'Does the pitch stay still, or does it wobble? Listen carefully.',
