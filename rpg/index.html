@@ -64,17 +64,43 @@ canvas { display: block; }
   opacity: 1;
 }
 
-/* Mastery overlay — Workshop slides up over the encounter screen */
+/* Mastery overlay — Workshop slides in from left, sprites panel on right */
 #screen-workshop.mastery-overlay {
-  top: 28vh;
-  border-radius: 1rem 1rem 0 0;
-  border-top: 1px solid var(--border-glow);
-  animation: mastery-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 5;
+  top: 0; left: 0; width: 62%;
+  border-right: 1px solid var(--border-glow);
+  border-radius: 0;
+  animation: mastery-slide-left 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 12;
 }
-@keyframes mastery-slide-up {
-  from { top: 100vh; opacity: 0; }
-  to   { top: 28vh;  opacity: 1; }
+@keyframes mastery-slide-left {
+  from { left: -65%; opacity: 0; }
+  to   { left: 0;    opacity: 1; }
+}
+#mastery-sprite-panel {
+  position: fixed; top: 0; right: 0; width: 38%; height: 100vh;
+  z-index: 11; display: none;
+  flex-direction: column; align-items: center; justify-content: space-evenly;
+  background: var(--bg);
+  padding: 1rem 0.5rem;
+  box-sizing: border-box;
+  gap: 0.5rem;
+}
+.msp-names {
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+}
+.msp-entity-name {
+  font-size: 0.85rem; letter-spacing: 0.12em;
+  color: var(--gold); text-transform: uppercase;
+}
+.msp-badge {
+  font-size: 0.65rem; letter-spacing: 0.14em;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.msp-sprite-wrap { line-height: 0; }
+.msp-vs {
+  font-size: 0.7rem; letter-spacing: 0.2em;
+  color: var(--text-dark); text-transform: uppercase;
 }
 #screen-workshop.mastery-overlay .ws-layout { height: 100%; }
 #screen-workshop.mastery-overlay .ws-header { display: none; }
@@ -2981,6 +3007,17 @@ canvas { display: block; }
 </div>
 
 <div id="unlock-toast"></div>
+
+<!-- Mastery split-screen: sprite panel (right side, z-index 4) -->
+<div id="mastery-sprite-panel">
+  <div class="msp-names">
+    <div class="msp-entity-name" id="msp-entity-name"></div>
+    <div class="msp-badge" id="msp-badge"></div>
+  </div>
+  <div class="msp-sprite-wrap" id="msp-monster"></div>
+  <div class="msp-vs">⚔ vs</div>
+  <div class="msp-sprite-wrap" id="msp-hero"></div>
+</div>
 
 <!-- ============================================================
      ENCOUNTER SCREEN — Full-bleed hero layout
@@ -11965,6 +12002,8 @@ const Workshop = (() => {
       _masteryMode = false;
       const ws = document.getElementById('screen-workshop');
       ws?.classList.remove('mastery-overlay', 'active');
+      const sp = document.getElementById('mastery-sprite-panel');
+      if (sp) sp.style.display = 'none';
     }
     document.getElementById('ws-challenge-bar')?.remove();
     document.getElementById('ws-wing-tabs')?.style.removeProperty('display');
@@ -12079,9 +12118,23 @@ const Workshop = (() => {
     _buildSignalStrip();
     _startWaveViz();
     if (_masteryMode) {
-      // Slide up over the encounter screen — don't navigate away
+      // Slide in from left over the encounter screen — sprites panel stays on right
       const ws = document.getElementById('screen-workshop');
       if (ws) { ws.classList.add('active', 'mastery-overlay'); }
+      // Populate and show sprite panel
+      const sp = document.getElementById('mastery-sprite-panel');
+      if (sp) {
+        const cls = CLASSES?.find(c => c.key === State.player.classKey);
+        const monEl  = document.getElementById('msp-monster');
+        const heroEl = document.getElementById('msp-hero');
+        const nameEl = document.getElementById('msp-entity-name');
+        const badgeEl = document.getElementById('msp-badge');
+        if (nameEl)  nameEl.textContent  = document.getElementById('enc-entity-name')?.textContent  || quest?.entityName || '';
+        if (badgeEl) badgeEl.textContent = document.getElementById('enc-module-badge')?.textContent || '';
+        if (monEl)   monEl.innerHTML   = (quest?.spriteKey && SPRITES[quest.spriteKey])   ? renderSprite(SPRITES[quest.spriteKey], 4)  : '';
+        if (heroEl)  heroEl.innerHTML  = (cls?.spriteKey  && SPRITES[cls.spriteKey])      ? renderSprite(SPRITES[cls.spriteKey],  3)   : '';
+        sp.style.display = 'flex';
+      }
     } else {
       UI.show('screen-workshop');
     }
