@@ -708,6 +708,44 @@ canvas { display: block; }
   transition: color 0.15s, border-color 0.15s;
 }
 .enc-listen-replay:hover { color: var(--text); border-color: var(--text-dim); }
+.enc-teach-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  width: 92%;
+}
+.enc-teach-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.55rem 0.5rem;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.enc-teach-btn:hover { border-color: var(--text-dim); }
+.enc-teach-btn.active {
+  border-color: var(--mod-primary, var(--gold));
+  background: var(--mod-dim, rgba(201,168,76,0.08));
+}
+.enc-teach-name { font-size: 0.8rem; letter-spacing: 0.04em; }
+.enc-teach-desc { font-size: 0.62rem; color: var(--text-dim); line-height: 1.3; }
+.enc-teach-btn.active .enc-teach-desc { color: var(--text); }
+.enc-teach-ready {
+  margin-top: 0.4rem;
+  background: none;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.enc-teach-ready:hover { background: rgba(201,168,76,0.1); }
 .enc-listen-feedback {
   font-size: 0.7rem;
   line-height: 1.5;
@@ -7069,10 +7107,16 @@ const EarTraining = (() => {
       wrongLore(ci) { return `It was ${['wide open','warm','muffled','almost gone'][ci]}. A filter is like a blanket for sound — pull it tighter and the bright parts disappear first.`; },
     },
     adsr: {
-      lore: 'Listen carefully — does the note jump at you or creep in? And when it ends, does it stop suddenly or fade away?',
+      lore: 'Now listen — which shape is this?',
       question: 'What does the note do at the START and at the END?',
       listenMs: 5500,
       _arc: null,
+      teach: [
+        { label: '👏 Clap',  desc: 'starts instantly, stops instantly', arc: { a:0.003, d:0.1, s:0.7, r:0.08 } },
+        { label: '🔔 Bell',  desc: 'starts instantly, fades away slowly', arc: { a:0.003, d:0.1, s:0.7, r:2.2  } },
+        { label: '🌊 Swell', desc: 'slowly swells in, then suddenly stops', arc: { a:1.1,   d:0.2, s:0.8, r:0.08 } },
+        { label: '🐋 Whale', desc: 'slowly breathes in, slowly breathes out', arc: { a:1.1,   d:0.2, s:0.8, r:2.2  } },
+      ],
       setup() {
         // 4 combos of fast/slow attack × fast/slow release so the contrast is obvious
         const archetypes = [
@@ -7091,15 +7135,15 @@ const EarTraining = (() => {
         Audio.demoADSROnce(this._arc.a, this._arc.d, this._arc.s, this._arc.r);
       },
       choices: [
-        'Starts instantly — stops instantly (like a clap)',
-        'Starts instantly — then slowly fades away (like a bell)',
-        'Slowly swells in — then suddenly stops',
-        'Slowly swells in — then slowly breathes out (like a whale)',
+        '👏 Clap — starts instantly, stops instantly',
+        '🔔 Bell — starts instantly, fades away slowly',
+        '🌊 Swell — slowly swells in, then suddenly stops',
+        '🐋 Whale — slowly breathes in, slowly breathes out',
       ],
-      bonusLore: 'You heard the shape of the note. The Hollow is known.',
+      bonusLore: 'You heard the shape. The Hollow is known.',
       wrongLore(ci) {
-        const names = ['instant start + instant stop','instant start + slow fade','slow swell + sudden stop','slow swell + slow fade'];
-        return `It was ${names[ci]}. The START of a note is called the attack — fast attack = snappy, slow attack = swells in. The END is called the release — fast release = cuts off, slow release = fades away.`;
+        const names = ['the Clap','the Bell','the Swell','the Whale'];
+        return `It was ${names[ci]}. The start of a note is called the attack, the end is called the release — together they give every sound its personality.`;
       },
     },
     lfo: {
@@ -7211,15 +7255,57 @@ const EarTraining = (() => {
   function start(quest, onDone) {
     const ch = CHALLENGES[quest.id];
     if (!ch) { onDone(); return; }
-    _onDone     = onDone;
-    _answered   = false;
-    _forceMax   = false;
-    _correctIdx = ch.setup();
+    _onDone   = onDone;
+    _answered = false;
+    _forceMax = false;
+    _correctIdx = -1;
 
+    if (ch.teach) {
+      _showTeachPhase(ch);
+    } else {
+      _correctIdx = ch.setup();
+      _showListenPhase(ch);
+    }
+  }
+
+  function _showTeachPhase(ch) {
     const el = document.getElementById('enc-listen-phase');
-    if (!el) { onDone(); return; }
+    if (!el) { _correctIdx = ch.setup(); _showListenPhase(ch); return; }
+
     el.innerHTML = `
-      <div class="enc-listen-label">— LISTEN —</div>
+      <div class="enc-listen-label">— LEARN THE SHAPES —</div>
+      <div class="enc-listen-entity">Tap each one to hear it. Take your time.</div>
+      <div class="enc-teach-grid" id="enc-teach-grid"></div>
+      <button class="enc-teach-ready" id="enc-teach-ready">→ I'm ready — test me!</button>
+    `;
+    el.style.display = 'flex';
+
+    const grid = document.getElementById('enc-teach-grid');
+    ch.teach.forEach(({ label, desc, arc }) => {
+      const btn = document.createElement('button');
+      btn.className = 'enc-teach-btn';
+      btn.innerHTML = `<span class="enc-teach-name">${label}</span><span class="enc-teach-desc">${desc}</span>`;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.enc-teach-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        Audio.demoADSROnce(arc.a, arc.d, arc.s, arc.r);
+      });
+      grid.appendChild(btn);
+    });
+
+    document.getElementById('enc-teach-ready').addEventListener('click', () => {
+      _correctIdx = ch.setup();
+      _showListenPhase(ch);
+    });
+  }
+
+  function _showListenPhase(ch) {
+    const el = document.getElementById('enc-listen-phase');
+    if (!el) return;
+    const listenMs = ch.listenMs || 3300;
+
+    el.innerHTML = `
+      <div class="enc-listen-label">— NOW LISTEN —</div>
       <div class="enc-listen-entity">${ch.lore}</div>
       <div class="enc-listen-bar-wrap"><div class="enc-listen-bar" id="enc-listen-bar"></div></div>
       <div class="enc-listen-question" id="enc-listen-question" style="opacity:0">${ch.question}</div>
@@ -7227,7 +7313,6 @@ const EarTraining = (() => {
       <div class="enc-listen-feedback" id="enc-listen-feedback"></div>
     `;
     el.style.display = 'flex';
-    const listenMs = ch.listenMs || 3300;
     // Start the fill bar animation on next frame (duration matches listen window)
     requestAnimationFrame(() => {
       const bar = document.getElementById('enc-listen-bar');
