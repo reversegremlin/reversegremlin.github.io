@@ -694,6 +694,20 @@ canvas { display: block; }
 }
 .enc-listen-choice.correct  { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.07); }
 .enc-listen-choice.wrong    { border-color: var(--danger); color: var(--danger); opacity: 0.65; }
+.enc-listen-replay {
+  margin-top: 0.35rem;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  border-radius: 2px;
+  align-self: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.enc-listen-replay:hover { color: var(--text); border-color: var(--text-dim); }
 .enc-listen-feedback {
   font-size: 0.7rem;
   line-height: 1.5;
@@ -7033,6 +7047,8 @@ const EarTraining = (() => {
     adsr: {
       lore: 'Listen carefully — does the note jump at you or creep in? And when it ends, does it stop suddenly or fade away?',
       question: 'What does the note do at the START and at the END?',
+      listenMs: 5500,
+      _arc: null,
       setup() {
         // 4 combos of fast/slow attack × fast/slow release so the contrast is obvious
         const archetypes = [
@@ -7042,10 +7058,15 @@ const EarTraining = (() => {
           { a:1.1,   d:0.2, s:0.8, r:2.2  },  // slow swell, slow fade
         ];
         const idx = Math.floor(Math.random() * 4);
-        const arc = archetypes[idx];
-        Audio.setDecay(arc.d); Audio.setSustain(arc.s); Audio.setRelease(arc.r);
-        Audio.setAttack(arc.a); // triggers _demoADSR
+        this._arc = archetypes[idx];
+        Audio.setDecay(this._arc.d); Audio.setSustain(this._arc.s); Audio.setRelease(this._arc.r);
+        Audio.setAttack(this._arc.a); // triggers _demoADSR
         return idx;
+      },
+      replay() {
+        if (!this._arc) return;
+        Audio.setDecay(this._arc.d); Audio.setSustain(this._arc.s); Audio.setRelease(this._arc.r);
+        Audio.setAttack(this._arc.a);
       },
       choices: [
         'Starts instantly — stops instantly (like a clap)',
@@ -7184,13 +7205,14 @@ const EarTraining = (() => {
       <div class="enc-listen-feedback" id="enc-listen-feedback"></div>
     `;
     el.style.display = 'flex';
-    // Start the fill bar animation on next frame
+    const listenMs = ch.listenMs || 3300;
+    // Start the fill bar animation on next frame (duration matches listen window)
     requestAnimationFrame(() => {
       const bar = document.getElementById('enc-listen-bar');
-      if (bar) bar.style.width = '100%';
+      if (bar) { bar.style.transition = `width ${(listenMs / 1000).toFixed(1)}s linear`; bar.style.width = '100%'; }
     });
-    // Reveal question + choices after 3.3 seconds
-    setTimeout(() => _revealChoices(ch), 3300);
+    // Reveal question + choices after the listen window
+    setTimeout(() => _revealChoices(ch), listenMs);
   }
 
   function _revealChoices(ch) {
@@ -7207,6 +7229,13 @@ const EarTraining = (() => {
       btn.addEventListener('click', () => _answer(idx, ch));
       c.appendChild(btn);
     });
+    if (ch.replay) {
+      const rb = document.createElement('button');
+      rb.className = 'enc-listen-replay';
+      rb.textContent = '🔊 Play it again';
+      rb.addEventListener('click', () => { if (!_answered) ch.replay(); });
+      c.appendChild(rb);
+    }
     c.style.opacity = '1';
   }
 
