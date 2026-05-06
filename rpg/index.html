@@ -64,6 +64,30 @@ canvas { display: block; }
   opacity: 1;
 }
 
+/* Mastery overlay — Workshop slides up over the encounter screen */
+#screen-workshop.mastery-overlay {
+  top: 36vh;
+  border-radius: 1rem 1rem 0 0;
+  border-top: 1px solid var(--border-glow);
+  animation: mastery-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 5;
+}
+@keyframes mastery-slide-up {
+  from { top: 100vh; opacity: 0; }
+  to   { top: 36vh;  opacity: 1; }
+}
+#screen-workshop.mastery-overlay .ws-layout { height: 100%; }
+#screen-workshop.mastery-overlay .ws-header { display: none; }
+.ws-mastery-step {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+  min-height: 1.2em;
+  transition: color 0.3s;
+}
+.ws-mastery-step.done { color: var(--gold); }
+
 /* ============================================================
    SHARED BUTTONS
    ============================================================ */
@@ -590,6 +614,105 @@ canvas { display: block; }
   padding: 0.7rem 1rem;
   gap: 0.45rem;
   border-right: 1px solid var(--border);
+  position: relative;
+}
+
+/* ── Ear Training: listen phase overlay ─────────────────────── */
+#enc-listen-phase {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.75rem 1rem;
+}
+.enc-listen-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.32em;
+  color: var(--mod-primary);
+  font-family: var(--font-mono);
+  font-weight: bold;
+}
+.enc-listen-entity {
+  font-size: 0.8rem;
+  color: var(--text);
+  text-align: center;
+  font-style: italic;
+  line-height: 1.55;
+  max-width: 230px;
+}
+.enc-listen-bar-wrap {
+  width: 90%;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0.1rem 0;
+}
+.enc-listen-bar {
+  height: 100%;
+  width: 0;
+  background: var(--mod-primary);
+  transition: width 3.2s linear;
+  border-radius: 2px;
+}
+.enc-listen-question {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  text-align: center;
+  transition: opacity 0.5s;
+}
+.enc-listen-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  transition: opacity 0.5s;
+}
+.enc-listen-choice {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: 0.73rem;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 2px;
+  transition: border-color 0.2s, color 0.2s;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+.enc-listen-choice:hover:not(:disabled) {
+  border-color: var(--mod-secondary);
+  color: var(--mod-secondary);
+}
+.enc-listen-choice.correct  { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.07); }
+.enc-listen-choice.wrong    { border-color: var(--danger); color: var(--danger); opacity: 0.65; }
+.enc-listen-feedback {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: center;
+  min-height: 2em;
+  max-width: 230px;
+}
+.enc-listen-feedback .ok  { color: var(--gold); }
+.enc-listen-feedback .bad { color: var(--text-dim); }
+.enc-ear-bonus {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  animation: ear-bonus-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ear-bonus-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1; text-shadow: 0 0 8px var(--gold); }
 }
 .enc-hud-params {
   display: flex;
@@ -2654,6 +2777,9 @@ canvas { display: block; }
       </div>
     </div>
     <div class="enc-hud-dice" id="enc-hud-dice">
+      <!-- Ear training listen phase — overlays dice content -->
+      <div id="enc-listen-phase" style="display:none;"></div>
+      <div class="enc-ear-bonus" id="enc-ear-bonus" style="display:none;">✦ Hunter's Ear — Max Roll</div>
       <div class="enc-param-name" id="enc-param-name">—</div>
       <div class="enc-param-value" id="enc-param-value">—</div>
       <div class="dice-tray" id="dice-tray"></div>
@@ -6699,6 +6825,222 @@ const QUEST_AUDIO_SETUP = {
 };
 
 /* ============================================================
+   EAR TRAINING — pre-battle listening phase
+   Before the first dice roll the monster "plays" a sound.
+   Identify it correctly to earn a guaranteed max on your first roll.
+   ============================================================ */
+const EarTraining = (() => {
+  let _onDone     = null;
+  let _correctIdx = -1;
+  let _forceMax   = false;
+  let _answered   = false;
+
+  const CHALLENGES = {
+    vco: {
+      lore: 'The Wound opens its voice. Listen before you roll.',
+      question: 'What is the shape of this waveform?',
+      setup() {
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setWaveform(['sine','triangle','square','sawtooth'][idx]);
+        return idx;
+      },
+      choices: ['Sine — smooth, pure, one frequency', 'Triangle — hollow, warm, odd harmonics', 'Square — reedy, buzzing, strong odd harmonics', 'Sawtooth — bright, full, every harmonic blazing'],
+      bonusLore: 'Your ear knows the shape. The Wound is exposed.',
+      wrongLore(ci) { return `It was ${['Sine','Triangle','Square','Sawtooth'][ci]}. Each waveform has a different harmonic fingerprint — Sine is purest, Sawtooth carries everything.`; },
+    },
+    vcf: {
+      lore: 'The Sieve already shapes the signal. Where does it cut?',
+      question: 'The filter cutoff is set to which range?',
+      setup() {
+        const opts = [{hz:8000},{hz:2000},{hz:400},{hz:80}];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.enableVCF(true); Audio.setCutoff(opts[idx].hz);
+        return idx;
+      },
+      choices: ['Open — all harmonics pass freely (8 kHz)', 'Warm — high end gently shaped (2 kHz)', 'Dark — only fundamentals remain (400 Hz)', 'Closed — nearly muted (80 Hz)'],
+      bonusLore: 'You heard the filter\'s shadow. Signal flow is revealed.',
+      wrongLore(ci) { return `It was ${['Open','Warm','Dark','Closed'][ci]}. Lower cutoff = darker tone. Higher = brighter. The filter is a sculptor of harmonic content.`; },
+    },
+    adsr: {
+      lore: 'The envelope breathes. Feel when the note arrives.',
+      question: 'How quickly does the note bloom from silence?',
+      setup() {
+        const opts = [{t:0.002},{t:0.06},{t:0.45},{t:1.0}];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setAttack(opts[idx].t);
+        return idx;
+      },
+      choices: ['Instant — strikes before you expect it', 'Fast — a quick bloom (~60 ms)', 'Slow — swells over ~450 ms', 'Very slow — breathes for a full second'],
+      bonusLore: 'You felt the note\'s birth. The Hollow yields its timing.',
+      wrongLore(ci) { return `It was ${['Instant','Fast','Slow','Very slow'][ci]}. Attack time is the difference between a struck hammer and a drawn bow.`; },
+    },
+    lfo: {
+      lore: 'The Shivering stirs in the pitch. Listen for motion.',
+      question: 'How fast does the pitch tremble?',
+      setup() {
+        const opts = [
+          {rate:null,  depth:0},
+          {rate:0.3,   depth:0.35},
+          {rate:2.5,   depth:0.35},
+          {rate:7,     depth:0.35},
+        ];
+        const idx = Math.floor(Math.random() * 4);
+        if (opts[idx].rate) { Audio.startLFO(opts[idx].rate, opts[idx].depth); Audio.setLFOTarget('vco'); }
+        else                { Audio.stopLFO(); Audio.setLFOTarget('none'); }
+        return idx;
+      },
+      choices: ['Still — no movement at all', 'Glacial — barely perceptible drift (0.3 Hz)', 'Vibrato — clear rhythmic wobble (2.5 Hz)', 'Flutter — rapid shimmer (7 Hz)'],
+      bonusLore: 'You traced the trembling frequency. The Shivering is known.',
+      wrongLore(ci) { return `It was ${['Still','Glacial','Vibrato','Flutter'][ci]}. LFO rate = cycles per second — slow cycles breathe, fast ones shimmer.`; },
+    },
+    reverb: {
+      lore: 'The Cathedral opens. Hear how far the sound travels.',
+      question: 'What space surrounds this signal?',
+      setup() {
+        const opts = [{mix:0},{mix:0.12},{mix:0.45},{mix:0.88}];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setReverb(opts[idx].mix);
+        return idx;
+      },
+      choices: ['Dry — no space, direct signal only', 'Small room — brief bloom around each note', 'Hall — a long, clear reverb tail', 'Cathedral — vast, the sound outlives the note'],
+      bonusLore: 'You measured the Cathedral\'s depth. The space yields to you.',
+      wrongLore(ci) { return `It was ${['Dry','Small room','Hall','Cathedral'][ci]}. Reverb mix controls how much signal decays into imagined space — from a closet to an abbey.`; },
+    },
+    delay: {
+      lore: 'The Memory Chamber holds each note. Count the echoes.',
+      question: 'What delay time echoes through this signal?',
+      setup() {
+        const opts = [
+          {mix:0,    time:null,  fb:0  },
+          {mix:0.45, time:0.12,  fb:0.4},
+          {mix:0.45, time:0.375, fb:0.5},
+          {mix:0.45, time:0.75,  fb:0.5},
+        ];
+        const idx = Math.floor(Math.random() * 4);
+        if (opts[idx].time) Audio.setDelay(opts[idx].mix, opts[idx].time, opts[idx].fb);
+        else                Audio.setDelay(0, 0.3, 0);
+        return idx;
+      },
+      choices: ['No echo — only the direct signal', 'Short slapback — a quick reflection (~120 ms)', 'Eighth note — distinct rhythmic echo (~375 ms)', 'Quarter note — long trailing repetition (~750 ms)'],
+      bonusLore: 'You heard the Memory\'s rhythm. The Chamber opens.',
+      wrongLore(ci) { return `It was ${['No echo','Short slapback','Eighth note','Quarter note'][ci]}. Delay time determines when the echo arrives — it can sync to a musical pulse.`; },
+    },
+    ladder: {
+      lore: 'The Ladder filters and saturates. Hear its character.',
+      question: 'How much drive is pushing through the Ladder?',
+      setup() {
+        const opts = [{drive:1,hz:1200},{drive:1.5,hz:1200},{drive:2.5,hz:900},{drive:4,hz:600}];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setDrive(opts[idx].drive); Audio.enableVCF(true); Audio.setCutoff(opts[idx].hz);
+        return idx;
+      },
+      choices: ['Clean — transparent, no coloring', 'Warm — subtle harmonic saturation', 'Saturated — audible grit and body', 'Driven — heavy, compressed, biting'],
+      bonusLore: 'You felt the Ladder\'s weight. The four poles yield.',
+      wrongLore(ci) { return `It was ${['Clean','Warm','Saturated','Driven'][ci]}. Drive controls how hard the signal pushes through the ladder\'s analog saturation.`; },
+    },
+    chorus: {
+      lore: 'The Choir stirs. Listen for the doubling.',
+      question: 'How many voices do you hear?',
+      setup() {
+        const opts = [{mix:0},{mix:0.22},{mix:0.55},{mix:0.9}];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setChorus(opts[idx].mix, 0.6, 0.5);
+        return idx;
+      },
+      choices: ['Single — dry, one voice only', 'Slight shimmer — barely doubled', 'Full chorus — clearly multiple copies', 'Submerged — thick shimmer dominates'],
+      bonusLore: 'You counted the choir. The voices reveal themselves.',
+      wrongLore(ci) { return `It was ${['Single','Slight shimmer','Full chorus','Submerged'][ci]}. Chorus mix blends the dry signal with slightly detuned, delayed copies of itself.`; },
+    },
+  };
+
+  function hasChallenge(questId) { return !!CHALLENGES[questId]; }
+
+  function start(quest, onDone) {
+    const ch = CHALLENGES[quest.id];
+    if (!ch) { onDone(); return; }
+    _onDone     = onDone;
+    _answered   = false;
+    _forceMax   = false;
+    _correctIdx = ch.setup();
+
+    const el = document.getElementById('enc-listen-phase');
+    if (!el) { onDone(); return; }
+    el.innerHTML = `
+      <div class="enc-listen-label">— LISTEN —</div>
+      <div class="enc-listen-entity">${ch.lore}</div>
+      <div class="enc-listen-bar-wrap"><div class="enc-listen-bar" id="enc-listen-bar"></div></div>
+      <div class="enc-listen-question" id="enc-listen-question" style="opacity:0">${ch.question}</div>
+      <div class="enc-listen-choices" id="enc-listen-choices" style="opacity:0"></div>
+      <div class="enc-listen-feedback" id="enc-listen-feedback"></div>
+    `;
+    el.style.display = 'flex';
+    // Start the fill bar animation on next frame
+    requestAnimationFrame(() => {
+      const bar = document.getElementById('enc-listen-bar');
+      if (bar) bar.style.width = '100%';
+    });
+    // Reveal question + choices after 3.3 seconds
+    setTimeout(() => _revealChoices(ch), 3300);
+  }
+
+  function _revealChoices(ch) {
+    if (_answered) return;
+    const q = document.getElementById('enc-listen-question');
+    const c = document.getElementById('enc-listen-choices');
+    if (!q || !c) return;
+    q.style.opacity = '1';
+    c.innerHTML = '';
+    ch.choices.forEach((label, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'enc-listen-choice';
+      btn.textContent = label;
+      btn.addEventListener('click', () => _answer(idx, ch));
+      c.appendChild(btn);
+    });
+    c.style.opacity = '1';
+  }
+
+  function _answer(idx, ch) {
+    if (_answered) return;
+    _answered = true;
+    document.querySelectorAll('.enc-listen-choice').forEach(b => { b.disabled = true; });
+    const fb = document.getElementById('enc-listen-feedback');
+    const correct = idx === _correctIdx;
+    if (correct) {
+      _forceMax = true;
+      document.querySelectorAll('.enc-listen-choice')[idx]?.classList.add('correct');
+      if (fb) fb.innerHTML = `<span class="ok">✦ ${ch.bonusLore} First roll: MAX.</span>`;
+    } else {
+      document.querySelectorAll('.enc-listen-choice')[_correctIdx]?.classList.add('correct');
+      document.querySelectorAll('.enc-listen-choice')[idx]?.classList.add('wrong');
+      if (fb) fb.innerHTML = `<span class="bad">✗ ${ch.wrongLore(_correctIdx)}</span>`;
+    }
+    setTimeout(_done, 2000);
+  }
+
+  function _done() {
+    const el = document.getElementById('enc-listen-phase');
+    if (el) el.style.display = 'none';
+    if (_forceMax) {
+      const bonus = document.getElementById('enc-ear-bonus');
+      if (bonus) bonus.style.display = 'block';
+    }
+    if (_onDone) { const cb = _onDone; _onDone = null; cb(); }
+  }
+
+  // Returns max die value if bonus is active, consuming it; null otherwise.
+  function consumeMaxRoll(dice) {
+    if (!_forceMax) return null;
+    _forceMax = false;
+    const bonus = document.getElementById('enc-ear-bonus');
+    if (bonus) bonus.style.display = 'none';
+    return dice;
+  }
+
+  return { hasChallenge, start, consumeMaxRoll };
+})();
+
+/* ============================================================
    STUDY MODE — per-module guided prompts shown in The Inner Chamber
    Each entry: { title, steps: [{num, html}] }
    ============================================================ */
@@ -8245,9 +8587,13 @@ const UI = {
     // Open the envelope — no wave arg so audioSetup's waveform is preserved
     await Audio.startVoice(220);
 
-    this._loadQuestParam(0);
+    // Show the encounter screen and start waveform viz before ear training
     Viz.start('enc-canvas');
     this.show('screen-encounter');
+
+    // Ear training listen phase (if challenge exists for this quest), then dice
+    const _self = this;
+    EarTraining.start(quest, () => _self._loadQuestParam(0));
   },
 
   _loadQuestParam(idx) {
@@ -8448,10 +8794,21 @@ const Game = {
       setTimeout(() => dmgEl.remove(), 1300);
     }
 
-    const roll   = Dice.funRoll(param.dice, param.key);
-    const result = param.roll(roll);
+    const maxRoll = EarTraining.consumeMaxRoll(param.dice);
+    const roll    = maxRoll !== null ? maxRoll : Dice.funRoll(param.dice, param.key);
+    const result  = param.roll(roll);
     result._roll  = roll;
     State.lastRoll = result;
+    // Show a gold float on max-roll bonus
+    if (maxRoll !== null && cvs) {
+      const rect = cvs.getBoundingClientRect();
+      const bEl = document.createElement('div');
+      bEl.className = 'damage-float';
+      bEl.textContent = '✦ MAX';
+      bEl.style.cssText += `;color:var(--gold);text-shadow:0 0 10px var(--gold);left:${rect.left + rect.width * 0.42}px;top:${rect.top + rect.height * 0.15}px;`;
+      document.body.appendChild(bEl);
+      setTimeout(() => bEl.remove(), 1300);
+    }
 
     UI.updateParamResult(result);
 
@@ -8499,7 +8856,7 @@ const Game = {
   _startPatchPhase(quest, challenge) {
     this._patchQuest     = quest;
     this._patchChallenge = challenge;
-    Workshop.openChallenge(quest, challenge);
+    Workshop.openChallenge(quest, challenge, { masteryMode: true });
   },
 
   youDied(lore) {
@@ -8514,7 +8871,8 @@ const Game = {
     const quest     = this._patchQuest;
     const challenge = this._patchChallenge;
     if (!quest || !challenge) { UI.goMap(); return; }
-    Workshop.openChallenge(quest, challenge);
+    UI.show('screen-encounter');
+    Workshop.openChallenge(quest, challenge, { masteryMode: true });
   },
 };
 
@@ -9685,6 +10043,7 @@ const Workshop = (() => {
   let _challengeMode  = false;
   let _challengeQuest = null;
   let _challenge      = null;
+  let _masteryMode    = false;   // true = encounter-overlay mode (no submit, auto-detect)
 
   // ── Public ────────────────────────────────────────────────────────────────
 
@@ -10734,6 +11093,11 @@ const Workshop = (() => {
     _challengeMode  = false;
     _challengeQuest = null;
     _challenge      = null;
+    if (_masteryMode) {
+      _masteryMode = false;
+      const ws = document.getElementById('screen-workshop');
+      ws?.classList.remove('mastery-overlay', 'active');
+    }
     document.getElementById('ws-challenge-bar')?.remove();
     document.getElementById('ws-wing-tabs')?.style.removeProperty('display');
     const bodyWrap = document.getElementById('ws-body-wrap');
@@ -10765,18 +11129,36 @@ const Workshop = (() => {
     const bar = document.createElement('div');
     bar.id = 'ws-challenge-bar';
     bar.className = 'ws-challenge-bar';
+    const actionsHtml = _masteryMode
+      ? `<button class="btn btn-secondary" style="font-size:0.75rem;opacity:0.5;" onclick="Workshop.forfeitChallenge()">↩ Walk Away</button>`
+      : `<button class="btn btn-gold" onclick="Workshop.submitChallenge()">✓ Submit Proof</button>
+         <button class="btn btn-secondary" style="font-size:0.75rem;opacity:0.6;" onclick="Workshop.forfeitChallenge()">↩ Walk Away</button>`;
     bar.innerHTML = `
       <div class="ws-challenge-phase">— The Proof —</div>
       <div class="ws-challenge-instruction">${challenge.instruction}</div>
       <div class="ws-challenge-goal">${challenge.goal}</div>
       ${challenge.howto ? `<div class="ws-challenge-howto">${challenge.howto}</div>` : ''}
       <div class="ws-challenge-feedback" id="ws-challenge-feedback"></div>
-      <div class="ws-challenge-actions">
-        <button class="btn btn-gold" onclick="Workshop.submitChallenge()">✓ Submit Proof</button>
-        <button class="btn btn-secondary" style="font-size:0.75rem;opacity:0.6;" onclick="Workshop.forfeitChallenge()">↩ Walk Away</button>
-      </div>
+      ${_masteryMode ? `<div class="ws-mastery-step" id="ws-mastery-step"></div>` : ''}
+      <div class="ws-challenge-actions">${actionsHtml}</div>
     `;
     wrap.prepend(bar);
+    if (_masteryMode) _checkChallengeProgress();
+  }
+
+  function _checkChallengeProgress() {
+    if (!_challengeMode || !_challenge || !_masteryMode) return;
+    let result;
+    try { result = _challenge.check(); } catch(e) { return; }
+    const fb   = document.getElementById('ws-challenge-feedback');
+    const step = document.getElementById('ws-mastery-step');
+    if (result.pass) {
+      if (fb)   fb.innerHTML = `<span style="color:var(--gold)">✦ ${_challenge.successMsg || 'Proof accepted.'}</span>`;
+      if (step) { step.textContent = ''; step.className = 'ws-mastery-step done'; }
+      setTimeout(() => _onChallengePass(), 1400);
+    } else if (result.failHint) {
+      if (step) { step.textContent = `→ ${result.failHint}`; step.className = 'ws-mastery-step'; }
+    }
   }
 
   function _onChallengePass() {
@@ -10795,7 +11177,7 @@ const Workshop = (() => {
     UI.showVictory(quest);
   }
 
-  async function openChallenge(quest, challenge) {
+  async function openChallenge(quest, challenge, opts = {}) {
     BGMusic.fadeOut(1.0);
     if (!Audio.isReady()) await Audio.init();
     Audio.resetChain();
@@ -10809,6 +11191,7 @@ const Workshop = (() => {
     _seqStepEls     = [];
     _tutorialActive = false;
     _challengeMode  = true;
+    _masteryMode    = !!opts.masteryMode;
     _challengeQuest = quest;
     _challenge      = challenge;
 
@@ -10820,7 +11203,13 @@ const Workshop = (() => {
     _buildKeyboard();
     _buildSignalStrip();
     _startWaveViz();
-    UI.show('screen-workshop');
+    if (_masteryMode) {
+      // Slide up over the encounter screen — don't navigate away
+      const ws = document.getElementById('screen-workshop');
+      if (ws) { ws.classList.add('active', 'mastery-overlay'); }
+    } else {
+      UI.show('screen-workshop');
+    }
     _initD20();
 
     const scrollArea = document.getElementById('ws-body-wrap');
@@ -11105,6 +11494,7 @@ const Workshop = (() => {
             row.querySelectorAll('.ws-choice-btn').forEach(b => b.classList.toggle('active', b.dataset.idx == idx));
             const d = document.getElementById(`wsc-${quest.id}-${param.key}`);
             if (d) d.textContent = cfg.choices[idx];
+            if (_masteryMode) _checkChallengeProgress();
           });
         });
       } else {
@@ -11130,6 +11520,7 @@ const Workshop = (() => {
         slider.addEventListener('input', () => {
           const v = parseFloat(slider.value);
           cfg.fn(v); valEl.textContent = cfg.fmt(v);
+          if (_masteryMode) _checkChallengeProgress();
         });
       }
 
@@ -11697,6 +12088,7 @@ const Workshop = (() => {
     _applyConnections();
     _redrawCables();
     if (routeKey === 'vco-out→vcf-in' && _tutorialActive) _onTutorialCableConnected();
+    if (_masteryMode) setTimeout(_checkChallengeProgress, 80);
   }
 
   function _disconnect(routeKey) {
@@ -11711,6 +12103,7 @@ const Workshop = (() => {
     });
     _applyConnections();
     _redrawCables();
+    if (_masteryMode) setTimeout(_checkChallengeProgress, 80);
   }
 
   function _redrawCables() {
