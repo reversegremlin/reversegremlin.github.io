@@ -6996,39 +6996,49 @@ const EarTraining = (() => {
 
   const CHALLENGES = {
     vco: {
-      lore: 'The Wound opens its voice. Listen before you roll.',
-      question: 'What is the shape of this waveform?',
+      lore: 'Close your eyes. What does this sound remind you of?',
+      question: 'Which of these sounds like what you just heard?',
       setup() {
         const idx = Math.floor(Math.random() * 4);
         Audio.setWaveform(['sine','triangle','square','sawtooth'][idx]);
         return idx;
       },
-      choices: ['Sine — smooth, pure, one frequency', 'Triangle — hollow, warm, odd harmonics', 'Square — reedy, buzzing, strong odd harmonics', 'Sawtooth — bright, full, every harmonic blazing'],
-      bonusLore: 'Your ear knows the shape. The Wound is exposed.',
-      wrongLore(ci) { return `It was ${['Sine','Triangle','Square','Sawtooth'][ci]}. Each waveform has a different harmonic fingerprint — Sine is purest, Sawtooth carries everything.`; },
+      choices: [
+        'A smooth hum — like blowing across the top of a bottle',
+        'Hollow and flutey — gentle, a little like a recorder',
+        'Buzzy and square — like an old video game or a bee',
+        'Bright and raspy — like a kazoo or a violin bow biting hard',
+      ],
+      bonusLore: 'Your ear already knew. The Wound is heard.',
+      wrongLore(ci) { return `It was the ${['smooth hum','hollow flute','buzzy video-game','bright raspy'][ci]} sound. Every sound has a shape — smooth ones feel round, buzzy ones feel jagged.`; },
     },
     vcf: {
-      lore: 'The Sieve already shapes the signal. Where does it cut?',
-      question: 'The filter cutoff is set to which range?',
+      lore: 'Imagine a blanket being slowly pulled over the sound. How covered is it right now?',
+      question: 'How bright or dark does the sound feel?',
       setup() {
         const opts = [{hz:8000},{hz:2000},{hz:400},{hz:80}];
         const idx = Math.floor(Math.random() * 4);
         Audio.enableVCF(true); Audio.setCutoff(opts[idx].hz);
         return idx;
       },
-      choices: ['Open — all harmonics pass freely (8 kHz)', 'Warm — high end gently shaped (2 kHz)', 'Dark — only fundamentals remain (400 Hz)', 'Closed — nearly muted (80 Hz)'],
-      bonusLore: 'You heard the filter\'s shadow. Signal flow is revealed.',
-      wrongLore(ci) { return `It was ${['Open','Warm','Dark','Closed'][ci]}. Lower cutoff = darker tone. Higher = brighter. The filter is a sculptor of harmonic content.`; },
+      choices: [
+        'Wide open — sharp and bright, like a whistle',
+        'Warm — full and round, the sharp edges are gone',
+        'Muffled — like the sound is behind a wall',
+        'Almost gone — like hearing music in the next room with the door closed',
+      ],
+      bonusLore: 'You felt the blanket. The Sieve is known.',
+      wrongLore(ci) { return `It was ${['wide open','warm','muffled','almost gone'][ci]}. A filter is like a blanket for sound — pull it tighter and the bright parts disappear first.`; },
     },
     adsr: {
-      lore: 'The Hollow shapes how each note is born, held, and released. Listen to the shape of the sound.',
-      question: 'What is the character of this envelope?',
+      lore: 'Listen to how the note starts and ends. Does it jump at you, or creep in slowly?',
+      question: 'Which instrument does this note feel most like?',
       setup() {
         const archetypes = [
-          { a:0.003, d:0.07,  s:0.05, r:0.08 },  // percussive
-          { a:0.008, d:0.28,  s:0.22, r:0.18 },  // plucked
-          { a:0.01,  d:0.05,  s:0.95, r:0.12 },  // organ
-          { a:0.85,  d:0.6,   s:0.85, r:1.6  },  // pad
+          { a:0.003, d:0.07,  s:0.05, r:0.08 },  // drum
+          { a:0.008, d:0.28,  s:0.22, r:0.18 },  // guitar pluck
+          { a:0.01,  d:0.05,  s:0.95, r:0.12 },  // organ key
+          { a:0.85,  d:0.6,   s:0.85, r:1.6  },  // string pad
         ];
         const idx = Math.floor(Math.random() * 4);
         const arc = archetypes[idx];
@@ -7037,90 +7047,115 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'Percussive — strikes hard, decays to silence instantly',
-        'Plucked — quick bloom, fades while still ringing',
-        'Organ — immediate and fully sustained until released',
-        'Pad — breathes in slowly, holds for a long drift, slow release',
+        'A drum hit — POW, then gone',
+        'A guitar string — quick bloom, then slowly fades',
+        'An organ key — on the moment you press it, off the moment you let go',
+        'A string pad — swells in like a wave, lingers after it ends',
       ],
-      bonusLore: 'You read the shape in the air. The Hollow is legible.',
-      wrongLore(ci) { return `It was ${['Percussive','Plucked','Organ','Pad'][ci]}. Attack shapes the entry, decay shapes the fall, sustain the hold, release the goodbye. Together they define what kind of instrument this sounds like.`; },
+      bonusLore: 'You felt the shape of the note. The Hollow opens.',
+      wrongLore(ci) { return `It was the ${['drum hit','guitar string','organ key','string pad'][ci]}. Every note has a shape — how it starts, how long it holds, how it ends. That shape makes a drum sound nothing like a violin.`; },
     },
     lfo: {
-      lore: 'The Shivering stirs in the pitch. Listen for motion.',
-      question: 'How fast does the pitch tremble?',
+      lore: 'Does the pitch stay still, or does it wobble? Listen carefully.',
+      question: 'What is the pitch doing?',
       setup() {
         const opts = [
-          {rate:null,  depth:0},
-          {rate:0.3,   depth:0.35},
-          {rate:2.5,   depth:0.35},
-          {rate:7,     depth:0.35},
+          {rate:null,  depth:0   },
+          {rate:0.4,   depth:0.4 },
+          {rate:2.8,   depth:0.4 },
+          {rate:8,     depth:0.4 },
         ];
         const idx = Math.floor(Math.random() * 4);
         if (opts[idx].rate) { Audio.startLFO(opts[idx].rate, opts[idx].depth); Audio.setLFOTarget('vco'); }
         else                { Audio.stopLFO(); Audio.setLFOTarget('none'); }
         return idx;
       },
-      choices: ['Still — no movement at all', 'Glacial — barely perceptible drift (0.3 Hz)', 'Vibrato — clear rhythmic wobble (2.5 Hz)', 'Flutter — rapid shimmer (7 Hz)'],
-      bonusLore: 'You traced the trembling frequency. The Shivering is known.',
-      wrongLore(ci) { return `It was ${['Still','Glacial','Vibrato','Flutter'][ci]}. LFO rate = cycles per second — slow cycles breathe, fast ones shimmer.`; },
+      choices: [
+        'Perfectly still — one steady note, no movement',
+        'Slow sway — like a boat rocking gently on water',
+        'Steady wobble — like a singer doing vibrato',
+        'Fast shimmer — like a hummingbird\'s wings',
+      ],
+      bonusLore: 'You heard the wobble. The Shivering is known.',
+      wrongLore(ci) { return `It was the ${['perfectly still','slow sway','steady wobble','fast shimmer'][ci]}. An LFO is like a hand gently shaking the pitch — slow shakes feel dreamy, fast ones feel electric.`; },
     },
     reverb: {
-      lore: 'The Cathedral opens. Hear how far the sound travels.',
-      question: 'What space surrounds this signal?',
+      lore: 'Where is this sound happening? Is it tiny and close, or huge and far away?',
+      question: 'What kind of space does this sound like it\'s in?',
       setup() {
-        const opts = [{mix:0},{mix:0.12},{mix:0.45},{mix:0.88}];
+        const opts = [{mix:0},{mix:0.15},{mix:0.5},{mix:0.92}];
         const idx = Math.floor(Math.random() * 4);
         Audio.setReverb(opts[idx].mix);
         return idx;
       },
-      choices: ['Dry — no space, direct signal only', 'Small room — brief bloom around each note', 'Hall — a long, clear reverb tail', 'Cathedral — vast, the sound outlives the note'],
-      bonusLore: 'You measured the Cathedral\'s depth. The space yields to you.',
-      wrongLore(ci) { return `It was ${['Dry','Small room','Hall','Cathedral'][ci]}. Reverb mix controls how much signal decays into imagined space — from a closet to an abbey.`; },
+      choices: [
+        'A tiny room — sound stops as soon as it starts, no echo at all',
+        'A bathroom — a quick bounce off the walls',
+        'A big gymnasium — you can hear the room around the sound',
+        'A cave — the sound keeps going long after the note stops',
+      ],
+      bonusLore: 'You heard the room. The Cathedral is mapped.',
+      wrongLore(ci) { return `It was ${['a tiny room','a bathroom','a gymnasium','a cave'][ci]}. Reverb is how sound bounces off walls — a big space makes longer, slower echoes.`; },
     },
     delay: {
-      lore: 'The Memory Chamber holds each note. Count the echoes.',
-      question: 'What delay time echoes through this signal?',
+      lore: 'Say "hello" in a canyon and it comes back to you. Does this sound repeat?',
+      question: 'What do you hear after the first note?',
       setup() {
         const opts = [
           {mix:0,    time:null,  fb:0  },
-          {mix:0.45, time:0.12,  fb:0.4},
-          {mix:0.45, time:0.375, fb:0.5},
-          {mix:0.45, time:0.75,  fb:0.5},
+          {mix:0.5,  time:0.12,  fb:0.4},
+          {mix:0.5,  time:0.38,  fb:0.5},
+          {mix:0.5,  time:0.75,  fb:0.5},
         ];
         const idx = Math.floor(Math.random() * 4);
         if (opts[idx].time) Audio.setDelay(opts[idx].mix, opts[idx].time, opts[idx].fb);
         else                Audio.setDelay(0, 0.3, 0);
         return idx;
       },
-      choices: ['No echo — only the direct signal', 'Short slapback — a quick reflection (~120 ms)', 'Eighth note — distinct rhythmic echo (~375 ms)', 'Quarter note — long trailing repetition (~750 ms)'],
-      bonusLore: 'You heard the Memory\'s rhythm. The Chamber opens.',
-      wrongLore(ci) { return `It was ${['No echo','Short slapback','Eighth note','Quarter note'][ci]}. Delay time determines when the echo arrives — it can sync to a musical pulse.`; },
+      choices: [
+        'Nothing — just the one note, no repeat',
+        'A quick flick right after — almost attached to the note',
+        'One clear echo a moment later — like a clap in a hallway',
+        'A slow echo — the note comes back like a voice from a distant canyon',
+      ],
+      bonusLore: 'You counted the echoes. The Chamber remembers.',
+      wrongLore(ci) { return `It was ${['no repeat','the quick flick','the hallway echo','the canyon echo'][ci]}. Delay is a recording that plays back after a short wait — the longer the wait, the more it sounds like a real echo.`; },
     },
     ladder: {
-      lore: 'The Ladder filters and saturates. Hear its character.',
-      question: 'How much drive is pushing through the Ladder?',
+      lore: 'Some sounds are clean and clear. Others are fuzzy and rough. How does this one feel?',
+      question: 'How does the texture of this sound feel?',
       setup() {
-        const opts = [{drive:1,hz:1200},{drive:1.5,hz:1200},{drive:2.5,hz:900},{drive:4,hz:600}];
+        const opts = [{drive:1,hz:1400},{drive:1.6,hz:1200},{drive:2.8,hz:900},{drive:4.5,hz:600}];
         const idx = Math.floor(Math.random() * 4);
         Audio.setDrive(opts[idx].drive); Audio.enableVCF(true); Audio.setCutoff(opts[idx].hz);
         return idx;
       },
-      choices: ['Clean — transparent, no coloring', 'Warm — subtle harmonic saturation', 'Saturated — audible grit and body', 'Driven — heavy, compressed, biting'],
-      bonusLore: 'You felt the Ladder\'s weight. The four poles yield.',
-      wrongLore(ci) { return `It was ${['Clean','Warm','Saturated','Driven'][ci]}. Drive controls how hard the signal pushes through the ladder\'s analog saturation.`; },
+      choices: [
+        'Smooth and clear — like a clean glass of water',
+        'Slightly fuzzy — warm, like wool',
+        'Crunchy — like biting into a cracker',
+        'Heavy and growly — like a guitar amp turned all the way up',
+      ],
+      bonusLore: 'You felt the grit. The Ladder\'s teeth are counted.',
+      wrongLore(ci) { return `It was ${['smooth and clear','slightly fuzzy','crunchy','heavy and growly'][ci]}. Pushing a sound too hard makes it distort — small amounts add warmth, large amounts add growl and crunch.`; },
     },
     chorus: {
-      lore: 'The Choir stirs. Listen for the doubling.',
-      question: 'How many voices do you hear?',
+      lore: 'Is this one voice or many? Listen — do you hear the sound wobbling and spreading?',
+      question: 'How does the sound feel in the space around you?',
       setup() {
-        const opts = [{mix:0},{mix:0.22},{mix:0.55},{mix:0.9}];
+        const opts = [{mix:0},{mix:0.25},{mix:0.6},{mix:0.92}];
         const idx = Math.floor(Math.random() * 4);
         Audio.setChorus(opts[idx].mix, 0.6, 0.5);
         return idx;
       },
-      choices: ['Single — dry, one voice only', 'Slight shimmer — barely doubled', 'Full chorus — clearly multiple copies', 'Submerged — thick shimmer dominates'],
-      bonusLore: 'You counted the choir. The voices reveal themselves.',
-      wrongLore(ci) { return `It was ${['Single','Slight shimmer','Full chorus','Submerged'][ci]}. Chorus mix blends the dry signal with slightly detuned, delayed copies of itself.`; },
+      choices: [
+        'One clear voice — just the note, standing right in front of you',
+        'Slightly wiggly — like hearing it in a tiled bathroom',
+        'Wide and shimmery — like a whole choir singing the same note',
+        'Thick and swirling — like falling into a pool of sound',
+      ],
+      bonusLore: 'You heard the choir. The voices are known.',
+      wrongLore(ci) { return `It was ${['one clear voice','slightly wiggly','wide and shimmery','thick and swirling'][ci]}. Chorus copies the sound, slightly shifts the copy's pitch, and plays both together — like one voice becoming a choir.`; },
     },
   };
 
