@@ -7308,6 +7308,318 @@ const EarTraining = (() => {
       bonusLore: 'You heard the choir. The voices are known.',
       wrongLore(ci) { return `It was ${['One voice','Bathroom','Choir','Swirling'][ci]}. Chorus copies the sound, shifts the copy slightly out of tune, and plays both — like one voice becoming a choir.`; },
     },
+
+    seq: {
+      lore: 'Now listen — how fast is the beat?',
+      question: 'What speed is this?',
+      listenMs: 4000,
+      teach: [
+        { label: '🐢 Very slow',  desc: 'like a slow heartbeat, you count the steps', play() { Audio.setSeqInterval(0); Audio.startSeq(45);  } },
+        { label: '🚶 Walking',    desc: 'comfortable, like footsteps on a path',       play() { Audio.setSeqInterval(0); Audio.startSeq(90);  } },
+        { label: '🏃 Running',    desc: 'faster, energetic and urgent',                play() { Audio.setSeqInterval(0); Audio.startSeq(150); } },
+        { label: '🚀 Blazing',    desc: 'very fast, the steps blur together',          play() { Audio.setSeqInterval(0); Audio.startSeq(220); } },
+      ],
+      setup() {
+        const opts = [45, 90, 150, 220];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setSeqInterval(0); Audio.startSeq(opts[idx]);
+        return idx;
+      },
+      choices: [
+        '🐢 Very slow — like a slow heartbeat',
+        '🚶 Walking — comfortable, like footsteps',
+        '🏃 Running — faster, energetic and urgent',
+        '🚀 Blazing — very fast, the steps blur together',
+      ],
+      bonusLore: 'You felt the pulse. The Sequencer is timed.',
+      wrongLore(ci) { return `It was ${['Very slow','Walking','Running','Blazing'][ci]}. Tempo is how fast the notes play — measured in BPM (beats per minute). A heartbeat is about 60 BPM.`; },
+    },
+
+    phaser: {
+      lore: 'Now listen — does the sound stay still, or does it sweep?',
+      question: 'What is the sound doing?',
+      teach: [
+        { label: '⬜ Plain',     desc: 'no sweep at all, just the raw sound',          play() { Audio.setPhaser(0);              } },
+        { label: '🌊 Dreamy',    desc: 'slow, floating sweep — like gentle waves',     play() { Audio.setPhaser(0.7, 0.25, 0.8); } },
+        { label: '🌀 Spinning',  desc: 'clear wobble — like a rotating speaker',       play() { Audio.setPhaser(0.7, 1.5,  0.8); } },
+        { label: '✈️ Jet',       desc: 'fast, rushing sweep — like a plane flying by', play() { Audio.setPhaser(0.7, 6,    0.8); } },
+      ],
+      setup() {
+        const opts = [
+          () => Audio.setPhaser(0),
+          () => Audio.setPhaser(0.7, 0.25, 0.8),
+          () => Audio.setPhaser(0.7, 1.5,  0.8),
+          () => Audio.setPhaser(0.7, 6,    0.8),
+        ];
+        const idx = Math.floor(Math.random() * 4);
+        opts[idx]();
+        return idx;
+      },
+      choices: [
+        '⬜ Plain — no sweep, just the raw sound',
+        '🌊 Dreamy — slow, floating sweep',
+        '🌀 Spinning — clear wobble, like a rotating speaker',
+        '✈️ Jet — fast, rushing sweep',
+      ],
+      bonusLore: 'You felt the sweep. The Wraith is traced.',
+      wrongLore(ci) { return `It was ${['Plain','Dreamy','Spinning','Jet'][ci]}. A phaser sweeps a notch through the frequency range — slow sweeps feel spacious, fast sweeps feel like an engine.`; },
+    },
+
+    formant: {
+      lore: 'Now listen — which vowel sound does this remind you of?',
+      question: 'Which vowel do you hear?',
+      teach: [
+        { label: '👄 AH',  desc: 'open throat, like saying "father"', play() { Audio.setFormant(0.5, 0); } },
+        { label: '👄 EH',  desc: 'mid-front, like saying "bed"',      play() { Audio.setFormant(0.5, 1); } },
+        { label: '👄 IH',  desc: 'high front, like saying "see"',     play() { Audio.setFormant(0.5, 2); } },
+        { label: '👄 OH',  desc: 'round and back, like saying "go"',  play() { Audio.setFormant(0.5, 3); } },
+      ],
+      setup() {
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setFormant(0.5, idx);
+        return idx;
+      },
+      choices: [
+        '👄 AH — open, like "father"',
+        '👄 EH — like "bed"',
+        '👄 IH — bright, like "see"',
+        '👄 OH — round, like "go"',
+      ],
+      bonusLore: 'You named the vowel. The Formant speaks.',
+      wrongLore(ci) { return `It was ${['AH','EH','IH','OH'][ci]}. A formant filter shapes sound like a mouth — the same way your lips and throat turn a hum into different vowels.`; },
+    },
+
+    turing: {
+      lore: 'Now listen — does the melody repeat the same pattern, or keep changing?',
+      question: 'How much is the pattern evolving?',
+      listenMs: 5000,
+      teach: [
+        { label: '🔁 Locked',    desc: 'exactly the same loop every time',           play() { Audio.setTuringPattern(7, 0.02); } },
+        { label: '🌱 Drifting',  desc: 'mostly the same, but a note changes here and there', play() { Audio.setTuringPattern(7, 0.2);  } },
+        { label: '🌊 Evolving',  desc: 'recognizable but always shifting',            play() { Audio.setTuringPattern(7, 0.55); } },
+        { label: '💫 Chaotic',   desc: 'never the same twice — completely unpredictable', play() { Audio.setTuringPattern(7, 0.95); } },
+      ],
+      setup() {
+        const opts = [0.02, 0.2, 0.55, 0.95];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setTuringPattern(7, opts[idx]);
+        return idx;
+      },
+      choices: [
+        '🔁 Locked — the same loop every single time',
+        '🌱 Drifting — mostly the same, tiny changes',
+        '🌊 Evolving — always recognizable but always shifting',
+        '💫 Chaotic — never the same twice',
+      ],
+      bonusLore: 'You heard the drift. The Machine is mapped.',
+      wrongLore(ci) { return `It was ${['Locked','Drifting','Evolving','Chaotic'][ci]}. A Turing machine decides at random whether to keep or change each note — low probability = locked pattern, high probability = pure chance.`; },
+    },
+
+    tape: {
+      lore: 'Now listen — does the sound feel perfectly steady, or does it wobble and glow?',
+      question: 'How much warmth and movement do you hear?',
+      teach: [
+        { label: '💻 Digital',  desc: 'perfectly still and clean, no wobble',         play() { Audio.stopLFO(); Audio.setDrive(1);   Audio.setCutoff(1200); } },
+        { label: '🎞️ Warm',     desc: 'slightly fuzzy and rich, like old vinyl',       play() { Audio.startLFO(0.1, 0.03); Audio.setDrive(1.8); Audio.setCutoff(1000); } },
+        { label: '📼 Wobbly',   desc: 'gentle pitch drift, the tape is slowing down', play() { Audio.startLFO(0.4, 0.08); Audio.setDrive(2.5); Audio.setCutoff(800);  } },
+        { label: '📻 Saturated', desc: 'heavy glow and movement, tape pushed hard',   play() { Audio.startLFO(0.9, 0.14); Audio.setDrive(4.0); Audio.setCutoff(600);  } },
+      ],
+      setup() {
+        const opts = [
+          () => { Audio.stopLFO();                           Audio.setDrive(1);   Audio.setCutoff(1200); },
+          () => { Audio.startLFO(0.1, 0.03);                Audio.setDrive(1.8); Audio.setCutoff(1000); },
+          () => { Audio.startLFO(0.4, 0.08);                Audio.setDrive(2.5); Audio.setCutoff(800);  },
+          () => { Audio.startLFO(0.9, 0.14);                Audio.setDrive(4.0); Audio.setCutoff(600);  },
+        ];
+        const idx = Math.floor(Math.random() * 4);
+        opts[idx]();
+        return idx;
+      },
+      choices: [
+        '💻 Digital — perfectly still and clean',
+        '🎞️ Warm — slightly fuzzy and rich, like old vinyl',
+        '📼 Wobbly — gentle pitch drift, tape slowing down',
+        '📻 Saturated — heavy glow and movement',
+      ],
+      bonusLore: 'You felt the warmth. The Tape is read.',
+      wrongLore(ci) { return `It was ${['Digital','Warm','Wobbly','Saturated'][ci]}. Tape recordings add warmth and gentle pitch wobble (wow & flutter) that digital recordings don't have.`; },
+    },
+
+    wavefolder: {
+      lore: 'Now listen — is this sound smooth and simple, or complex and buzzy?',
+      question: 'How folded does the waveform feel?',
+      teach: [
+        { label: '〰️ Smooth',   desc: 'clean sine wave, round and simple',             play() { Audio.setFold(1);   } },
+        { label: '🌊 Rippled',  desc: 'slightly complex, a soft shimmer added',        play() { Audio.setFold(1.8); } },
+        { label: '🌀 Complex',  desc: 'many layers, rich and textured',               play() { Audio.setFold(3);   } },
+        { label: '⚡ Extreme',  desc: 'harsh and buzzy, completely transformed',       play() { Audio.setFold(5);   } },
+      ],
+      setup() {
+        const opts = [1, 1.8, 3, 5];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setFold(opts[idx]);
+        return idx;
+      },
+      choices: [
+        '〰️ Smooth — clean and simple, like a sine wave',
+        '🌊 Rippled — slightly complex, a shimmer added',
+        '🌀 Complex — many layers, rich and textured',
+        '⚡ Extreme — harsh and buzzy, completely transformed',
+      ],
+      bonusLore: 'You heard the folds. The Waveform is counted.',
+      wrongLore(ci) { return `It was ${['Smooth','Rippled','Complex','Extreme'][ci]}. A wavefolder takes a simple wave and folds it back on itself — each fold adds more buzzy, harmonic complexity.`; },
+    },
+
+    noise: {
+      lore: 'Now listen — what does this sound remind you of in nature?',
+      question: 'What kind of noise is this?',
+      teach: [
+        { label: '📺 Static',  desc: 'harsh and hissy, like an old TV with no signal', play() { Audio.enableVCF(true); Audio.setCutoff(8000); } },
+        { label: '🌧️ Rain',   desc: 'softer hiss, like rain on a window',             play() { Audio.enableVCF(true); Audio.setCutoff(2000); } },
+        { label: '🌬️ Wind',   desc: 'low and breathy, like wind through trees',        play() { Audio.enableVCF(true); Audio.setCutoff(500);  } },
+        { label: '🌊 Ocean',  desc: 'deep rumble, like distant waves underground',     play() { Audio.enableVCF(true); Audio.setCutoff(120);  } },
+      ],
+      setup() {
+        const opts = [8000, 2000, 500, 120];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.enableVCF(true); Audio.setCutoff(opts[idx]);
+        return idx;
+      },
+      choices: [
+        '📺 Static — harsh and hissy, like an old TV',
+        '🌧️ Rain — softer hiss, like rain on a window',
+        '🌬️ Wind — low and breathy, like wind through trees',
+        '🌊 Ocean — deep rumble, like distant waves',
+      ],
+      bonusLore: 'You named the noise. The Hiss is shaped.',
+      wrongLore(ci) { return `It was ${['Static','Rain','Wind','Ocean'][ci]}. Noise contains all frequencies at once — a filter is like cupping your hands around it, letting only some through.`; },
+    },
+
+    ringmod: {
+      lore: 'Now listen — does this sound feel musical, robotic, or metallic?',
+      question: 'How would you describe this strange sound?',
+      teach: [
+        { label: '🤖 Robot',     desc: 'buzzy and speech-like, like a talking robot',  play() { Audio.setRingMod(1,   0.6); } },
+        { label: '🔔 Bell',      desc: 'clear ringing tones, like metal bells',         play() { Audio.setRingMod(2,   0.6); } },
+        { label: '🎸 Metallic',  desc: 'bright and clanging, electric and harsh',       play() { Audio.setRingMod(3.5, 0.6); } },
+        { label: '💥 Clang',     desc: 'dissonant and clashing, like struck metal',     play() { Audio.setRingMod(7,   0.6); } },
+      ],
+      setup() {
+        const opts = [1, 2, 3.5, 7];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setRingMod(opts[idx], 0.6);
+        return idx;
+      },
+      choices: [
+        '🤖 Robot — buzzy and speech-like',
+        '🔔 Bell — clear ringing tones',
+        '🎸 Metallic — bright and clanging',
+        '💥 Clang — dissonant and clashing',
+      ],
+      bonusLore: 'You named the ring. The Modulator is known.',
+      wrongLore(ci) { return `It was ${['Robot','Bell','Metallic','Clang'][ci]}. Ring modulation multiplies two sounds together — this creates new frequencies that weren't in either original sound.`; },
+    },
+
+    drunk: {
+      lore: 'Now listen — how wildly does the pitch jump around?',
+      question: 'How big are the pitch leaps?',
+      teach: [
+        { label: '🌱 Tiny steps',   desc: 'barely moves, gentle and calm',              play() { Audio.setDrunkWalk(1,  80); } },
+        { label: '🚶 Small steps',  desc: 'wanders gently, mostly stays nearby',        play() { Audio.setDrunkWalk(3,  80); } },
+        { label: '🏃 Big leaps',    desc: 'jumps around boldly, unpredictable',          play() { Audio.setDrunkWalk(7,  80); } },
+        { label: '🎲 Wild jumps',   desc: 'leaps across the whole range, chaotic',      play() { Audio.setDrunkWalk(12, 80); } },
+      ],
+      setup() {
+        const opts = [1, 3, 7, 12];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setDrunkWalk(opts[idx], 80);
+        return idx;
+      },
+      choices: [
+        '🌱 Tiny steps — barely moves, gentle and calm',
+        '🚶 Small steps — wanders gently nearby',
+        '🏃 Big leaps — jumps around boldly',
+        '🎲 Wild jumps — leaps across the whole range',
+      ],
+      bonusLore: 'You tracked the wandering. The Walker is known.',
+      wrongLore(ci) { return `It was ${['Tiny steps','Small steps','Big leaps','Wild jumps'][ci]}. A drunk walk moves randomly — small steps stay nearby, big steps jump far away each time.`; },
+    },
+
+    stutter: {
+      lore: 'Now listen — how fast is the sound being chopped?',
+      question: 'What does the rhythm of the chopping feel like?',
+      teach: [
+        { label: '🎵 Slow pulse',  desc: 'slow on/off, like a gentle tremolo',          play() { Audio.setStutter(60);  } },
+        { label: '🎭 Stutter',     desc: 'rhythmic chop, like a skipping record',        play() { Audio.setStutter(180); } },
+        { label: '✂️ Chopped',     desc: 'fast cutting, the notes fragment into pieces', play() { Audio.setStutter(360); } },
+        { label: '⚡ Buzz',        desc: 'so fast it becomes a texture, not a rhythm',   play() { Audio.setStutter(600); } },
+      ],
+      setup() {
+        const opts = [60, 180, 360, 600];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setStutter(opts[idx]);
+        return idx;
+      },
+      choices: [
+        '🎵 Slow pulse — slow on/off, like a gentle tremolo',
+        '🎭 Stutter — rhythmic chop, like a skipping record',
+        '✂️ Chopped — fast cutting, notes fragment',
+        '⚡ Buzz — so fast it becomes texture, not rhythm',
+      ],
+      bonusLore: 'You counted the chops. The Gate yields.',
+      wrongLore(ci) { return `It was ${['Slow pulse','Stutter','Chopped','Buzz'][ci]}. A stutter rapidly turns the sound on and off — slow = tremolo, fast = the rhythm becomes texture.`; },
+    },
+
+    euclid: {
+      lore: 'Now listen — how many notes do you hear in each repeating pattern?',
+      question: 'How filled-in is the rhythm?',
+      listenMs: 4500,
+      teach: [
+        { label: '💧 Sparse',     desc: 'just 2 hits in every 8 — lots of space',       play() { Audio.setEuclid(2, 8); } },
+        { label: '🎵 Medium',     desc: '4 hits — steady, evenly spaced',               play() { Audio.setEuclid(4, 8); } },
+        { label: '🎶 Dense',      desc: '6 hits — mostly filled, only small gaps',      play() { Audio.setEuclid(6, 8); } },
+        { label: '⚡ Every beat', desc: 'all 8 hits — constant, no gaps at all',        play() { Audio.setEuclid(8, 8); } },
+      ],
+      setup() {
+        const opts = [2, 4, 6, 8];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setEuclid(opts[idx], 8);
+        return idx;
+      },
+      choices: [
+        '💧 Sparse — just 2 hits, lots of breathing room',
+        '🎵 Medium — 4 hits, evenly spaced',
+        '🎶 Dense — 6 hits, mostly filled',
+        '⚡ Every beat — all 8 hits, no gaps',
+      ],
+      bonusLore: 'You felt the rhythm. The Pattern is counted.',
+      wrongLore(ci) { return `It was ${['Sparse','Medium','Dense','Every beat'][ci]}. Euclidean rhythms spread a set number of hits as evenly as possible across a fixed number of steps — it's how many drums around the world naturally organize their rhythms.`; },
+    },
+
+    sidechain: {
+      lore: 'Now listen — does the sound breathe and pump, or stay perfectly steady?',
+      question: 'How much does the volume pump?',
+      teach: [
+        { label: '🔊 Steady',        desc: 'completely even, no pumping at all',           play() { Audio.setSidechain(4, 0);   } },
+        { label: '🫀 Gentle pulse',  desc: 'slight breathing, barely noticeable',          play() { Audio.setSidechain(4, 0.3); } },
+        { label: '🎵 Classic pump',  desc: 'clear pumping, like dance music',              play() { Audio.setSidechain(4, 0.7); } },
+        { label: '💥 Hard pump',     desc: 'extreme ducking, the volume slams down hard',  play() { Audio.setSidechain(4, 1.0); } },
+      ],
+      setup() {
+        const opts = [0, 0.3, 0.7, 1.0];
+        const idx = Math.floor(Math.random() * 4);
+        Audio.setSidechain(4, opts[idx]);
+        return idx;
+      },
+      choices: [
+        '🔊 Steady — completely even, no pumping',
+        '🫀 Gentle pulse — slight breathing, barely there',
+        '🎵 Classic pump — clear pumping, like dance music',
+        '💥 Hard pump — extreme, the volume slams down',
+      ],
+      bonusLore: 'You felt the pump. The Sidechain breathes.',
+      wrongLore(ci) { return `It was ${['Steady','Gentle pulse','Classic pump','Hard pump'][ci]}. Sidechain compression ducks the volume in rhythm — dance music uses this to make the beat feel huge.`; },
+    },
   };
 
   function hasChallenge(questId) { return !!CHALLENGES[questId]; }
