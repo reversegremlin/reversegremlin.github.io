@@ -694,6 +694,22 @@ canvas { display: block; }
 }
 .enc-listen-choice.correct  { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.07); }
 .enc-listen-choice.wrong    { border-color: var(--danger); color: var(--danger); opacity: 0.65; }
+.enc-listen-choice.correct-hint {
+  border-color: var(--gold);
+  color: var(--gold);
+  animation: correct-hint-pulse 0.9s ease-in-out infinite;
+}
+@keyframes correct-hint-pulse {
+  0%, 100% { box-shadow: none; }
+  50%       { box-shadow: 0 0 10px 2px rgba(201,168,76,0.35); }
+}
+.enc-listen-hint {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
+}
 .enc-listen-replay {
   margin-top: 0.35rem;
   background: none;
@@ -7072,25 +7088,37 @@ const EarTraining = (() => {
 
   const CHALLENGES = {
     vco: {
-      lore: 'Close your eyes. What does this sound remind you of?',
-      question: 'Which of these sounds like what you just heard?',
+      lore: 'Now listen — which one is playing?',
+      question: 'Which sound do you hear?',
+      teach: [
+        { label: '〰️ Sine',     desc: 'smooth, round hum',              play() { Audio.setWaveform('sine');     } },
+        { label: '△ Triangle', desc: 'hollow and gentle, like a flute', play() { Audio.setWaveform('triangle'); } },
+        { label: '⊓ Square',   desc: 'buzzy, like a bee or video game', play() { Audio.setWaveform('square');   } },
+        { label: '⋀ Sawtooth', desc: 'bright and raspy, like a kazoo',  play() { Audio.setWaveform('sawtooth'); } },
+      ],
       setup() {
         const idx = Math.floor(Math.random() * 4);
         Audio.setWaveform(['sine','triangle','square','sawtooth'][idx]);
         return idx;
       },
       choices: [
-        'A smooth hum — like blowing across the top of a bottle',
-        'Hollow and flutey — gentle, a little like a recorder',
-        'Buzzy and square — like an old video game or a bee',
-        'Bright and raspy — like a kazoo or a violin bow biting hard',
+        '〰️ Sine — smooth, round hum',
+        '△ Triangle — hollow and gentle, like a flute',
+        '⊓ Square — buzzy, like a bee or video game',
+        '⋀ Sawtooth — bright and raspy, like a kazoo',
       ],
-      bonusLore: 'Your ear already knew. The Wound is heard.',
-      wrongLore(ci) { return `It was the ${['smooth hum','hollow flute','buzzy video-game','bright raspy'][ci]} sound. Every sound has a shape — smooth ones feel round, buzzy ones feel jagged.`; },
+      bonusLore: 'Your ear knew the shape. The Wound is heard.',
+      wrongLore(ci) { return `It was ${['Sine','Triangle','Square','Sawtooth'][ci]}. Each waveform has its own texture — Sine is the smoothest, Sawtooth the most jagged.`; },
     },
     vcf: {
-      lore: 'Imagine a blanket being slowly pulled over the sound. How covered is it right now?',
-      question: 'How bright or dark does the sound feel?',
+      lore: 'Now listen — how much of the sound is coming through?',
+      question: 'How bright or dark does it feel?',
+      teach: [
+        { label: '🔆 Bright',  desc: 'wide open, sharp like a whistle',       play() { Audio.enableVCF(true); Audio.setCutoff(8000); } },
+        { label: '🌤 Warm',    desc: 'full and round, edges softened',         play() { Audio.enableVCF(true); Audio.setCutoff(2000); } },
+        { label: '🌫 Muffled', desc: 'like hearing it through a wall',         play() { Audio.enableVCF(true); Audio.setCutoff(400);  } },
+        { label: '🌑 Closed',  desc: 'almost silent, like music next door',    play() { Audio.enableVCF(true); Audio.setCutoff(80);   } },
+      ],
       setup() {
         const opts = [{hz:8000},{hz:2000},{hz:400},{hz:80}];
         const idx = Math.floor(Math.random() * 4);
@@ -7098,13 +7126,13 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'Wide open — sharp and bright, like a whistle',
-        'Warm — full and round, the sharp edges are gone',
-        'Muffled — like the sound is behind a wall',
-        'Almost gone — like hearing music in the next room with the door closed',
+        '🔆 Bright — wide open, sharp like a whistle',
+        '🌤 Warm — full and round, edges softened',
+        '🌫 Muffled — like hearing it through a wall',
+        '🌑 Closed — almost silent, like music next door',
       ],
-      bonusLore: 'You felt the blanket. The Sieve is known.',
-      wrongLore(ci) { return `It was ${['wide open','warm','muffled','almost gone'][ci]}. A filter is like a blanket for sound — pull it tighter and the bright parts disappear first.`; },
+      bonusLore: 'You felt the blanket lift. The Sieve is known.',
+      wrongLore(ci) { return `It was ${['Bright','Warm','Muffled','Closed'][ci]}. A filter is like a blanket — pull it tighter and the bright, sharp parts disappear first.`; },
     },
     adsr: {
       lore: 'Now listen — which shape is this?',
@@ -7112,10 +7140,10 @@ const EarTraining = (() => {
       listenMs: 5500,
       _arc: null,
       teach: [
-        { label: '👏 Clap',  desc: 'starts instantly, stops instantly', arc: { a:0.003, d:0.1, s:0.7, r:0.08 } },
-        { label: '🔔 Bell',  desc: 'starts instantly, fades away slowly', arc: { a:0.003, d:0.1, s:0.7, r:2.2  } },
-        { label: '🌊 Swell', desc: 'slowly swells in, then suddenly stops', arc: { a:1.1,   d:0.2, s:0.8, r:0.08 } },
-        { label: '🐋 Whale', desc: 'slowly breathes in, slowly breathes out', arc: { a:1.1,   d:0.2, s:0.8, r:2.2  } },
+        { label: '👏 Clap',  desc: 'starts instantly, stops instantly',       play() { Audio.demoADSROnce(0.003, 0.1, 0.7, 0.08); } },
+        { label: '🔔 Bell',  desc: 'starts instantly, fades away slowly',     play() { Audio.demoADSROnce(0.003, 0.1, 0.7, 2.2 ); } },
+        { label: '🌊 Swell', desc: 'slowly swells in, then suddenly stops',   play() { Audio.demoADSROnce(1.1,   0.2, 0.8, 0.08); } },
+        { label: '🐋 Whale', desc: 'slowly breathes in, slowly breathes out', play() { Audio.demoADSROnce(1.1,   0.2, 0.8, 2.2 ); } },
       ],
       setup() {
         // 4 combos of fast/slow attack × fast/slow release so the contrast is obvious
@@ -7147,14 +7175,20 @@ const EarTraining = (() => {
       },
     },
     lfo: {
-      lore: 'Does the pitch stay still, or does it wobble? Listen carefully.',
-      question: 'What is the pitch doing?',
+      lore: 'Now listen — what is the pitch doing?',
+      question: 'How would you describe the movement?',
+      teach: [
+        { label: '➖ Still',     desc: 'one steady note, no wobble',        play() { Audio.stopLFO(); Audio.setLFOTarget('none'); } },
+        { label: '🌊 Slow sway', desc: 'gently rocking, like a boat',       play() { Audio.startLFO(0.4, 0.4); Audio.setLFOTarget('vco'); } },
+        { label: '🎤 Vibrato',   desc: 'steady wobble, like a singer',      play() { Audio.startLFO(2.8, 0.4); Audio.setLFOTarget('vco'); } },
+        { label: '🐦 Flutter',   desc: 'fast shimmer, like a hummingbird',  play() { Audio.startLFO(8,   0.4); Audio.setLFOTarget('vco'); } },
+      ],
       setup() {
         const opts = [
-          {rate:null,  depth:0   },
-          {rate:0.4,   depth:0.4 },
-          {rate:2.8,   depth:0.4 },
-          {rate:8,     depth:0.4 },
+          {rate:null, depth:0  },
+          {rate:0.4,  depth:0.4},
+          {rate:2.8,  depth:0.4},
+          {rate:8,    depth:0.4},
         ];
         const idx = Math.floor(Math.random() * 4);
         if (opts[idx].rate) { Audio.startLFO(opts[idx].rate, opts[idx].depth); Audio.setLFOTarget('vco'); }
@@ -7162,17 +7196,24 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'Perfectly still — one steady note, no movement',
-        'Slow sway — like a boat rocking gently on water',
-        'Steady wobble — like a singer doing vibrato',
-        'Fast shimmer — like a hummingbird\'s wings',
+        '➖ Still — one steady note, no wobble',
+        '🌊 Slow sway — gently rocking, like a boat',
+        '🎤 Vibrato — steady wobble, like a singer',
+        '🐦 Flutter — fast shimmer, like a hummingbird',
       ],
       bonusLore: 'You heard the wobble. The Shivering is known.',
-      wrongLore(ci) { return `It was the ${['perfectly still','slow sway','steady wobble','fast shimmer'][ci]}. An LFO is like a hand gently shaking the pitch — slow shakes feel dreamy, fast ones feel electric.`; },
+      wrongLore(ci) { return `It was ${['Still','Slow sway','Vibrato','Flutter'][ci]}. An LFO gently shakes the pitch — slow shakes feel dreamy, fast ones feel electric.`; },
     },
     reverb: {
-      lore: 'Where is this sound happening? Is it tiny and close, or huge and far away?',
-      question: 'What kind of space does this sound like it\'s in?',
+      lore: 'Now listen — what kind of space is this sound in?',
+      question: 'How big is the room?',
+      listenMs: 4200,
+      teach: [
+        { label: '📦 Tiny room',  desc: 'sound stops the moment it ends',           play() { Audio.setReverb(0);    } },
+        { label: '🚿 Bathroom',   desc: 'a quick bounce off the walls',              play() { Audio.setReverb(0.15); } },
+        { label: '🏀 Gymnasium',  desc: 'you can hear the room around the sound',    play() { Audio.setReverb(0.5);  } },
+        { label: '🦇 Cave',       desc: 'echoes for a long time after each note',    play() { Audio.setReverb(0.92); } },
+      ],
       setup() {
         const opts = [{mix:0},{mix:0.15},{mix:0.5},{mix:0.92}];
         const idx = Math.floor(Math.random() * 4);
@@ -7180,23 +7221,30 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'A tiny room — sound stops as soon as it starts, no echo at all',
-        'A bathroom — a quick bounce off the walls',
-        'A big gymnasium — you can hear the room around the sound',
-        'A cave — the sound keeps going long after the note stops',
+        '📦 Tiny room — sound stops the moment it ends',
+        '🚿 Bathroom — a quick bounce off the walls',
+        '🏀 Gymnasium — you can hear the room around it',
+        '🦇 Cave — echoes for a long time after each note',
       ],
       bonusLore: 'You heard the room. The Cathedral is mapped.',
-      wrongLore(ci) { return `It was ${['a tiny room','a bathroom','a gymnasium','a cave'][ci]}. Reverb is how sound bounces off walls — a big space makes longer, slower echoes.`; },
+      wrongLore(ci) { return `It was ${['Tiny room','Bathroom','Gymnasium','Cave'][ci]}. Reverb is the echo of a space — a big room makes longer, slower echoes.`; },
     },
     delay: {
-      lore: 'Say "hello" in a canyon and it comes back to you. Does this sound repeat?',
-      question: 'What do you hear after the first note?',
+      lore: 'Now listen — does the sound repeat after the note?',
+      question: 'What do you hear after the note plays?',
+      listenMs: 4000,
+      teach: [
+        { label: '🔇 No echo',    desc: 'just the sound, nothing after',               play() { Audio.setDelay(0,   0.3,   0);   } },
+        { label: '⚡ Quick flick', desc: 'a tiny echo almost stuck to the note',        play() { Audio.setDelay(0.5, 0.12,  0.4); } },
+        { label: '🕐 Short echo', desc: 'one clear bounce a moment later',             play() { Audio.setDelay(0.5, 0.38,  0.5); } },
+        { label: '🏔 Canyon',     desc: 'a slow, trailing echo, like a mountain valley', play() { Audio.setDelay(0.5, 0.75,  0.5); } },
+      ],
       setup() {
         const opts = [
-          {mix:0,    time:null,  fb:0  },
-          {mix:0.5,  time:0.12,  fb:0.4},
-          {mix:0.5,  time:0.38,  fb:0.5},
-          {mix:0.5,  time:0.75,  fb:0.5},
+          {mix:0,   time:null,  fb:0  },
+          {mix:0.5, time:0.12,  fb:0.4},
+          {mix:0.5, time:0.38,  fb:0.5},
+          {mix:0.5, time:0.75,  fb:0.5},
         ];
         const idx = Math.floor(Math.random() * 4);
         if (opts[idx].time) Audio.setDelay(opts[idx].mix, opts[idx].time, opts[idx].fb);
@@ -7204,17 +7252,23 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'Nothing — just the one note, no repeat',
-        'A quick flick right after — almost attached to the note',
-        'One clear echo a moment later — like a clap in a hallway',
-        'A slow echo — the note comes back like a voice from a distant canyon',
+        '🔇 No echo — just the sound, nothing after',
+        '⚡ Quick flick — a tiny echo almost stuck to the note',
+        '🕐 Short echo — one clear bounce a moment later',
+        '🏔 Canyon — a slow, trailing echo',
       ],
       bonusLore: 'You counted the echoes. The Chamber remembers.',
-      wrongLore(ci) { return `It was ${['no repeat','the quick flick','the hallway echo','the canyon echo'][ci]}. Delay is a recording that plays back after a short wait — the longer the wait, the more it sounds like a real echo.`; },
+      wrongLore(ci) { return `It was ${['No echo','Quick flick','Short echo','Canyon'][ci]}. Delay plays back a recording of the note after a short wait — longer wait = more like a real canyon echo.`; },
     },
     ladder: {
-      lore: 'Some sounds are clean and clear. Others are fuzzy and rough. How does this one feel?',
-      question: 'How does the texture of this sound feel?',
+      lore: 'Now listen — how does the texture feel?',
+      question: 'How would you describe the surface of this sound?',
+      teach: [
+        { label: '💎 Clean',   desc: 'smooth and clear, like a glass of water', play() { Audio.setDrive(1);   Audio.setCutoff(1400); } },
+        { label: '🧶 Fuzzy',   desc: 'warm and slightly soft, like wool',        play() { Audio.setDrive(1.6); Audio.setCutoff(1200); } },
+        { label: '🍪 Crunchy', desc: 'gritty texture, like biting a cracker',   play() { Audio.setDrive(2.8); Audio.setCutoff(900);  } },
+        { label: '🎸 Heavy',   desc: 'growly and buzzy, like a cranked amp',    play() { Audio.setDrive(4.5); Audio.setCutoff(600);  } },
+      ],
       setup() {
         const opts = [{drive:1,hz:1400},{drive:1.6,hz:1200},{drive:2.8,hz:900},{drive:4.5,hz:600}];
         const idx = Math.floor(Math.random() * 4);
@@ -7222,17 +7276,23 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'Smooth and clear — like a clean glass of water',
-        'Slightly fuzzy — warm, like wool',
-        'Crunchy — like biting into a cracker',
-        'Heavy and growly — like a guitar amp turned all the way up',
+        '💎 Clean — smooth and clear, like a glass of water',
+        '🧶 Fuzzy — warm and slightly soft, like wool',
+        '🍪 Crunchy — gritty texture, like biting a cracker',
+        '🎸 Heavy — growly and buzzy, like a cranked amp',
       ],
       bonusLore: 'You felt the grit. The Ladder\'s teeth are counted.',
-      wrongLore(ci) { return `It was ${['smooth and clear','slightly fuzzy','crunchy','heavy and growly'][ci]}. Pushing a sound too hard makes it distort — small amounts add warmth, large amounts add growl and crunch.`; },
+      wrongLore(ci) { return `It was ${['Clean','Fuzzy','Crunchy','Heavy'][ci]}. Pushing sound too hard makes it distort — a little gives warmth, a lot gives growl and crunch.`; },
     },
     chorus: {
-      lore: 'Is this one voice or many? Listen — do you hear the sound wobbling and spreading?',
-      question: 'How does the sound feel in the space around you?',
+      lore: 'Now listen — is this one voice or many?',
+      question: 'How does the sound feel in the space?',
+      teach: [
+        { label: '👤 One voice',  desc: 'clear and single, right in front of you',    play() { Audio.setChorus(0,    0.6, 0.5); } },
+        { label: '🛁 Bathroom',   desc: 'slightly wobbly, like tiled walls',          play() { Audio.setChorus(0.25, 0.6, 0.5); } },
+        { label: '🎶 Choir',      desc: 'wide and shimmery, like many voices',        play() { Audio.setChorus(0.6,  0.6, 0.5); } },
+        { label: '🌊 Swirling',   desc: 'thick and swimming, like falling into sound', play() { Audio.setChorus(0.92, 0.6, 0.5); } },
+      ],
       setup() {
         const opts = [{mix:0},{mix:0.25},{mix:0.6},{mix:0.92}];
         const idx = Math.floor(Math.random() * 4);
@@ -7240,24 +7300,27 @@ const EarTraining = (() => {
         return idx;
       },
       choices: [
-        'One clear voice — just the note, standing right in front of you',
-        'Slightly wiggly — like hearing it in a tiled bathroom',
-        'Wide and shimmery — like a whole choir singing the same note',
-        'Thick and swirling — like falling into a pool of sound',
+        '👤 One voice — clear and single, right in front of you',
+        '🛁 Bathroom — slightly wobbly, like tiled walls',
+        '🎶 Choir — wide and shimmery, like many voices',
+        '🌊 Swirling — thick and swimming, like falling into sound',
       ],
       bonusLore: 'You heard the choir. The voices are known.',
-      wrongLore(ci) { return `It was ${['one clear voice','slightly wiggly','wide and shimmery','thick and swirling'][ci]}. Chorus copies the sound, slightly shifts the copy's pitch, and plays both together — like one voice becoming a choir.`; },
+      wrongLore(ci) { return `It was ${['One voice','Bathroom','Choir','Swirling'][ci]}. Chorus copies the sound, shifts the copy slightly out of tune, and plays both — like one voice becoming a choir.`; },
     },
   };
 
   function hasChallenge(questId) { return !!CHALLENGES[questId]; }
 
+  let _wrongOnce = false;
+
   function start(quest, onDone) {
     const ch = CHALLENGES[quest.id];
     if (!ch) { onDone(); return; }
-    _onDone   = onDone;
-    _answered = false;
-    _forceMax = false;
+    _onDone     = onDone;
+    _answered   = false;
+    _wrongOnce  = false;
+    _forceMax   = false;
     _correctIdx = -1;
 
     if (ch.teach) {
@@ -7273,7 +7336,7 @@ const EarTraining = (() => {
     if (!el) { _correctIdx = ch.setup(); _showListenPhase(ch); return; }
 
     el.innerHTML = `
-      <div class="enc-listen-label">— LEARN THE SHAPES —</div>
+      <div class="enc-listen-label">— LEARN THE SOUNDS —</div>
       <div class="enc-listen-entity">Tap each one to hear it. Take your time.</div>
       <div class="enc-teach-grid" id="enc-teach-grid"></div>
       <button class="enc-teach-ready" id="enc-teach-ready">→ I'm ready — test me!</button>
@@ -7281,14 +7344,14 @@ const EarTraining = (() => {
     el.style.display = 'flex';
 
     const grid = document.getElementById('enc-teach-grid');
-    ch.teach.forEach(({ label, desc, arc }) => {
+    ch.teach.forEach(entry => {
       const btn = document.createElement('button');
       btn.className = 'enc-teach-btn';
-      btn.innerHTML = `<span class="enc-teach-name">${label}</span><span class="enc-teach-desc">${desc}</span>`;
+      btn.innerHTML = `<span class="enc-teach-name">${entry.label}</span><span class="enc-teach-desc">${entry.desc}</span>`;
       btn.addEventListener('click', () => {
         document.querySelectorAll('.enc-teach-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        Audio.demoADSROnce(arc.a, arc.d, arc.s, arc.r);
+        entry.play();
       });
       grid.appendChild(btn);
     });
@@ -7348,20 +7411,28 @@ const EarTraining = (() => {
 
   function _answer(idx, ch) {
     if (_answered) return;
-    _answered = true;
-    document.querySelectorAll('.enc-listen-choice').forEach(b => { b.disabled = true; });
+    const btns = Array.from(document.querySelectorAll('.enc-listen-choice'));
     const fb = document.getElementById('enc-listen-feedback');
-    const correct = idx === _correctIdx;
-    if (correct) {
-      _forceMax = true;
-      document.querySelectorAll('.enc-listen-choice')[idx]?.classList.add('correct');
-      if (fb) fb.innerHTML = `<span class="ok">✦ ${ch.bonusLore} First roll: MAX.</span>`;
+    if (idx === _correctIdx) {
+      _answered = true;
+      btns.forEach(b => { b.disabled = true; b.classList.remove('correct-hint'); });
+      btns[idx]?.classList.add('correct');
+      if (_wrongOnce) {
+        if (fb) fb.innerHTML = `<span class="ok">✓ That's the one. Carry on.</span>`;
+      } else {
+        _forceMax = true;
+        if (fb) fb.innerHTML = `<span class="ok">✦ ${ch.bonusLore} First roll: MAX.</span>`;
+      }
+      setTimeout(_done, 1400);
     } else {
-      document.querySelectorAll('.enc-listen-choice')[_correctIdx]?.classList.add('correct');
-      document.querySelectorAll('.enc-listen-choice')[idx]?.classList.add('wrong');
-      if (fb) fb.innerHTML = `<span class="bad">✗ ${ch.wrongLore(_correctIdx)}</span>`;
+      _wrongOnce = true;
+      btns.forEach(b => { b.disabled = true; });
+      btns[idx]?.classList.add('wrong');
+      btns[_correctIdx]?.classList.remove('wrong');
+      btns[_correctIdx]?.classList.add('correct-hint');
+      btns[_correctIdx].disabled = false;
+      if (fb) fb.innerHTML = `<span class="bad">✗ ${ch.wrongLore(_correctIdx)}</span><br><span class="enc-listen-hint">↑ tap the right answer to continue</span>`;
     }
-    setTimeout(_done, 2000);
   }
 
   function _done() {
