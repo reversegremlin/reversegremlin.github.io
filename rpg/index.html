@@ -4428,7 +4428,7 @@ const Audio = (() => {
   // hearing ranges far more than sine/triangle, adding ~8–12 dB perceived
   // loudness at the same gain. Values here are tuned against a physical SPL
   // meter at 220 Hz; adjust if base frequency changes significantly.
-  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.28, sawtooth: 0.32 };
+  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.17, sawtooth: 0.21 };
   function _correctedGain() { return _rawGain * (_WAVE_GAIN[_currentWave] ?? 1.0); }
 
   async function loadWorklet(source, name) {
@@ -4680,10 +4680,14 @@ const Audio = (() => {
     if (!vco) return;
     _ensureRunning();
     _currentWave = type;
+    const now = ctx.currentTime;
+    const target = _correctedGain();
+    // Ramp gain to new corrected level in 8ms BEFORE waveform switch arrives at worklet,
+    // so there is no loud burst when switching from sine/tri to square/saw.
+    envGain.gain.cancelAndHoldAtTime(now);
+    envGain.gain.linearRampToValueAtTime(target, now + 0.008);
     vco.port.postMessage({ type });
-    envGain.gain.cancelScheduledValues(0);
-    envGain.gain.setTargetAtTime(_correctedGain(), ctx.currentTime, 0.05);
-    noteOn = true; // mark on directly — don't call _ensureVoiceOn or it overwrites
+    noteOn = true;
   }
 
   function getWaveform() { return _currentWave; }
