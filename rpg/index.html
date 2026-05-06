@@ -4792,6 +4792,29 @@ const Audio = (() => {
   function setSustain(v) { adsrVals.sustain = v; _demoADSR(); }
   function setRelease(t) { adsrVals.release = t; _demoADSR(); }
 
+  // Single-shot ADSR demo: sets all four values, plays once, note ends cleanly.
+  // No re-open (no drone), de-clicked via cancelAndHoldAtTime.
+  function demoADSROnce(a, d, s, r) {
+    adsrVals.attack = a; adsrVals.decay = d; adsrVals.sustain = s; adsrVals.release = r;
+    if (!envGain || !ctx) return;
+    _ensureRunning();
+    const now  = ctx.currentTime;
+    const peak = _correctedGain();
+    const sus  = peak * Math.max(0.05, s);
+    const holdDur = Math.max(0.4, d * 2);
+    const rampZero = now + 0.01; // 10 ms de-click ramp to silence
+    // Hold current value then glide to 0 before attack (eliminates click)
+    envGain.gain.cancelAndHoldAtTime(now);
+    envGain.gain.linearRampToValueAtTime(0, rampZero);
+    // Attack → decay → sustain hold → release → silence, no re-open
+    envGain.gain.linearRampToValueAtTime(peak, rampZero + Math.max(0.003, a));
+    envGain.gain.setTargetAtTime(sus, rampZero + a, Math.max(0.005, d / 4));
+    const holdEnd = rampZero + Math.max(0.003, a) + holdDur;
+    envGain.gain.setValueAtTime(sus, holdEnd);
+    envGain.gain.setTargetAtTime(0, holdEnd, Math.max(0.01, r / 4));
+    noteOn = true;
+  }
+
   // ── LFO ───────────────────────────────────────────────────────────────────
   let lfoOsc = null, lfoGain = null;
   // depth × 80 → semitone-range frequency deviation (80 Hz ≈ ±1 semitone @ 220 Hz)
@@ -5262,7 +5285,8 @@ const Audio = (() => {
            chainPhaserToDelay, unchainPhaserToDelay,
            chainFormantToReverb, unchainFormantToReverb,
            chainFormantToDelay, unchainFormantToDelay,
-           connectEnvToFilter, disconnectEnvToFilter };
+           connectEnvToFilter, disconnectEnvToFilter,
+           demoADSROnce };
 })();
 
 /* ============================================================
@@ -7059,14 +7083,12 @@ const EarTraining = (() => {
         ];
         const idx = Math.floor(Math.random() * 4);
         this._arc = archetypes[idx];
-        Audio.setDecay(this._arc.d); Audio.setSustain(this._arc.s); Audio.setRelease(this._arc.r);
-        Audio.setAttack(this._arc.a); // triggers _demoADSR
+        Audio.demoADSROnce(this._arc.a, this._arc.d, this._arc.s, this._arc.r);
         return idx;
       },
       replay() {
         if (!this._arc) return;
-        Audio.setDecay(this._arc.d); Audio.setSustain(this._arc.s); Audio.setRelease(this._arc.r);
-        Audio.setAttack(this._arc.a);
+        Audio.demoADSROnce(this._arc.a, this._arc.d, this._arc.s, this._arc.r);
       },
       choices: [
         'Starts instantly — stops instantly (like a clap)',
