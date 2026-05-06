@@ -7021,17 +7021,29 @@ const EarTraining = (() => {
       wrongLore(ci) { return `It was ${['Open','Warm','Dark','Closed'][ci]}. Lower cutoff = darker tone. Higher = brighter. The filter is a sculptor of harmonic content.`; },
     },
     adsr: {
-      lore: 'The envelope breathes. Feel when the note arrives.',
-      question: 'How quickly does the note bloom from silence?',
+      lore: 'The Hollow shapes how each note is born, held, and released. Listen to the shape of the sound.',
+      question: 'What is the character of this envelope?',
       setup() {
-        const opts = [{t:0.002},{t:0.06},{t:0.45},{t:1.0}];
+        const archetypes = [
+          { a:0.003, d:0.07,  s:0.05, r:0.08 },  // percussive
+          { a:0.008, d:0.28,  s:0.22, r:0.18 },  // plucked
+          { a:0.01,  d:0.05,  s:0.95, r:0.12 },  // organ
+          { a:0.85,  d:0.6,   s:0.85, r:1.6  },  // pad
+        ];
         const idx = Math.floor(Math.random() * 4);
-        Audio.setAttack(opts[idx].t);
+        const arc = archetypes[idx];
+        Audio.setDecay(arc.d); Audio.setSustain(arc.s); Audio.setRelease(arc.r);
+        Audio.setAttack(arc.a); // triggers _demoADSR
         return idx;
       },
-      choices: ['Instant — strikes before you expect it', 'Fast — a quick bloom (~60 ms)', 'Slow — swells over ~450 ms', 'Very slow — breathes for a full second'],
-      bonusLore: 'You felt the note\'s birth. The Hollow yields its timing.',
-      wrongLore(ci) { return `It was ${['Instant','Fast','Slow','Very slow'][ci]}. Attack time is the difference between a struck hammer and a drawn bow.`; },
+      choices: [
+        'Percussive — strikes hard, decays to silence instantly',
+        'Plucked — quick bloom, fades while still ringing',
+        'Organ — immediate and fully sustained until released',
+        'Pad — breathes in slowly, holds for a long drift, slow release',
+      ],
+      bonusLore: 'You read the shape in the air. The Hollow is legible.',
+      wrongLore(ci) { return `It was ${['Percussive','Plucked','Organ','Pad'][ci]}. Attack shapes the entry, decay shapes the fall, sustain the hold, release the goodbye. Together they define what kind of instrument this sounds like.`; },
     },
     lfo: {
       lore: 'The Shivering stirs in the pitch. Listen for motion.',
