@@ -1122,6 +1122,149 @@ canvas { display: block; }
 }
 
 /* ============================================================
+   GRIMOIRE / CODEX SCREEN
+   ============================================================ */
+#screen-codex {
+  background: #000;
+  overflow-y: auto;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.codex-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #000;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.6rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.codex-header h1 {
+  flex: 1;
+  font-size: 1.35rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-shadow: 0 0 18px var(--gold);
+  margin: 0;
+}
+
+.codex-subtitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
+}
+
+.codex-empty {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 4rem 2rem;
+  line-height: 1.8;
+}
+
+.codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.4rem;
+  padding: 1.6rem;
+}
+
+.codex-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--mod-primary, var(--gold));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: fade-in 0.4s ease;
+}
+
+.codex-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.codex-card-sprite {
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px var(--mod-primary, var(--gold)));
+}
+
+.codex-card-title {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  color: var(--mod-secondary, var(--gold));
+  font-weight: bold;
+}
+
+.codex-card-location {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
+  text-transform: uppercase;
+}
+
+.codex-lore {
+  padding: 0.9rem 1rem;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  color: var(--text);
+  font-style: italic;
+  border-bottom: 1px solid var(--border);
+  flex: 1;
+}
+
+.codex-readout {
+  padding: 0.75rem 1rem;
+}
+
+.codex-readout-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.codex-readout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.22rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.72rem;
+}
+
+.codex-readout-row:last-child {
+  border-bottom: none;
+}
+
+.codex-readout-key {
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.codex-readout-val {
+  color: var(--mod-secondary, var(--gold));
+  text-align: right;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+/* ============================================================
    SANDBOX HEADER
    ============================================================ */
 .sandbox-header {
@@ -2662,6 +2805,7 @@ canvas { display: block; }
       <button class="btn btn-secondary btn-sm" id="btn-wing2" onclick="UI.switchWing(2)" style="display:none;font-size:0.7rem;letter-spacing:0.1em;border-color:#aa44bb;color:#cc88ee;">WING II ›</button>
       <button class="btn btn-secondary btn-sm" id="btn-wing1" onclick="UI.switchWing(1)" style="display:none;font-size:0.7rem;letter-spacing:0.1em;border-color:#8b2200;color:#c9a84c;">‹ WING I</button>
       <button class="btn btn-gold btn-sm" id="btn-workshop" onclick="Workshop.open()" style="display:none;letter-spacing:0.12em;">The Composer's Workshop</button>
+      <button class="btn btn-secondary btn-sm" id="btn-grimoire" onclick="UI.goCodex()" style="display:none;font-size:0.68rem;letter-spacing:0.08em;opacity:0.8;">📖 Grimoire</button>
       <button class="btn btn-secondary btn-sm" onclick="UI.newGame()" style="font-size:0.65rem;opacity:0.5;">New Hunt</button>
     </div>
   </div>
@@ -2835,9 +2979,24 @@ canvas { display: block; }
     <div class="victory-theory" id="victory-theory"></div>
     <button class="btn btn-gold" id="btn-victory-study" onclick="UI.goStudy()" style="display:none;">✦ Enter The Inner Chamber →</button>
     <button class="btn btn-secondary" onclick="UI.goMap()">← Return to Moogham</button>
+    <button class="btn btn-secondary" id="btn-victory-codex" onclick="UI.goCodex()" style="display:none; font-size:0.78rem; opacity:0.85;">📖 Add to Grimoire</button>
     <button class="btn btn-secondary" id="btn-victory-rebattle" onclick="UI.reBattle()" style="display:none; font-size:0.78rem; opacity:0.75;">↺ Re-battle</button>
     <button class="btn btn-gold" id="btn-victory-workshop" onclick="Workshop.open()" style="display:none; font-size:0.78rem; opacity:0.7;">Open Full Workshop</button>
   </div>
+</div>
+
+<!-- ============================================================
+     GRIMOIRE / CODEX SCREEN
+     ============================================================ -->
+<div id="screen-codex" class="screen">
+  <div class="codex-header">
+    <div>
+      <h1>Grimoire of Wounds</h1>
+      <div class="codex-subtitle">Every entity mastered — their sound, encoded in lore and truth</div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="UI.goMap()">← Map</button>
+  </div>
+  <div id="codex-grid" class="codex-grid"></div>
 </div>
 
 <!-- ============================================================
@@ -7041,6 +7200,89 @@ const EarTraining = (() => {
 })();
 
 /* ============================================================
+   GRIMOIRE OF WOUNDS — generative lore codex of mastered entities
+   ============================================================ */
+const Codex = (() => {
+  function _narrateLore(quest, params) {
+    const lines = [];
+    for (const [, result] of Object.entries(params)) {
+      if (!result || !result.theory) continue;
+      // Take the first sentence of theory as the lore fragment
+      const sentence = result.theory.split(/\.\s/)[0].replace(/\.$/, '');
+      if (sentence.length > 10) lines.push(sentence + '.');
+    }
+    if (!lines.length) return quest.lore ? quest.lore.split('\n\n')[0] : 'Its nature resists description.';
+    return lines.join(' ');
+  }
+
+  function _buildCard(quest, params) {
+    const mc = MODULE_COLORS[quest.id] || MODULE_COLORS.vco;
+    const card = document.createElement('div');
+    card.className = 'codex-card';
+    card.style.setProperty('--mod-primary',   mc.primary);
+    card.style.setProperty('--mod-secondary', mc.secondary);
+
+    // Header: sprite + name + location
+    const spriteHtml = SPRITES[quest.spriteKey] ? renderSprite(SPRITES[quest.spriteKey], 5) : '';
+    const head = document.createElement('div');
+    head.className = 'codex-card-head';
+    head.innerHTML = `
+      <div class="codex-card-sprite">${spriteHtml}</div>
+      <div>
+        <div class="codex-card-title">${quest.entityName}</div>
+        <div class="codex-card-location">${quest.location || ''}</div>
+      </div>`;
+    card.appendChild(head);
+
+    // Poetic lore
+    const lore = document.createElement('div');
+    lore.className = 'codex-lore';
+    lore.textContent = _narrateLore(quest, params);
+    card.appendChild(lore);
+
+    // Technical readout
+    const readout = document.createElement('div');
+    readout.className = 'codex-readout';
+    const rtitle = document.createElement('div');
+    rtitle.className = 'codex-readout-title';
+    rtitle.textContent = 'Configuration';
+    readout.appendChild(rtitle);
+    for (const [key, result] of Object.entries(params)) {
+      if (!result) continue;
+      const label = result.label !== undefined ? (result.label || key) : key;
+      const display = result.display || String(result.value ?? '—');
+      const row = document.createElement('div');
+      row.className = 'codex-readout-row';
+      row.innerHTML = `<span class="codex-readout-key">${label}</span><span class="codex-readout-val">${display}</span>`;
+      readout.appendChild(row);
+    }
+    card.appendChild(readout);
+
+    return card;
+  }
+
+  function open() {
+    Victory.stop();
+    BGMusic.fadeIn(2.0);
+    const grid = document.getElementById('codex-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const mastered = QUESTS.filter(q => !q.isFinale && State.progress[q.id] && State.questParams[q.id]);
+    if (!mastered.length) {
+      grid.innerHTML = '<div class="codex-empty">No entities mastered yet.<br>Defeat a creature to etch it into the Grimoire.</div>';
+    } else {
+      for (const quest of mastered) {
+        grid.appendChild(_buildCard(quest, State.questParams[quest.id]));
+      }
+    }
+    UI.show('screen-codex');
+  }
+
+  return { open };
+})();
+
+/* ============================================================
    STUDY MODE — per-module guided prompts shown in The Inner Chamber
    Each entry: { title, steps: [{num, html}] }
    ============================================================ */
@@ -8205,6 +8447,10 @@ const UI = {
     if (w2btn) w2btn.style.display = (State.currentWing === 1 && State.wing2Unlocked) ? 'inline-flex' : 'none';
     if (w1btn) w1btn.style.display = State.currentWing === 2 ? 'inline-flex' : 'none';
 
+    // Show Grimoire button once at least one entity is mastered
+    const grimoireBtn = document.getElementById('btn-grimoire');
+    if (grimoireBtn) grimoireBtn.style.display = State.masterCount() > 0 ? 'inline-flex' : 'none';
+
     // Filter quests for the current wing
     const wingQuests = QUESTS.filter(q => State.currentWing === 2 ? q.wing === 2 : (!q.wing || q.wing === 1));
 
@@ -8675,9 +8921,11 @@ const UI = {
     const studyBtn   = document.getElementById('btn-victory-study');
     const rebattleBtn = document.getElementById('btn-victory-rebattle');
     const wsBtn      = document.getElementById('btn-victory-workshop');
+    const codexBtn   = document.getElementById('btn-victory-codex');
     if (studyBtn)    studyBtn.style.display    = 'inline-block';
     if (rebattleBtn) rebattleBtn.style.display = 'inline-block';
     if (wsBtn)       wsBtn.style.display       = 'inline-block';
+    if (codexBtn)    codexBtn.style.display    = 'inline-block';
     Viz.stop();
     this.show('screen-victory');
     requestAnimationFrame(() => Victory.start(quest.id));
@@ -8689,6 +8937,10 @@ const UI = {
     if (!questId) { Workshop.open(); return; }
     Victory.stop();
     Workshop.openStudy(questId);
+  },
+
+  goCodex() {
+    Codex.open();
   },
 
   reBattle() {
