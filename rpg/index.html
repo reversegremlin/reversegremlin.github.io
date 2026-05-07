@@ -2527,6 +2527,32 @@ canvas { display: block; }
 }
 
 
+/* ── VICTORY SPLASH screen ───────────────────────────────────────────────── */
+#screen-victory-splash {
+  background: #000;
+  overflow: hidden;
+  gap: 0;
+}
+.vsplash-text {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: clamp(2.8rem, 11vw, 7rem);
+  font-weight: 700;
+  font-style: italic;
+  color: #c8a84b;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 40px rgba(180,140,30,0.9), 0 0 120px rgba(180,140,30,0.3);
+  opacity: 0;
+  animation: vsplash-appear 1.8s ease-out 0.15s forwards;
+  line-height: 1.25;
+  text-align: center;
+  padding: 0 2rem;
+}
+@keyframes vsplash-appear {
+  0%   { opacity: 0; letter-spacing: 0.5em; transform: scale(1.08); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; letter-spacing: 0.12em; transform: scale(1); }
+}
+
 /* ── YOU DIED screen ─────────────────────────────────────────────────────── */
 #screen-you-died {
   background: #000;
@@ -3100,6 +3126,10 @@ canvas { display: block; }
 <!-- ============================================================
      YOU DIED SCREEN
      ============================================================ -->
+<div id="screen-victory-splash" class="screen">
+  <div class="vsplash-text" id="vsplash-text"></div>
+</div>
+
 <div id="screen-you-died" class="screen">
   <div class="youdied-text">YOU DIED</div>
   <div class="youdied-lore" id="youdied-lore"></div>
@@ -4465,7 +4495,7 @@ const Audio = (() => {
   // hearing ranges far more than sine/triangle, adding ~8–12 dB perceived
   // loudness at the same gain. Values here are tuned against a physical SPL
   // meter at 220 Hz; adjust if base frequency changes significantly.
-  const _WAVE_GAIN = { sine: 1.0, triangle: 0.85, square: 0.17, sawtooth: 0.21 };
+  const _WAVE_GAIN = { sine: 1.6, triangle: 1.3, square: 0.09, sawtooth: 0.11 };
   function _correctedGain() { return _rawGain * (_WAVE_GAIN[_currentWave] ?? 1.0); }
 
   async function loadWorklet(source, name) {
@@ -9562,24 +9592,59 @@ const UI = {
     document.getElementById('enc-progress-text').textContent = `${paramIdx+1} / ${total}`;
   },
 
+  _VICTORY_PHRASES: [
+    'OSCILLATOR\nFELLED',
+    'SIGNAL\nCONSUMED',
+    'WAVEFORM\nPURGED',
+    'RESONANCE\nSHATTERED',
+    'ENVELOPE\nCLOSED',
+    'HARMONICS\nSEVERED',
+    'NOISE\nCLEANSED',
+    'FREQUENCY\nCLAIMED',
+    'THE PATCH\nHOLDS',
+    'TIMBRE\nCRUSHED',
+    'MODULATION\nSTILLED',
+    'THE ECHO\nFADES',
+    'CUTOFF\nCROSSED',
+    'THE SCORE\nRISES',
+    'BANDWIDTH\nSEIZED',
+  ],
+
   showVictory(quest) {
     this._victoryQuestId = quest.id;
     Audio.stopVoice(2.0);
+    Viz.stop();
+
+    // Splash first
+    const phrase = this._VICTORY_PHRASES[Math.floor(Math.random() * this._VICTORY_PHRASES.length)];
+    const splashEl = document.getElementById('vsplash-text');
+    if (splashEl) {
+      splashEl.innerHTML = phrase.replace('\n', '<br>');
+      // Reset animation by forcing reflow
+      splashEl.style.animation = 'none';
+      splashEl.offsetHeight;
+      splashEl.style.animation = '';
+    }
+    this.show('screen-victory-splash');
+
+    setTimeout(() => this._showVictoryContent(quest), 2600);
+  },
+
+  _showVictoryContent(quest) {
     document.getElementById('victory-icon').innerHTML    = renderSprite(SPRITES[quest.spriteKey], 12);
     document.getElementById('victory-title').textContent = `${quest.entityName} — Mastered`;
     const _hn2 = State.player.name || 'Hunter';
     const _vh  = (t) => t.replace(/\n\n/g,'<br><br>').replace(/\{hunter\}/g,`<em style="color:var(--gold);font-style:normal;font-weight:bold;">${_hn2}</em>`);
     document.getElementById('victory-lore').innerHTML    = _vh(quest.victoryLore);
     document.getElementById('victory-theory').textContent = quest.victoryTheory;
-    const studyBtn   = document.getElementById('btn-victory-study');
+    const studyBtn    = document.getElementById('btn-victory-study');
     const rebattleBtn = document.getElementById('btn-victory-rebattle');
-    const wsBtn      = document.getElementById('btn-victory-workshop');
-    const codexBtn   = document.getElementById('btn-victory-codex');
+    const wsBtn       = document.getElementById('btn-victory-workshop');
+    const codexBtn    = document.getElementById('btn-victory-codex');
     if (studyBtn)    studyBtn.style.display    = 'inline-block';
     if (rebattleBtn) rebattleBtn.style.display = 'inline-block';
     if (wsBtn)       wsBtn.style.display       = 'inline-block';
     if (codexBtn)    codexBtn.style.display    = 'inline-block';
-    Viz.stop();
     this.show('screen-victory');
     requestAnimationFrame(() => Victory.start(quest.id));
     setTimeout(() => BGMusic.fadeIn(3.0), 2800);
