@@ -102,6 +102,55 @@ canvas { display: block; }
   font-size: 0.7rem; letter-spacing: 0.2em;
   color: var(--text-dark); text-transform: uppercase;
 }
+
+/* ── Sprite battle animations ──────────────────────────────────────────── */
+/* Idle breathe — on the SVG so it composes with attack transforms on parent */
+#mastery-sprite-panel .msp-sprite-wrap svg {
+  animation: msp-breathe 3s ease-in-out infinite;
+}
+#mastery-sprite-panel #msp-hero svg { animation-delay: -1.4s; }
+@keyframes msp-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-4px) scale(1.03); }
+}
+
+/* Hero lunges upward to attack */
+#msp-hero.msp-attack { animation: msp-hero-lunge 0.45s ease-out; }
+@keyframes msp-hero-lunge {
+  0%   { transform: translateY(0) scale(1); }
+  25%  { transform: translateY(-22px) scale(1.08); }
+  60%  { transform: translateY(-9px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Monster flashes + shakes when hit */
+#msp-monster.msp-hit { animation: msp-monster-hit 0.52s ease-out; }
+@keyframes msp-monster-hit {
+  0%   { transform: translateX(0);    filter: brightness(1); }
+  15%  { transform: translateX(-14px); filter: brightness(6) saturate(0.1); }
+  40%  { transform: translateX(8px);  filter: brightness(2.5); }
+  65%  { transform: translateX(-4px); filter: brightness(1.4); }
+  100% { transform: translateX(0);    filter: brightness(1); }
+}
+
+/* Monster lunges downward to counter-attack */
+#msp-monster.msp-attack { animation: msp-monster-lunge 0.45s ease-out; }
+@keyframes msp-monster-lunge {
+  0%   { transform: translateY(0) scale(1); }
+  25%  { transform: translateY(20px) scale(1.08); }
+  60%  { transform: translateY(8px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Hero flashes + shakes when hit */
+#msp-hero.msp-hit { animation: msp-hero-hit 0.52s ease-out; }
+@keyframes msp-hero-hit {
+  0%   { transform: translateX(0);    filter: brightness(1); }
+  15%  { transform: translateX(14px);  filter: brightness(6) saturate(0.1); }
+  40%  { transform: translateX(-8px); filter: brightness(2.5); }
+  65%  { transform: translateX(4px);  filter: brightness(1.4); }
+  100% { transform: translateX(0);    filter: brightness(1); }
+}
 #screen-workshop.mastery-overlay .ws-layout { height: 100%; }
 #screen-workshop.mastery-overlay .ws-header { display: none; }
 .ws-mastery-step {
@@ -11015,6 +11064,49 @@ const Workshop = (() => {
   let _challenge      = null;
   let _masteryMode    = false;   // true = encounter-overlay mode (no submit, auto-detect)
 
+  // Battle animation state
+  let _battleCounterTimer = null;
+  let _lastAdjustTs       = 0;
+
+  function _triggerSpriteAnim(id, cls, duration) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('msp-attack', 'msp-hit');
+    el.offsetWidth; // force reflow to restart animation
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), duration);
+  }
+
+  function _spriteBattle(type) {
+    if (!_masteryMode) return;
+    if (document.getElementById('mastery-sprite-panel')?.style.display === 'none') return;
+    clearTimeout(_battleCounterTimer);
+    if (type === 'connect' || type === 'adjust') {
+      _triggerSpriteAnim('msp-hero', 'msp-attack', 450);
+      setTimeout(() => _triggerSpriteAnim('msp-monster', 'msp-hit', 520), type === 'connect' ? 80 : 140);
+    } else {
+      _triggerSpriteAnim('msp-monster', 'msp-attack', 450);
+      setTimeout(() => _triggerSpriteAnim('msp-hero', 'msp-hit', 520), 80);
+    }
+    _battleCounterTimer = setTimeout(() => {
+      if (_masteryMode) _spriteBattle('counter');
+    }, 4000 + Math.random() * 5000);
+  }
+
+  function _onModuleInput() {
+    if (!_masteryMode) return;
+    const now = Date.now();
+    if (now - _lastAdjustTs < 420) return;
+    _lastAdjustTs = now;
+    _spriteBattle('adjust');
+  }
+
+  function _onModuleClick(e) {
+    if (!_masteryMode) return;
+    if (e.target.closest('.ws-jack') || e.target.closest('.ws-challenge-bar')) return;
+    if (e.target.closest('button')) _spriteBattle('adjust');
+  }
+
   // ── Public ────────────────────────────────────────────────────────────────
 
   async function open() {
@@ -12074,6 +12166,12 @@ const Workshop = (() => {
     document.getElementById('ws-wing-tabs')?.style.removeProperty('display');
     const bodyWrap = document.getElementById('ws-body-wrap');
     if (bodyWrap) bodyWrap.style.removeProperty('flex-direction');
+    clearTimeout(_battleCounterTimer);
+    _battleCounterTimer = null;
+    if (bodyWrap) {
+      bodyWrap.removeEventListener('input', _onModuleInput);
+      bodyWrap.removeEventListener('click', _onModuleClick);
+    }
   }
 
   function _buildChallengeModules(modIds) {
@@ -12200,6 +12298,16 @@ const Workshop = (() => {
         if (heroEl)  heroEl.innerHTML  = (cls?.spriteKey  && SPRITES[cls.spriteKey])      ? renderSprite(SPRITES[cls.spriteKey],  3)   : '';
         sp.style.display = 'flex';
       }
+      // Wire battle animation listeners
+      const bodyWrap = document.getElementById('ws-body-wrap');
+      if (bodyWrap) {
+        bodyWrap.addEventListener('input', _onModuleInput);
+        bodyWrap.addEventListener('click', _onModuleClick);
+      }
+      // First monster counter-attack after 5-9 seconds
+      _battleCounterTimer = setTimeout(() => {
+        if (_masteryMode) _spriteBattle('counter');
+      }, 5000 + Math.random() * 4000);
     } else {
       UI.show('screen-workshop');
     }
@@ -13081,7 +13189,7 @@ const Workshop = (() => {
     _applyConnections();
     _redrawCables();
     if (routeKey === 'vco-out→vcf-in' && _tutorialActive) _onTutorialCableConnected();
-    if (_masteryMode) setTimeout(_checkChallengeProgress, 80);
+    if (_masteryMode) { _spriteBattle('connect'); setTimeout(_checkChallengeProgress, 80); }
   }
 
   function _disconnect(routeKey) {
@@ -13096,7 +13204,7 @@ const Workshop = (() => {
     });
     _applyConnections();
     _redrawCables();
-    if (_masteryMode) setTimeout(_checkChallengeProgress, 80);
+    if (_masteryMode) { _spriteBattle('disconnect'); setTimeout(_checkChallengeProgress, 80); }
   }
 
   function _redrawCables() {
