@@ -8,11 +8,8 @@
     },
     "entityName": "The Singing Wound",
     "lore": [
-      "In the cobblestoned dark of the Moogham Underbelly, before the beasts had taken the streets, there was only sound.",
-      "A single note. 220 Hz. The workers who built Moogham's first workshop said the oscillator that produced it never stopped running — not during the Hunt, not during the long silence that followed. They said it was the sound of the city's heartbeat, and that if it ever stopped, Moogham would end.",
-      "In the old grimoires, there is a note in the margin of the chapter on oscillators. Someone — the handwriting is Gehrman's — wrote only this: *\"The frequency is not chosen. It is remembered.\"*",
-      "The Singing Wound drifts where the brickwork ends and the nightmare begins. It does not breathe. It vibrates. Pitch is not abstract — it is cycles per second, pressure waves in air, a number that your nervous system translates into meaning without asking your permission.",
-      "{hunter}, you must learn to name it. The Wound has always known its pitch. The question is whether you can hear it."
+      "In the cobblestoned dark of the Moogham Underbelly, there was always sound. A single note — 220 Hz — that the city's first oscillator never stopped producing, not through the Hunt, not through the long silence after. Gehrman's margin note in the old grimoires reads: *\"The frequency is not chosen. It is remembered.\"*",
+      "The Wound vibrates where the brickwork ends and the nightmare begins. Pitch is not abstract — it is cycles per second, a number your nervous system translates without asking permission. {hunter}, it already knows its pitch. The question is whether you can hear it."
     ],
     "victoryLore": [
       "The tone has been bound. {hunter} has named the frequency that others could not.",
@@ -21,12 +18,20 @@
     ],
     "victoryTheory": "A Voltage-Controlled Oscillator generates a periodic waveform — a signal that repeats at a fixed frequency. Frequency (Hz) = pitch: 440 Hz is concert A. Double it: A an octave up. Halve it: A an octave down. Waveform shape determines timbre — what instruments call \"tone colour.\" Sine: pure, only the fundamental. Sawtooth: all harmonics, bright and buzzy. Square: odd harmonics only, hollow and nasal. Triangle: softer odd harmonics, woody. Every sound you will make begins with this one choice.",
     "params": {
-      "note":   { "name": "The Pitch of Its Cry",   "instruction": "The Wound has always known its pitch. Roll the die — you are only naming it." },
-      "wave":   { "name": "The Shape of Its Voice", "instruction": "The waveform existed before you arrived. Roll — witness its shape." },
-      "volume": { "name": "The Wound's Intensity",  "instruction": "The Wound decides its volume. Roll — how much of itself will it give you?" }
+      "note": {
+        "name": "The Pitch of Its Cry",
+        "instruction": "The Wound has always known its pitch. Roll the die — you are only naming it."
+      },
+      "wave": {
+        "name": "The Shape of Its Voice",
+        "instruction": "The waveform existed before you arrived. Roll — witness its shape."
+      },
+      "volume": {
+        "name": "The Wound's Intensity",
+        "instruction": "The Wound decides its volume. Roll — how much of itself will it give you?"
+      }
     }
   },
-
   "vcf": {
     "title": "The Flesh Sieve",
     "location": "The Moogham Underbelly",
@@ -36,10 +41,8 @@
     },
     "entityName": "The Flesh Sieve",
     "lore": [
-      "The Pthumerian scrolls describe it as *\"the membrane between what is heard and what is felt.\"* The scholars of Moogham's Old Workshop translated this poorly, as \"filter\" — a word too clinical for what the Sieve actually is.",
-      "It stretches across a narrow passage deep in the Underbelly, made of something organic and semi-transparent, and every sound that passes through it is changed. Low frequencies drift through like smoke through canvas. High frequencies fight and are turned away, or are not — depending on where the membrane holds tightest.",
-      "At the membrane's threshold, something interesting happens: if the cutoff frequency is set just right and the resonance pushed high enough, the Sieve begins to *ring*. It sings a note of its own — not from the input, but from the geometry of the filter itself. The Flesh Sieve has its own voice. It has always had one.",
-      "{hunter}, you are not here to destroy the Sieve. You are here to learn its preferences — and to make them your own."
+      "The Pthumerian scrolls call it *\"the membrane between what is heard and what is felt.\"* Every sound that passes through is changed — low frequencies drift through like smoke; high frequencies are turned away, or are not. The Sieve decides what you hear.",
+      "At the right cutoff and enough resonance, the Sieve begins to *ring* — not from the input, but from the geometry of the filter itself. It has a voice. {hunter}, you are not here to destroy it. You are here to learn its preferences."
     ],
     "victoryLore": [
       "The membrane has been understood. {hunter} knows now that filtering is not removal — it is *emphasis*. What survives a filter is not what is left over. It is what was always the most important part.",
@@ -48,12 +51,20 @@
     ],
     "victoryTheory": "The VCF (Voltage-Controlled Filter) shapes spectrum. Cutoff frequency: the boundary above or below which the filter attenuates. Lowpass lets bass through — used everywhere, from warm pads to booming kicks. Highpass strips body — airy, thin, spectral. Bandpass keeps only a narrow slice — nasal, vowel-like. Resonance (Q): how much the filter amplifies frequencies near the cutoff. Low Q = gentle slope. High Q = a peak that sings. At maximum Q, a filter self-oscillates — it generates its own sine tone, needing no input at all. This is one of the most important facts in synthesis.",
     "params": {
-      "cutoff":     { "name": "The Sieve's Opening",    "instruction": "Roll — the Sieve sets its own threshold. You are only reading the membrane." },
-      "resonance":  { "name": "The Sieve's Resonance",  "instruction": "The Sieve has its own voice. Roll — how loudly does it choose to sing?" },
-      "filtertype": { "name": "The Sieve's Attitude",   "instruction": "The Sieve has three attitudes. Roll — discover which face it turns toward you." }
+      "cutoff": {
+        "name": "The Sieve's Opening",
+        "instruction": "Roll — the Sieve sets its own threshold. You are only reading the membrane."
+      },
+      "resonance": {
+        "name": "The Sieve's Resonance",
+        "instruction": "The Sieve has its own voice. Roll — how loudly does it choose to sing?"
+      },
+      "filtertype": {
+        "name": "The Sieve's Attitude",
+        "instruction": "The Sieve has three attitudes. Roll — discover which face it turns toward you."
+      }
     }
   },
-
   "adsr": {
     "title": "The Breathing Hollow",
     "location": "The Patch Bay Cathedral",
@@ -63,14 +74,8 @@
     },
     "entityName": "The Breathing Hollow",
     "lore": [
-      "The Patch Bay Cathedral. The bells have not rung in years, and the silence they have left behind has taken on a shape.",
-      "Gehrman had a name for each stage. He wrote them in the margins of the Old Workshop's ledger, in a hand that grew less steady as the years passed:",
-      "*\"Attack: The Birth. The moment the note decides to exist. Can take four milliseconds or four seconds. The difference between a hammer and a drawn bow.\"*",
-      "*\"Decay: The Settling. After the peak, the note finds its level — the amount of itself it can sustain. Short decay makes percussion. Long decay makes presence.\"*",
-      "*\"Sustain: The Held Breath. Not a time, but an amount — how much of the peak remains while the gate is held open. Zero is a drum. One hundred percent is an organ.\"*",
-      "*\"Release: The Letting Go. How long after the note ends does its ghost remain. A short release is clean. A long release is haunted.\"*",
-      "At the bottom of the page, after the four definitions, Gehrman wrote: *\"There is a fifth stage. I have not named it. I hope you never need to.\"*",
-      "The Breathing Hollow lives in the Patch Bay Cathedral because it is made of the same material as a cathedral — stone, and the memory of what happened inside it. It breathes in four movements. Learn them."
+      "Gehrman wrote four definitions in the Old Workshop's ledger: *Attack: the moment a note decides to exist. Decay: the settling after the peak. Sustain: the held breath — not a time, but an amount. Release: how long the ghost remains.*",
+      "At the bottom of the page he added: *\"There is a fifth stage. I have not named it. I hope you never need to.\"* The Breathing Hollow breathes in four movements, {hunter}. Learn them."
     ],
     "victoryLore": [
       "The arc has been traced. {hunter} has given sound a lifespan — the four movements from birth to dissolution.",
@@ -79,13 +84,24 @@
     ],
     "victoryTheory": "ADSR is an envelope — a time-varying control signal applied to amplitude (volume), but also to any other parameter. Attack: time to rise from zero to peak. Decay: time to fall from peak to sustain level. Sustain: level held while gate is open (0–100%). Release: time to fall to zero after gate closes. Fast attack + short decay + low sustain = percussion. Slow attack + long sustain + long release = pad. Every instrument in nature has an ADSR — this is simply its name.",
     "params": {
-      "attack":  { "name": "The Birth",        "instruction": "How quickly does the note decide to exist? Roll." },
-      "decay":   { "name": "The Settling",     "instruction": "After the peak, how long before it finds its level? Roll." },
-      "sustain": { "name": "The Held Breath",  "instruction": "While the gate is held — how much of itself does the note keep? Roll." },
-      "release": { "name": "The Letting Go",   "instruction": "After the gate closes, how long does the ghost remain? Roll." }
+      "attack": {
+        "name": "The Birth",
+        "instruction": "How quickly does the note decide to exist? Roll."
+      },
+      "decay": {
+        "name": "The Settling",
+        "instruction": "After the peak, how long before it finds its level? Roll."
+      },
+      "sustain": {
+        "name": "The Held Breath",
+        "instruction": "While the gate is held — how much of itself does the note keep? Roll."
+      },
+      "release": {
+        "name": "The Letting Go",
+        "instruction": "After the gate closes, how long does the ghost remain? Roll."
+      }
     }
   },
-
   "lfo": {
     "title": "The Trembling",
     "location": "The Patch Bay Cathedral",
@@ -95,11 +111,8 @@
     },
     "entityName": "The Shivering Apparition",
     "lore": [
-      "A static sound is a dead sound.",
-      "The scholars of Moogham understood this. Any sound that does not move — that does not breathe, shift, tremble, swell — is perceived by the ear as an object rather than an event. The brain stops paying attention to it. This is why a sustained organ note begins to disappear from consciousness after a few seconds, while a slightly trembling one holds attention indefinitely.",
-      "The Shivering Apparition exists at the threshold of visibility. It is not fully here. It oscillates between presence and absence — not fast enough to produce sound, but fast enough to *change* the sound around it.",
-      "This is the nature of low-frequency oscillation: a wave too slow to hear, but fast enough to matter. Below 20 Hz, a waveform becomes a modulation source rather than an audio source. Apply it to pitch: vibrato, that slight human wavering that separates a singer from a tuning fork. Apply it to amplitude: tremolo, the trembling of a struck piano string. Apply it to the filter cutoff: a rhythmic wah, the sound of the Sieve breathing.",
-      "In the grimoires of Moogham, the LFO is described as *\"the movement beneath the movement — the tide under the wave.\"* {hunter}, learn to feel it before you learn to hear it."
+      "A static sound is a dead sound. Below 20 Hz, a waveform cannot be heard — but it can still *change* the sound around it. Apply it to pitch: vibrato. To amplitude: tremolo. To filter cutoff: a rhythmic wah. The Shivering Apparition oscillates at the threshold of perception — too slow to hear, fast enough to matter.",
+      "The grimoires call it *\"the movement beneath the movement — the tide under the wave.\"* {hunter}, learn to feel it before you learn to hear it."
     ],
     "victoryLore": [
       "The trembling has been calibrated. {hunter} now understands that motion is not decoration — it is the difference between a sound that lives and one that merely exists.",
@@ -107,11 +120,16 @@
     ],
     "victoryTheory": "An LFO is an oscillator running below 20 Hz — below the threshold of audible pitch. Instead of producing sound, it *shapes* sound. Rate: the modulation speed (0.1 Hz = one cycle per 10 seconds; 10 Hz = fast shimmer). Depth: how far the target parameter deviates. Target: what gets modulated — pitch (vibrato), amplitude (tremolo), filter cutoff (auto-wah), or any other parameter. The LFO is the animator of static patches: it turns snapshots into film.",
     "params": {
-      "lfo_rate":  { "name": "The Trembling Rate",  "instruction": "How fast does the tide move? Roll." },
-      "lfo_depth": { "name": "The Trembling Depth", "instruction": "How far from center does the Apparition stray? Roll." }
+      "lfo_rate": {
+        "name": "The Trembling Rate",
+        "instruction": "How fast does the tide move? Roll."
+      },
+      "lfo_depth": {
+        "name": "The Trembling Depth",
+        "instruction": "How far from center does the Apparition stray? Roll."
+      }
     }
   },
-
   "reverb": {
     "title": "The Cathedral Echo",
     "location": "The Patch Bay Cathedral",
@@ -121,11 +139,8 @@
     },
     "entityName": "The Cathedral of Forgotten Prayers",
     "lore": [
-      "The Patch Bay Cathedral has been measured. Its reverb time — the time it takes a sound to decay by 60 decibels — is eleven seconds.",
-      "Eleven seconds. The stone is porous limestone, the arches are fifteen meters high, and the years since anyone last sung inside it have only added resonance — the silence accumulating in the walls like sediment.",
-      "Below the Cathedral, the Pthumerian catacombs continue deeper still. The scholars found rooms down there where the reverb time exceeded thirty seconds — so long that a single struck note would still be faintly audible long after you had forgotten making it. The Pthumerians built those rooms deliberately. Whether they were built for worship or for listening is a question the scrolls refuse to answer.",
-      "Reverb is not echo. Echo is a single distinct repetition. Reverb is *thousands* of reflections arriving so closely spaced that the ear perceives them as continuous — as the acoustic texture of a space. Every room you have ever been in has a reverb signature. A bathroom sounds like a bathroom. A concert hall sounds like a concert hall. The acoustic is the architecture.",
-      "{hunter}: you are about to choose what architecture your sound inhabits. The Cathedral offers its eleven seconds. Take them, or take less."
+      "The Patch Bay Cathedral has been measured. Its reverb time — how long a sound takes to decay by 60 dB — is eleven seconds. Porous limestone, fifteen-meter arches, years of accumulating silence. Every room has a reverb signature. A bathroom sounds like a bathroom. A concert hall sounds like a concert hall. The acoustic is the architecture.",
+      "Reverb is not echo. Echo is one repetition. Reverb is thousands of reflections so tightly spaced the ear perceives them as the texture of a space. {hunter}: you are about to choose what architecture your sound inhabits."
     ],
     "victoryLore": [
       "The space has been chosen. {hunter}'s sound now lives inside walls larger than any room that exists.",
@@ -134,11 +149,16 @@
     ],
     "victoryTheory": "Reverb simulates acoustic space via thousands of early reflections and a diffuse late tail. Decay time (RT60): how long before the reverberation drops 60 dB — essentially inaudible. Pre-delay: the gap before first reflection (larger rooms have longer pre-delay — your ear uses this to estimate room size). Mix: dry (direct signal) vs wet (reverberated). Small room: 0.2–0.5s. Concert hall: 1.5–2.5s. Cathedral: 4–11s. Infinite plate: eternal. Longer reverb = more spatial, less clear. Short reverb = presence without wash.",
     "params": {
-      "reverb_size": { "name": "The Cathedral's Scale",    "instruction": "Roll — which space will your sound inhabit?" },
-      "reverb_mix":  { "name": "The Cathedral's Presence", "instruction": "Roll — how far into the space does your sound travel?" }
+      "reverb_size": {
+        "name": "The Cathedral's Scale",
+        "instruction": "Roll — which space will your sound inhabit?"
+      },
+      "reverb_mix": {
+        "name": "The Cathedral's Presence",
+        "instruction": "Roll — how far into the space does your sound travel?"
+      }
     }
   },
-
   "delay": {
     "title": "The Memory Loop",
     "location": "The Modulation Wilds",
@@ -148,11 +168,8 @@
     },
     "entityName": "The Echo Wraith",
     "lore": [
-      "In the graveyard behind the Patch Bay Cathedral, the groundskeepers reported hearing Father Gascoigne's gunshots for weeks after his death.",
-      "Not his scream. Not the beast he became. The gunshots — sharp and clean, three-quarter-note apart, each one slightly quieter than the last. On the seventh repetition, they said, you could barely hear them. On the eighth, silence. The delay time was approximately 450 milliseconds. The feedback was approximately 75%.",
-      "The Echo Wraith does not attack. It repeats. Whatever passes through it, it returns, slightly later, slightly quieter — and again, and again, diminishing but never fully gone. At high enough feedback, the delays accumulate into a wash of sound that outlives its source. This is how ghosts work, here.",
-      "Delay is the architecture of time. The time between the dry signal and its first echo defines a rhythm — 500ms is an eighth note at 60 BPM; 375ms is a dotted eighth at 80 BPM. Lock the delay time to the tempo and the echo becomes a musical partner. Set it freely and the echo becomes a texture, a space, a companion that walks slightly behind you.",
-      "{hunter}: in the Modulation Wilds, everything that happens has already happened before. You are simply learning to hear how far behind you it walks."
+      "For weeks after Father Gascoigne's death, the groundskeepers heard his gunshots. Not his scream — the gunshots. Sharp, three-quarter-note apart, each slightly quieter than the last. On the eighth repetition: silence. The delay time was approximately 450 ms. Feedback: 75%.",
+      "Delay is the architecture of time. Lock it to tempo and the echo becomes a musical partner. Set it free and it becomes a companion that walks slightly behind you. {hunter}: in the Modulation Wilds, everything has already happened before."
     ],
     "victoryLore": [
       "Time has been shaped. {hunter} now understands that delay is not an effect — it is a relationship between a sound and its memory.",
@@ -161,11 +178,16 @@
     ],
     "victoryTheory": "Delay captures a signal and plays it back after a set time (delay time, in ms or note values). Feedback routes the output back to the input — each feedback loop is one more repetition, slightly quieter. At 0% feedback: single echo. At 75%: many echoes, slow decay. Near 100%: near-infinite — the echoes pile up into wash. Tempo-synced delay locks to BPM: dotted-eighth delay (at 80 BPM = 562ms) creates the classic U2/Edge rhythmic echo. Free delay creates spatial depth. High feedback creates ambience from a single hit.",
     "params": {
-      "delay_time": { "name": "The Memory's Distance",    "instruction": "How far behind you does the echo walk? Roll." },
-      "delay_fb":   { "name": "The Memory's Persistence", "instruction": "How many times does the ghost return? Roll." }
+      "delay_time": {
+        "name": "The Memory's Distance",
+        "instruction": "How far behind you does the echo walk? Roll."
+      },
+      "delay_fb": {
+        "name": "The Memory's Persistence",
+        "instruction": "How many times does the ghost return? Roll."
+      }
     }
   },
-
   "seq": {
     "title": "The Ritual Pattern",
     "location": "The Modulation Wilds",
@@ -175,10 +197,7 @@
     },
     "entityName": "The Ritual Cantor",
     "lore": [
-      "Deep in the Modulation Wilds, a figure chants. It has been chanting the same sequence for years. Perhaps centuries. The sequence never changes — but each repetition reveals something new.",
-      "Gehrman programmed the first sequence before the Hunt began. Eight steps. D, G, A, G, D, A, C, G — an old descending pattern that some of the hunters said sounded like a hymn, and others said sounded like a warning. He set the tempo to 95 BPM and left the workshop running when the Hunt started.",
-      "It is still running.",
-      "The sequencer is the great discovery of modular synthesis: the realisation that a musician does not need to be present for music to occur. You design a pattern — the pitches, the tempo, the intervals — and then the machine plays it, forever, without fatigue, without variation, without interpretation. And in that absence of interpretation, something unexpected happens: the music begins to seem inevitable. As if it was always going to be these notes, in this order, at this speed.",
+      "Gehrman programmed the first sequence before the Hunt began. Eight steps. Still running. The sequencer's revelation: a musician does not need to be present for music to occur. Without a performer's interpretation, the pattern becomes *inevitable* — as if it was always going to be these notes, in this order.",
       "{hunter}: you do not play the sequence. You design it, and then you *listen* — as if you had nothing to do with it."
     ],
     "victoryLore": [
@@ -188,11 +207,16 @@
     ],
     "victoryTheory": "A step sequencer cycles through a fixed set of pitches and gates in order. Each step: a note (pitch in Hz) and a trigger (gate on/off). The tempo defines how fast steps advance. The pitch relationship between steps is the melody. Small intervals (semitones, whole tones) create smooth lines. Large intervals (4ths, 5ths, octaves) create leaps and drama. Sequencers are compositional tools: you design the architecture, the machine inhabits it. Changing a single note in an 8-step loop rewrites its entire character.",
     "params": {
-      "tempo":   { "name": "The Cantor's Pace",      "instruction": "At what tempo does the ritual proceed? Roll." },
-      "pattern": { "name": "The Sacred Interval",    "instruction": "What is the interval at the heart of the pattern? Roll." }
+      "tempo": {
+        "name": "The Cantor's Pace",
+        "instruction": "At what tempo does the ritual proceed? Roll."
+      },
+      "pattern": {
+        "name": "The Sacred Interval",
+        "instruction": "What is the interval at the heart of the pattern? Roll."
+      }
     }
   },
-
   "ladder": {
     "title": "The Deep Maw",
     "location": "The Analog Nightmare",
@@ -202,12 +226,8 @@
     },
     "entityName": "The Deep Maw",
     "lore": [
-      "The Analog Nightmare. A place where the architecture of the city ends and the architecture of physics begins.",
-      "The Pthumerian scribes had a word for the transistor ladder filter. It translates, approximately, as *\"the voice of the blood.\"* They described it not as a tool but as an organ — a structure that existed in certain resonant materials before anyone thought to build it deliberately. The first ladder filters, they wrote, were discovered rather than invented: a configuration of resistance and capacitance that appeared spontaneously in ancient circuits when the conditions were right.",
-      "Four stages of filtering, cascaded in series. Each stage adds 6 dB of slope per octave. Four stages: 24 dB/octave — an enormously steep wall that cuts frequencies four times as sharply as a single-pole filter. But it is the self-feedback, the loop of the output back to the input through a carefully chosen amount of resonance, that gives the Maw its character.",
-      "At low resonance: warmth. A rounded, dark sound with the high frequencies rolled away in a way that sounds organic rather than digital. At medium resonance: a pronounced peak at the cutoff frequency — the filter begins to speak. At high resonance: the filter self-oscillates, generating a pure sine tone from its own feedback, needing no input to make sound. The Maw sings its own note.",
-      "At that point, it is not a filter. It is an oscillator. An entirely new voice has appeared from the feedback of a tool.",
-      "{hunter}: the Maw does not open easily. But once it does, nothing sounds the same."
+      "The Pthumerian scribes called the ladder filter *\"the voice of the blood\"* — not a tool, but an organ. Four cascaded stages: 24 dB/octave. At low resonance: warmth. At medium: a pronounced peak, the filter begins to speak. At high resonance: self-oscillation — a pure sine tone from its own feedback, needing no input.",
+      "At that point it is not a filter. It is an oscillator. A new voice born from feedback. {hunter}: the Maw does not open easily. But once it does, nothing sounds the same."
     ],
     "victoryLore": [
       "The Maw has been fed and answered. {hunter} now understands why analog synthesis persists in a digital world: not because digital is worse, but because the Maw produces something that requires physics to create — a resonance shaped by electron flow through transistors, not by mathematics.",
@@ -216,12 +236,20 @@
     ],
     "victoryTheory": "The Huovilainen transistor ladder model cascades four one-pole filters (each: 6dB/oct) for a total 24dB/octave roll-off. Resonance feeds the output back to the input — at low Q: warmth. At high Q: a prominent resonance peak. At maximum Q: self-oscillation (the filter generates a sine tone with no input). Drive (pre-gain) adds tanh-curve saturation — even-order harmonics, warmth, the sound of a circuit under stress. This is the core sound of analog synthesis.",
     "params": {
-      "ladder_cutoff": { "name": "The Maw's Threshold", "instruction": "Where does the Maw draw its boundary today? Roll." },
-      "ladder_res":    { "name": "The Maw's Hunger",    "instruction": "How much does the Maw feed back on itself? Roll." },
-      "ladder_drive":  { "name": "The Maw's Fury",      "instruction": "How hard do you push the circuit into saturation? Roll." }
+      "ladder_cutoff": {
+        "name": "The Maw's Threshold",
+        "instruction": "Where does the Maw draw its boundary today? Roll."
+      },
+      "ladder_res": {
+        "name": "The Maw's Hunger",
+        "instruction": "How much does the Maw feed back on itself? Roll."
+      },
+      "ladder_drive": {
+        "name": "The Maw's Fury",
+        "instruction": "How hard do you push the circuit into saturation? Roll."
+      }
     }
   },
-
   "chorus": {
     "title": "The Wailing Choir",
     "location": "The Resonance Vaults",
@@ -231,11 +259,8 @@
     },
     "entityName": "The Wailing Choir",
     "lore": [
-      "In the accounts of those who survived Mergo's Loft, there is a recurring detail that the official Moogham histories omit: the crying.",
-      "Not from one place. From everywhere simultaneously. The Wet Nurse spread its wings and the sound of Mergo's wailing became impossible to locate — not because it was quiet, but because it was *plural*. Multiple copies of the same cry, arriving from different directions with slightly different timings. The human auditory system cannot locate a sound when its copies arrive within 30 milliseconds of each other. The brain gives up trying to find the source and simply accepts it as the texture of the air.",
-      "The Wet Nurse knew this. Or at least, the Wet Nurse produced this effect naturally, as a consequence of what it was.",
-      "Chorus works the same way: multiple copies of a signal, each slightly detuned and slightly delayed, blended back with the original. The ear perceives not separate voices but *width* — the illusion of multiple sources occupying space. A single voice becomes a choir. A single synthesiser becomes an orchestra section. The signal gains a spatial quality that no equaliser or filter can produce, because it is not about timbre — it is about *location*.",
-      "{hunter}: the shimmer is not a property of the sound. It is a property of what the sound *implies about the room it is in*."
+      "Survivors of Mergo's Loft described the same detail: the crying came from everywhere simultaneously. Multiple copies, slightly different timings. The human ear cannot locate a sound when copies arrive within 30 ms of each other. The brain gives up and accepts it as the texture of the air.",
+      "Chorus works the same way — slightly detuned, slightly delayed copies blended back with the original. Not separate voices: *width*. A single synthesiser becomes an orchestra section. {hunter}: the shimmer is not a property of the sound. It is what the sound implies about the room."
     ],
     "victoryLore": [
       "The copies have been calibrated. {hunter} now understands that width is an illusion produced by timing — and that the most convincing illusions are the ones we cannot localise.",
@@ -243,12 +268,20 @@
     ],
     "victoryTheory": "Chorus delays and detuned copies of the signal using one or more LFO-modulated delay lines. Rate: how fast the LFO moves the delay time (modulating pitch slightly). Depth: how far the pitch drifts from center. Mix: dry vs wet. At low depth and rate: thickening — the sound gains density without obvious movement. At moderate settings: a shimmering, living quality — strings sections, chorus lines. At high depth and rate: a \"seasick\" wobble. The key insight: chorus does not add harmonics (like distortion) or space (like reverb) — it adds *implied simultaneity*.",
     "params": {
-      "chorus_mix":   { "name": "The Choir's Presence", "instruction": "How many voices do you allow? Roll." },
-      "chorus_rate":  { "name": "The Choir's Drift",    "instruction": "How fast do the copies drift from the source? Roll." },
-      "chorus_depth": { "name": "The Choir's Spread",   "instruction": "How far does each voice stray before returning? Roll." }
+      "chorus_mix": {
+        "name": "The Choir's Presence",
+        "instruction": "How many voices do you allow? Roll."
+      },
+      "chorus_rate": {
+        "name": "The Choir's Drift",
+        "instruction": "How fast do the copies drift from the source? Roll."
+      },
+      "chorus_depth": {
+        "name": "The Choir's Spread",
+        "instruction": "How far does each voice stray before returning? Roll."
+      }
     }
   },
-
   "phaser": {
     "title": "The Phase Wraith",
     "location": "The Modulation Wilds",
@@ -258,12 +291,8 @@
     },
     "entityName": "The Phase Wraith",
     "lore": [
-      "The ghosts of Cainhurst were different from Moogham's other entities. They did not attack. They phased.",
-      "They appeared, and then a portion of them was *gone* — not their body, but a frequency-selective absence. At certain angles, a ghost would seem to thin out, its lower registers vanishing while its upper registers remained, or vice versa. Move slightly, and the absence would shift upward through the spectrum, taking different frequencies. It was as if looking at a ghost through a comb that slowly rotated.",
-      "This is the nature of phase cancellation: when a signal is combined with a slightly phase-shifted version of itself, certain frequencies cancel. Not all frequencies — only those where the phase relationship happens to be 180 degrees. The others add together normally, or even reinforce. As the phase shift changes with a slow LFO, the notches sweep through the spectrum.",
-      "The result is a sound that thins and fattens in a moving pattern — not a volume change, but a *spectral* change. The Phase Wraith is not louder or quieter at any frequency. It is present or absent. The notches move upward, slowly, then return.",
-      "The grimoires describe it as *\"the sound of something listening through a frequency-selective wall — hearing you as a sequence of partial absences.\"*",
-      "{hunter}: the Phase Wraith cannot be harmed. It can only be observed."
+      "The ghosts of Cainhurst did not attack — they *phased*. At certain angles, their lower registers vanished while higher ones remained, then shifted upward. Phase cancellation: a signal combined with its slightly-shifted self cancels at certain frequencies. As the shift moves with a slow LFO, the notches sweep through the spectrum.",
+      "Not louder or quieter — *present or absent*. The Phase Wraith is not a volume effect. It is a spectral one. {hunter}: it cannot be harmed. It can only be observed."
     ],
     "victoryLore": [
       "The interference pattern has been mapped. {hunter} now controls the comb of cancellation — the notches that sweep through the spectrum like light through venetian blinds.",
@@ -271,12 +300,20 @@
     ],
     "victoryTheory": "A phaser chains all-pass filters, which shift phase without affecting amplitude. When this phase-shifted signal mixes with the dry signal, cancellation notches form where phase difference is 180°. A slow LFO sweeps all-pass frequency → the notches sweep the spectrum. More stages = more notches = more complex, more alien character. Rate: sweep speed (slow = tidal sweep; fast = tremolo-like flutter). Depth: sweep width. Mix: dry/wet balance. Unlike chorus (which creates comb filter via delay), phaser creates it via phase rotation — a mathematically distinct but perceptually similar result.",
     "params": {
-      "phaser_rate":  { "name": "The Wraith's Sweep",    "instruction": "How fast do the notches sweep the spectrum? Roll." },
-      "phaser_depth": { "name": "The Wraith's Depth",    "instruction": "How far across the spectrum does the cancellation sweep? Roll." },
-      "phaser_mix":   { "name": "The Wraith's Presence", "instruction": "How visible is the Phase Wraith? Roll." }
+      "phaser_rate": {
+        "name": "The Wraith's Sweep",
+        "instruction": "How fast do the notches sweep the spectrum? Roll."
+      },
+      "phaser_depth": {
+        "name": "The Wraith's Depth",
+        "instruction": "How far across the spectrum does the cancellation sweep? Roll."
+      },
+      "phaser_mix": {
+        "name": "The Wraith's Presence",
+        "instruction": "How visible is the Phase Wraith? Roll."
+      }
     }
   },
-
   "formant": {
     "title": "The Drowned Voice",
     "location": "The Analog Nightmare",
@@ -286,11 +323,8 @@
     },
     "entityName": "The Drowned Voice",
     "lore": [
-      "The Amygdalae do not speak to those who cannot hear them.",
-      "Moogham's scholars spent generations arguing about whether the Great Ones communicated at all, and in what form. The hunters who survived contact with the Amygdalae consistently reported the same phenomenon: not words, not visions, but a sense of *vowels* — specific, distinct resonances that occupied different cavities of the skull at different moments. F1, F2, F3: the frequencies that the mouth's cavities amplify when forming a sound. Each vowel is a different architecture of resonance. The Amygdalae, it seemed, spoke entirely in the geometry of mouths they did not have.",
-      "Formants are not frequencies. They are the amplification of certain frequencies by the shape of an enclosed space. The human vocal tract is a variable cavity — the tongue, jaw, and lips reshape it continuously, moving the resonant peaks, producing the vowels of language. Three primary formants: F1 (related to jaw height), F2 (tongue position), F3 (lip position). Move these three numbers and you move through the entire vowel space of all human languages simultaneously.",
-      "The Drowned Voice exists in the lowest reaches of the Analog Nightmare because it has been separated from the body that once gave it shape. What remains is the resonance without the speaker — formants floating free of any anatomy, tunable to any vowel in any language.",
-      "{hunter}: you are about to hear sound that your brain will interpret as speech, because your brain cannot stop itself from doing so. Pay attention to which part begins to respond."
+      "Hunters who survived contact with the Amygdalae reported the same phenomenon: not words — *vowels*. Specific resonances occupying different cavities of the skull. F1, F2, F3: the frequencies the vocal tract amplifies when forming sound. Each vowel is a different architecture of resonance. The Amygdalae spoke in the geometry of mouths they did not have.",
+      "The Drowned Voice is that resonance without the speaker — formants floating free of anatomy. {hunter}: you are about to hear sound your brain will interpret as speech, because it cannot stop itself. Pay attention to which part responds."
     ],
     "victoryLore": [
       "The anatomy has been reconstructed. {hunter} now speaks with resonances borrowed from a body that no longer exists.",
@@ -299,12 +333,20 @@
     ],
     "victoryTheory": "Formants are resonance peaks in a spectrum, produced by cavity geometry. The human voice has three primary formants (F1, F2, F3) that shift with mouth and throat shape, producing all vowel sounds. A formant filter bank emulates this with resonant bandpass filters tuned to these frequencies. F1: 250–800 Hz (jaw height). F2: 700–2500 Hz (tongue front/back). F3: 1900–3500 Hz (lip rounding). Different vowel configurations are entirely different timbres. Interesting: you don't need a voice to trigger them — any wideband sound (noise, sawtooth) passed through a formant filter bank produces vowel-shaped resonances.",
     "params": {
-      "formant_vowel": { "name": "The Shape of Its Mouth",  "instruction": "The cavity speaks in vowels. Roll — which vowel does it hold today?" },
-      "formant_q":     { "name": "The Cavity's Resonance", "instruction": "How sharply does the architecture ring? Roll." },
-      "formant_mix":   { "name": "The Voice's Intrusion",  "instruction": "How much does the voice replace the tone? Roll." }
+      "formant_vowel": {
+        "name": "The Shape of Its Mouth",
+        "instruction": "The cavity speaks in vowels. Roll — which vowel does it hold today?"
+      },
+      "formant_q": {
+        "name": "The Cavity's Resonance",
+        "instruction": "How sharply does the architecture ring? Roll."
+      },
+      "formant_mix": {
+        "name": "The Voice's Intrusion",
+        "instruction": "How much does the voice replace the tone? Roll."
+      }
     }
   },
-
   "turing": {
     "title": "The Dream Engine",
     "location": "The Resonance Vaults",
@@ -314,12 +356,8 @@
     },
     "entityName": "The Dream Engine",
     "lore": [
-      "The Doll in the Hunter's Dream does not know she is a program.",
-      "This is the conclusion the Moogham scholars reached, after years of study. She believes she is a listener — someone who waits in a particular garden, speaks certain words, feels something when you return. Whether this belief constitutes consciousness has never been established, and the scholars eventually stopped asking, because the question made the research uncomfortable in a way they could not articulate.",
-      "The Dream Engine was found in the deepest chamber of the Resonance Vaults, behind a door that opens only once per generation. It generates sequences from numbers — patterns that appear intentional but follow no composer. Pseudorandom: determined by a seed (a single number that contains, implicitly, an entire melody), but unpredictable in advance to any listener. A number that contains music. Music that contains a number.",
-      "Gehrman had a different name for this machine. He called it *\"the composer that does not know it is composing.\"* He was very careful not to specify whether this was a criticism.",
-      "The probability parameter is the machine's willingness to deviate from its last decision. At low probability, the sequence locks into a loop — cyclical, hypnotic, like a prayer. At high probability, new material enters every cycle — generative, surprising, alive. The interval between is where the Dream Engine sounds most like it has an intention.",
-      "{hunter}: the machine does not know it is making music. Does it matter?"
+      "The Dream Engine generates sequences from numbers — patterns that appear intentional but follow no composer. Pseudorandom: determined by a seed, unpredictable in advance. Gehrman called it *\"the composer that does not know it is composing.\"*",
+      "At low probability: the sequence locks into a loop — cyclical, hypnotic, like a prayer. At high probability: generative, alive, surprising. {hunter}: the machine does not know it is making music. Does it matter?"
     ],
     "victoryLore": [
       "The Dream Engine has been seeded and calibrated. {hunter} has learned to work with randomness rather than against it — to use the machine's uncertainty as a compositional tool.",
@@ -328,12 +366,20 @@
     ],
     "victoryTheory": "A Turing machine shift register generates pseudo-random sequences. A seed initialises the register — the same seed always produces the same sequence (this is what distinguishes pseudo-random from truly random). The probability (drift) parameter determines how often the register mutates vs holds: 0% = a fixed, looping sequence. 100% = completely new material every step. 20–40% is the \"musical\" range: enough repetition to establish pattern, enough drift to evolve. This is how ambient electronic music breathes — enough structure to be heard as pattern, enough randomness to resist complete prediction.",
     "params": {
-      "turing_seed":  { "name": "The Engine's Seed",  "instruction": "Give the machine its starting number. Roll — the melody is already inside it." },
-      "turing_prob":  { "name": "The Engine's Drift",  "instruction": "How willing is the machine to forget its own past? Roll." },
-      "turing_tempo": { "name": "The Engine's Pulse", "instruction": "At what tempo does the machine step through its decisions? Roll." }
+      "turing_seed": {
+        "name": "The Engine's Seed",
+        "instruction": "Give the machine its starting number. Roll — the melody is already inside it."
+      },
+      "turing_prob": {
+        "name": "The Engine's Drift",
+        "instruction": "How willing is the machine to forget its own past? Roll."
+      },
+      "turing_tempo": {
+        "name": "The Engine's Pulse",
+        "instruction": "At what tempo does the machine step through its decisions? Roll."
+      }
     }
   },
-
   "tape": {
     "title": "The Burning Reel",
     "location": "The Analog Nightmare",
@@ -343,12 +389,8 @@
     },
     "entityName": "The Burning Reel",
     "lore": [
-      "In the deeper chambers of the Analog Nightmare, past the Ladder's growl, {hunter} found the smell before the sound.",
-      "Burning.",
-      "Not fire. Something more subtle. The smell of magnetic oxide under stress — a tape saturating past its rated headroom, bending the signal into harmonics it was never meant to contain.",
-      "The Burning Reel is not a creature in the usual sense. It is a memory — layers of sound deposited on acetate, played back slightly wrong. The transport wobbles. The oxide saturates. High frequencies smear into warmth. The machine imposes its own character on everything that passes through it.",
-      "This is not distortion. This is what recordings sounded like before they became perfect. {hunter}, the Reel wants to touch your sound — to make it old, to make it breathe, to make it forget it came from a digital source.",
-      "Let it."
+      "{hunter} smelled it before hearing it. Not fire — the smell of magnetic oxide under stress. Tape saturating past its rated headroom, bending signal into harmonics it was never meant to contain.",
+      "This is not distortion. This is what recordings sounded like before they became perfect. The Burning Reel wants to make your sound *old* — to make it breathe, to make it forget it came from a digital source. Let it."
     ],
     "victoryLore": [
       "The Reel has left its mark. {hunter} now understands what is lost in the pursuit of perfect reproduction.",
@@ -356,12 +398,20 @@
     ],
     "victoryTheory": "Tape saturation adds even-order harmonics through a soft-clip (tanh) curve — the same curve as a tube amplifier overdriving. Wow and flutter are low-frequency pitch modulations caused by mechanical inconsistency in the tape transport. Together they produce the signature warmth that digital audio lacks: organic compression, harmonic richness, micro-pitch variation. The sound breathes.",
     "params": {
-      "tape_sat":    { "name": "The Heat of the Oxide",      "instruction": "How hot does the tape run? Roll." },
-      "tape_wow":    { "name": "The Flutter of the Transport", "instruction": "How much does the transport tremble? Roll." },
-      "tape_warmth": { "name": "The Colour of the Tape",     "instruction": "What frequency signature does this tape stock carry? Roll." }
+      "tape_sat": {
+        "name": "The Heat of the Oxide",
+        "instruction": "How hot does the tape run? Roll."
+      },
+      "tape_wow": {
+        "name": "The Flutter of the Transport",
+        "instruction": "How much does the transport tremble? Roll."
+      },
+      "tape_warmth": {
+        "name": "The Colour of the Tape",
+        "instruction": "What frequency signature does this tape stock carry? Roll."
+      }
     }
   },
-
   "wavefolder": {
     "title": "The Harmonic Abyss",
     "location": "The Resonance Vaults",
@@ -371,11 +421,8 @@
     },
     "entityName": "The Harmonic Abyss",
     "lore": [
-      "The Resonance Vaults hold many secrets, but the deepest chamber is not about echo. It is about recursion.",
-      "The Harmonic Abyss has no body — only a surface. A crystalline sheet that maps inputs to outputs through a folding function. You feed in a pure sine wave and watch it fold. The peak of the sine, instead of clipping, inverts. The inverted peak folds again. And again.",
-      "Each fold adds harmonics — not the random smear of distortion, but precise mathematical additions. Odd harmonics. Even harmonics. A harmonic series generated by pure geometry.",
-      "{hunter}, the Abyss does not consume sound. It multiplies it. Feed it a simple wave and receive back something ancient and metallic — a tone that has been folded into itself so many times it has forgotten its origin.",
-      "The number of folds determines everything. One fold: doubling. Two folds: a bright, complex tone. Six folds: chaos that still has structure. The Abyss is mathematics made audible."
+      "Not echo — recursion. The Harmonic Abyss is a surface: a folding function. Feed in a sine wave and watch it fold. The peak inverts. The inversion folds again. Each fold adds harmonics — not distortion's random smear, but precise mathematical additions determined by geometry.",
+      "{hunter}: the Abyss does not consume sound. It multiplies it. One fold: doubling. Six folds: structured chaos. Feed it something simple — receive back something ancient and metallic that has forgotten its origin."
     ],
     "victoryLore": [
       "The geometry has been mapped. {hunter} now understands that complexity can arise from simplicity — that a single sine wave, folded enough times, contains everything.",
@@ -383,12 +430,20 @@
     ],
     "victoryTheory": "A wavefolder reflects the signal at amplitude boundaries — instead of clipping at ±1, the signal folds back in the opposite direction. Each fold doubles the number of zero-crossings and adds harmonics in a mathematically precise way. Unlike tape saturation (even harmonics) or square wave clipping (odd harmonics), wavefolding produces complex, inharmonic partials that shift with amplitude. The result sounds metallic, crystalline, or Buchla-esque.",
     "params": {
-      "fold_amount": { "name": "The Depth of the Fold",  "instruction": "How many times does the wave fold back on itself? Roll." },
-      "fold_freq":   { "name": "The Root Frequency",     "instruction": "What frequency enters the Abyss? Roll." },
-      "fold_wave":   { "name": "The Shape to Fold",      "instruction": "Which waveform will you send into the geometry? Roll." }
+      "fold_amount": {
+        "name": "The Depth of the Fold",
+        "instruction": "How many times does the wave fold back on itself? Roll."
+      },
+      "fold_freq": {
+        "name": "The Root Frequency",
+        "instruction": "What frequency enters the Abyss? Roll."
+      },
+      "fold_wave": {
+        "name": "The Shape to Fold",
+        "instruction": "Which waveform will you send into the geometry? Roll."
+      }
     }
   },
-
   "noise": {
     "title": "The Static Oracle",
     "location": "The Modulation Wilds",
@@ -398,11 +453,8 @@
     },
     "entityName": "The Static Oracle",
     "lore": [
-      "{hunter} heard it long before seeing it. A sound without pitch. Without start or end. It had always been here — beneath the tonal music of the other beasts, beneath the LFO's trembling, beneath the sequencer's chant.",
-      "White noise is the voice of everything speaking at once. Every frequency, simultaneously, with equal energy. It is the most complex signal possible — and the most simple. It contains no pattern. It IS no pattern. It is the raw material of all sound: unfiltered, unshapen, unmeaning.",
-      "Filter it and it becomes wind. Resonant-filter it and it becomes breath, or speech, or the scrape of a bow across strings. Add ADSR to it and it becomes percussion. Add it underneath a pitched sound and it becomes texture.",
-      "The Static Oracle does not speak to {hunter}. But it answers every question about what sound fundamentally is: not pitch, not timbre, not rhythm — but energy distributed across the spectrum of vibration.",
-      "Listen. Everything is in there."
+      "A sound without pitch, without start or end. White noise is every frequency speaking simultaneously with equal energy — the most complex signal possible, and the most simple. It contains no pattern. It IS no pattern. The raw material of all sound.",
+      "Filter it and it becomes wind. Resonant-filter it and it becomes breath or speech. Add ADSR and it becomes percussion. The Static Oracle does not speak to {hunter} — but it answers every question about what sound fundamentally is. Everything is in there."
     ],
     "victoryLore": [
       "The static has been given shape. {hunter} now understands that all sound contains noise — that noise is not the absence of music but its substrate.",
@@ -410,12 +462,20 @@
     ],
     "victoryTheory": "White noise has equal energy per frequency (flat spectrum). Pink noise rolls off at -3dB per octave (equal energy per octave) — it sounds \"warmer\" and more natural to human ears. Both are random signals with no correlation between samples. Filter white noise through a resonant VCF: at high Q, the filter rings with the noise source, producing tuned percussion hits. The entire drum machine lives inside noise.",
     "params": {
-      "noise_mix":    { "name": "The Oracle's Volume",   "instruction": "How loudly does the static speak today? Roll." },
-      "noise_color":  { "name": "The Oracle's Spectrum", "instruction": "Which colour does the Oracle speak in today? Roll." },
-      "noise_filter": { "name": "The Oracle's Shape",    "instruction": "How does the filter shape the Oracle's voice? Roll." }
+      "noise_mix": {
+        "name": "The Oracle's Volume",
+        "instruction": "How loudly does the static speak today? Roll."
+      },
+      "noise_color": {
+        "name": "The Oracle's Spectrum",
+        "instruction": "Which colour does the Oracle speak in today? Roll."
+      },
+      "noise_filter": {
+        "name": "The Oracle's Shape",
+        "instruction": "How does the filter shape the Oracle's voice? Roll."
+      }
     }
   },
-
   "ringmod": {
     "title": "The Bell of Unreality",
     "location": "The Analog Nightmare",
@@ -425,11 +485,8 @@
     },
     "entityName": "The Bell of Unreality",
     "lore": [
-      "It hung in the air of the Analog Nightmare — not attached to anything. Not swaying. Just there.",
-      "A bell the colour of old copper, large enough that {hunter} could see the inside of it: empty, resonant, deeply wrong in its proportions.",
-      "When it rang, it rang twice. Two sounds simultaneously — the sum and the difference of two frequencies that should never have been combined. This is ring modulation: take signal A and signal B, multiply them together, and receive back (A+B) and (A-B). Neither of the original signals. Something entirely new.",
-      "At musical frequency ratios, ring modulation creates bells and metallic tones. At slightly detuned ratios, it creates throbbing, pulsing intermodulation. At non-integer ratios, it creates alien intervals that exist in no scale, in no harmonic series — the voice of a world with different physics.",
-      "{hunter}, the Bell does not ring for the dead. It rings for the improbable."
+      "It hung in the air — not attached to anything. A bell the colour of old copper, deeply wrong in its proportions. When it rang, it rang *twice*: the sum and difference of two frequencies that should never have been combined. Ring modulation: multiply A and B, receive back (A+B) and (A–B). Neither original signal survives. Something new does.",
+      "At musical ratios: bells and metal. At detuned ratios: throbbing intermodulation. At non-integer ratios: alien intervals in no known scale. {hunter}, the Bell does not ring for the dead. It rings for the improbable."
     ],
     "victoryLore": [
       "The intermodulation has been mastered. {hunter} now controls the impossible intervals between sounds that were never meant to coexist.",
@@ -437,12 +494,20 @@
     ],
     "victoryTheory": "Ring modulation multiplies two signals: output = A × B. This generates sum (A+B) and difference (A-B) frequencies — but removes the originals. At musical ratios (2:1, 3:2), the sidebands are harmonic: bells and metallic tones. At irrational ratios, the sidebands are inharmonic: alien, clanging, unstable. The result never exists in nature — ring mod creates intervals that no acoustic instrument can produce.",
     "params": {
-      "ring_ratio": { "name": "The Bell's Impossible Interval", "instruction": "The Bell chooses its carrier ratio. Roll — witness the impossible interval." },
-      "ring_pitch": { "name": "The Source Frequency",           "instruction": "What frequency will you multiply? Roll." },
-      "ring_mix":   { "name": "The Bell's Presence",            "instruction": "How much of the Bell's ring replaces the source? Roll." }
+      "ring_ratio": {
+        "name": "The Bell's Impossible Interval",
+        "instruction": "The Bell chooses its carrier ratio. Roll — witness the impossible interval."
+      },
+      "ring_pitch": {
+        "name": "The Source Frequency",
+        "instruction": "What frequency will you multiply? Roll."
+      },
+      "ring_mix": {
+        "name": "The Bell's Presence",
+        "instruction": "How much of the Bell's ring replaces the source? Roll."
+      }
     }
   },
-
   "drunk": {
     "title": "The Wandering Tone",
     "location": "The Modulation Wilds",
@@ -452,11 +517,8 @@
     },
     "entityName": "The Wandering Tone",
     "lore": [
-      "Not all paths through the Modulation Wilds lead anywhere.",
-      "The Wandering Tone was first heard years ago — a melodic line that moved through keys as if it had forgotten what key it was in. Not randomly. Step-wise. Each note one or two steps from the last, but the direction chosen by something — chance? intent? — that no one in Moogham could name.",
-      "It visits the same notes twice. It backtracks. It pauses at an interval for three steps before continuing. It makes phrases that almost sound composed.",
-      "{hunter}, you will try to capture it, to make it yours. But the Wandering Tone cannot be owned. It can only be parameterized — its step size, its tempo, its range. After that, it goes where it wants.",
-      "The paradox of the drunk walk is that it sounds more human than any sequenced pattern. Because humans also wander. Because composition is, often, the illusion of direction imposed on movement that was already happening anyway."
+      "A melodic line moving through keys as if it had forgotten what key it was in — not randomly, but step-wise. Each note one or two steps from the last, the direction chosen by something no one in Moogham could name. It backtracks. It pauses. It makes phrases that almost sound composed.",
+      "{hunter}: you can set its step size, its tempo, its range. After that, it goes where it wants. The drunk walk sounds more human than any sequenced pattern — because humans also wander."
     ],
     "victoryLore": [
       "The wandering has been licensed. {hunter} has learned to trust randomness as a compositional tool.",
@@ -464,12 +526,20 @@
     ],
     "victoryTheory": "The drunk walk (random walk) is a stochastic process: each next value is the previous value plus a random signed step. In music, this means pitch moves up or down by a small, random amount at each step. The result sounds melodic because adjacent pitches are always musically close — you don't hear leaps, only steps. The \"drunkenness\" comes from the unpredictability of the direction, not the distance. Long drunk walks produce surprisingly musical sequences.",
     "params": {
-      "drunk_step":  { "name": "The Size of Each Step",  "instruction": "How far does the Tone wander on each step? Roll." },
-      "drunk_tempo": { "name": "The Speed of the Wander", "instruction": "How quickly does the walk proceed? Roll." },
-      "drunk_wave":  { "name": "The Wanderer's Voice",   "instruction": "In what voice does the wanderer speak? Roll." }
+      "drunk_step": {
+        "name": "The Size of Each Step",
+        "instruction": "How far does the Tone wander on each step? Roll."
+      },
+      "drunk_tempo": {
+        "name": "The Speed of the Wander",
+        "instruction": "How quickly does the walk proceed? Roll."
+      },
+      "drunk_wave": {
+        "name": "The Wanderer's Voice",
+        "instruction": "In what voice does the wanderer speak? Roll."
+      }
     }
   },
-
   "stutter": {
     "title": "The Glitch Revenant",
     "location": "The Resonance Vaults",
@@ -479,11 +549,8 @@
     },
     "entityName": "The Glitch Revenant",
     "lore": [
-      "It should not be here. The Resonance Vaults are a place of sustained sound — long tones, slow movement, the patience of stone.",
-      "The Glitch Revenant does not belong. It moves in stutters. Its body is fragmented — pieces of itself visible in different places simultaneously, as if the light that renders it is misfiring. It makes sounds that should not be possible: a single note, but heard four times in the space where one note should be. Then silence for a fraction of a second. Then again.",
-      "Stutter is the effect of capturing a small slice of audio and looping it. The slice is so short that the ear perceives it as a rapid gate: a rhythmic fragmentation of the sound. Fast stutter rates create a kind of pitched buzz. Slow stutter rates create a mechanical, robotic repetition.",
-      "{hunter}, the Glitch Revenant is not broken. It is broken *on purpose*. The seam is the instrument. The artifact is the art.",
-      "Roll."
+      "It moves in stutters. Pieces of its body visible in different places simultaneously, as if the light rendering it is misfiring. A single note, heard four times where one should be. Then silence. Then again.",
+      "Stutter is a tiny slice of audio looped so fast the ear hears rhythmic fragmentation. Fast rates: a pitched buzz. Slow rates: mechanical repetition. {hunter}: the Glitch Revenant is not broken. It is broken *on purpose*. The seam is the instrument."
     ],
     "victoryLore": [
       "The fragmentation has been controlled. {hunter} now understands that error can be a technique.",
@@ -491,12 +558,20 @@
     ],
     "victoryTheory": "Stutter repeats a short audio slice in a tight loop, creating rapid gate rhythms. At very high rates (200-500 BPM), the repetition is so fast it creates a pitched buzz — the repetition rate becomes audible as a tone. At lower rates, the individual repeats are heard as rhythmic fragments. The stutter rate defines the \"grid\": it can lock to tempo for musical stutter, or be set freely for glitch textures.",
     "params": {
-      "stutter_rate":  { "name": "The Seizure Rate",      "instruction": "How fast does the Revenant fragment? Roll." },
-      "stutter_pitch": { "name": "The Fragment's Note",   "instruction": "What pitch is the Revenant cutting into pieces? Roll." },
-      "stutter_wave":  { "name": "The Fragment's Character", "instruction": "What character does the fragment carry? Roll." }
+      "stutter_rate": {
+        "name": "The Seizure Rate",
+        "instruction": "How fast does the Revenant fragment? Roll."
+      },
+      "stutter_pitch": {
+        "name": "The Fragment's Note",
+        "instruction": "What pitch is the Revenant cutting into pieces? Roll."
+      },
+      "stutter_wave": {
+        "name": "The Fragment's Character",
+        "instruction": "What character does the fragment carry? Roll."
+      }
     }
   },
-
   "euclid": {
     "title": "The Geometric Pulse",
     "location": "The Patch Bay Cathedral",
@@ -506,11 +581,8 @@
     },
     "entityName": "The Geometric Pulse",
     "lore": [
-      "The Patch Bay Cathedral holds more than cables and patch points. At the centre of the nave, where the stained glass once was, there is a circle of light.",
-      "Not a circle of lamps. A circle made of rhythm.",
-      "Seventeen pulses arranged in a ring of twenty-four — not evenly spaced, but as evenly as possible. The gaps between pulses follow a pattern that repeats. The pattern is ancient: it is the same mathematics that governs the clave pattern in Afro-Cuban music, the tresillo in jazz, the West African bell patterns that seeded all of popular music.",
-      "The Geometric Pulse is Euclidean rhythm. The algorithm is two thousand years old. The mathematics was discovered by a Greek geometer who never heard a drum. And yet the patterns it generates are the heartbeat of half the world's music.",
-      "{hunter}, you will not fight this entity. You will calculate it. Roll the number of hits, roll the number of steps, and the geometry will do the rest."
+      "At the centre of the Patch Bay Cathedral, where stained glass once was: a circle made of rhythm. Seventeen pulses in a ring of twenty-four — as evenly spaced as possible. The same mathematics governs the clave in Afro-Cuban music, the tresillo in jazz, the West African bell patterns that seeded all popular music.",
+      "The algorithm is two thousand years old. Discovered by a Greek geometer who never heard a drum. {hunter}: you will not fight this entity — you will calculate it."
     ],
     "victoryLore": [
       "The mathematics has been applied. {hunter} now holds a rhythm no human would ever have programmed — and it sounds inevitable.",
@@ -518,12 +590,20 @@
     ],
     "victoryTheory": "Euclidean rhythm distributes N hits across M steps as evenly as possible (Bjorklund algorithm). E(3,8) = [x.x..x..] — the tresillo, foundation of jazz. E(5,8) = [x.xx.xx.] — the Cuban clave. E(7,12) = [x.x.xx.x.xx.] — Bulgarian aksak. These patterns appear across world music not because of cultural transmission, but because maximum evenness is mathematically universal. The algorithm doesn't know about music; it just distributes objects optimally in space.",
     "params": {
-      "euclid_hits":  { "name": "The Number of Pulses",  "instruction": "How many pulses does the geometry distribute? Roll." },
-      "euclid_steps": { "name": "The Size of the Pattern", "instruction": "How many steps does the circle hold? Roll." },
-      "euclid_tempo": { "name": "The Pulse's Speed",     "instruction": "At what tempo does the geometry unfold? Roll." }
+      "euclid_hits": {
+        "name": "The Number of Pulses",
+        "instruction": "How many pulses does the geometry distribute? Roll."
+      },
+      "euclid_steps": {
+        "name": "The Size of the Pattern",
+        "instruction": "How many steps does the circle hold? Roll."
+      },
+      "euclid_tempo": {
+        "name": "The Pulse's Speed",
+        "instruction": "At what tempo does the geometry unfold? Roll."
+      }
     }
   },
-
   "sidechain": {
     "title": "The Pumping Specter",
     "location": "The Modulation Wilds",
@@ -533,11 +613,8 @@
     },
     "entityName": "The Pumping Specter",
     "lore": [
-      "{hunter} first felt it before hearing it.",
-      "A rhythmic pressure against the sternum. Expansion and contraction. As if the air itself were breathing in time — a slow, felt pulse that sat beneath the other sounds and pushed them apart, then let them back together.",
-      "The Pumping Specter is sidechain compression made audible. In the waking world, sidechain compressors reduce the volume of one signal whenever another signal is present — a kick drum silences the bass briefly, creating a pumping, breathing sensation. In the Modulation Wilds, the Specter does this directly: it breathes into the sound itself, expanding and contracting, creating the illusion that the entire soundscape has a heart.",
-      "This technique defines modern electronic music. Every four-to-the-floor track from 1987 to today has it. The pump is what makes the kick drum cut through everything, even when you cannot hear the kick itself.",
-      "{hunter}, you are about to feel your sound breathe."
+      "{hunter} felt it before hearing it — rhythmic pressure against the sternum. Expansion and contraction in time. The Pumping Specter is sidechain compression made audible: one signal silences another when it is present. A kick drum briefly silences the bass. The music breathes.",
+      "This defines modern electronic music — every four-to-the-floor track from 1987 to today. The pump is what makes the kick cut through everything, even when you cannot hear the kick itself. {hunter}, you are about to feel your sound breathe."
     ],
     "victoryLore": [
       "The breathing has been synchronized. {hunter} now controls the heartbeat beneath the music.",
@@ -545,12 +622,20 @@
     ],
     "victoryTheory": "Sidechain compression reduces a signal's volume whenever a trigger signal is present. In electronic music, the kick drum triggers the compressor on the bass/pad/reverb, creating a \"pumping\" effect: the sound gets quieter during the kick, then blooms back. The rate of pumping is the tempo. The depth is how quiet it gets. The attack/release shape determines whether it's subtle breathing or aggressive ducking. The pump is not a mistake — it is the physics of how music occupies space.",
     "params": {
-      "sc_rate":    { "name": "The Heartbeat Rate",    "instruction": "How fast does the Specter breathe? Roll." },
-      "sc_depth":   { "name": "The Depth of the Breath", "instruction": "How far does the pump pull the sound down before releasing it? Roll." },
-      "sc_texture": { "name": "The Specter's Source", "instruction": "What texture breathes beneath the pump? Roll." }
+      "sc_rate": {
+        "name": "The Heartbeat Rate",
+        "instruction": "How fast does the Specter breathe? Roll."
+      },
+      "sc_depth": {
+        "name": "The Depth of the Breath",
+        "instruction": "How far does the pump pull the sound down before releasing it? Roll."
+      },
+      "sc_texture": {
+        "name": "The Specter's Source",
+        "instruction": "What texture breathes beneath the pump? Roll."
+      }
     }
   },
-
   "finale": {
     "title": "The Final Frequency",
     "location": "The Resonant Void",
@@ -583,7 +668,6 @@
     "victoryTheory": "Everything you mastered: VCO → pitch, timbre, source. VCF → frequency selection, resonance. ADSR → time, life, shape. LFO → motion, modulation. Reverb → space, location. Delay → time, memory. Sequencer → pattern, structure. Ladder → harmonic weight, saturation. Chorus → width, implied simultaneity. Phaser → interference, absence. Formant → vowel, voice, language. Turing → controlled randomness, generative music. Tape → imperfection, warmth, history. Wavefolder → mathematical complexity, new harmonics. Noise → everything at once. Ring Mod → impossible intervals. Drunk Walk → stochastic melody. Stutter → fragmentation as technique. Euclid → geometric rhythm. Sidechain → breath, pulse, the pump.\n\nThese are not features. They are vocabulary. The synthesizer does exactly what you tell it. The art is knowing what to say — and when to stop.",
     "params": {}
   },
-
   "withered": {
     "title": "The Architect's Test",
     "location": "The Archive Threshold",
@@ -605,12 +689,20 @@
     ],
     "victoryTheory": "The half-boss test: combining waveform, filter, and reverb simultaneously. Waveform = spectral content. Filter = spectral shaping. Reverb = spatial embedding. These are the first three dimensions of any synthesized sound. Master all three at once and you hold the foundation of every sound ever synthesized.",
     "params": {
-      "w2_wave": { "name": "The Waveform of Mastery",  "instruction": "Name the wave. You have rolled this die before." },
-      "w2_cut":  { "name": "The Filter's Threshold",   "instruction": "Where does the Sieve draw its line?" },
-      "w2_rev":  { "name": "The Space of the Test",    "instruction": "Place your sound in a space. Roll." }
+      "w2_wave": {
+        "name": "The Waveform of Mastery",
+        "instruction": "Name the wave. You have rolled this die before."
+      },
+      "w2_cut": {
+        "name": "The Filter's Threshold",
+        "instruction": "Where does the Sieve draw its line?"
+      },
+      "w2_rev": {
+        "name": "The Space of the Test",
+        "instruction": "Place your sound in a space. Roll."
+      }
     }
   },
-
   "flanger": {
     "title": "The Doppler Crossing",
     "location": "The Doppler Crossings",
@@ -630,11 +722,16 @@
     ],
     "victoryTheory": "Flanging: a signal mixed with a very short, slightly varying delay of itself (1–20ms). Where the two copies are in phase, they reinforce. Where out of phase, they cancel — creating notches in the spectrum. As delay time varies via LFO, notch frequencies sweep up and down, creating the characteristic jet-plane sweep. Key parameters: delay time (notch spacing), rate (sweep speed), depth (modulation amount), feedback (resonance at notch frequencies). Flanger = chorus with shorter delay and feedback.",
     "params": {
-      "fl_rate":  { "name": "The Ghost's Drift Speed",  "instruction": "How fast does the Revenant slip out of phase? Roll." },
-      "fl_depth": { "name": "The Echo's Separation",    "instruction": "How far does the copy drift before returning? Roll." }
+      "fl_rate": {
+        "name": "The Ghost's Drift Speed",
+        "instruction": "How fast does the Revenant slip out of phase? Roll."
+      },
+      "fl_depth": {
+        "name": "The Echo's Separation",
+        "instruction": "How far does the copy drift before returning? Roll."
+      }
     }
   },
-
   "bitcrush": {
     "title": "The Decimated Quarter",
     "location": "The Decimated Quarter",
@@ -654,11 +751,16 @@
     ],
     "victoryTheory": "Bit crushing reduces bit depth (amplitude resolution) and/or sample rate. Bit depth reduction adds quantization noise — smooth waveforms become staircases. Sample rate reduction creates aliasing — high frequencies fold back as inharmonic artifacts. Classic 8-bit and 12-bit sounds (Akai MPC60, E-mu SP-12) are beloved for their grit. Bitcrushing treats limitation as timbre.",
     "params": {
-      "bc_bits": { "name": "The Depth of Reduction",      "instruction": "How many bits remain? Roll — fewer is more brutal." },
-      "bc_rate": { "name": "The Sample Rate Reduction",   "instruction": "Roll — fewer samples per second means more aliasing." }
+      "bc_bits": {
+        "name": "The Depth of Reduction",
+        "instruction": "How many bits remain? Roll — fewer is more brutal."
+      },
+      "bc_rate": {
+        "name": "The Sample Rate Reduction",
+        "instruction": "Roll — fewer samples per second means more aliasing."
+      }
     }
   },
-
   "spectral": {
     "title": "The Frequency Loom",
     "location": "The Frequency Loom",
@@ -678,11 +780,16 @@
     ],
     "victoryTheory": "Spectral processing analyzes sound via FFT, decomposing it into frequency bins. Operations include: freezing (hold bin amplitudes — the pad effect), smearing (blur over time), shifting (move bins up/down — inharmonic pitch shift), stretching (increase spacing — slow time without changing pitch). The vocoder cross-applies one sound's spectral envelope to another's pitch content. All spectral tools read the chord inside the waveform.",
     "params": {
-      "sp_vowel": { "name": "The Spectral Vowel", "instruction": "Which formant cluster does the Weave occupy? Roll." },
-      "sp_rate":  { "name": "The Weave's Drift",  "instruction": "How quickly does the spectrum rotate? Roll." }
+      "sp_vowel": {
+        "name": "The Spectral Vowel",
+        "instruction": "Which formant cluster does the Weave occupy? Roll."
+      },
+      "sp_rate": {
+        "name": "The Weave's Drift",
+        "instruction": "How quickly does the spectrum rotate? Roll."
+      }
     }
   },
-
   "resonator": {
     "title": "The Cathedral Chambers",
     "location": "The Cathedral Chambers",
@@ -702,11 +809,16 @@
     ],
     "victoryTheory": "A resonator is a bandpass filter with very high Q. At extreme Q values, the filter self-oscillates — producing a pure sine at its cutoff frequency. Karplus-Strong synthesis uses a short delay loop with a lowpass filter to simulate a plucked string. Physical modeling generalises this: model the resonant properties of real instruments using digital filters tuned to their acoustic modes. The resonator knows only frequency and decay rate.",
     "params": {
-      "res_freq": { "name": "The Chamber's Pitch",   "instruction": "Which frequency does the chamber prefer? Roll." },
-      "res_q":    { "name": "The Chamber's Sustain", "instruction": "How long does the resonance ring before it dies? Roll." }
+      "res_freq": {
+        "name": "The Chamber's Pitch",
+        "instruction": "Which frequency does the chamber prefer? Roll."
+      },
+      "res_q": {
+        "name": "The Chamber's Sustain",
+        "instruction": "How long does the resonance ring before it dies? Roll."
+      }
     }
   },
-
   "fm": {
     "title": "The Bell Foundry Ruins",
     "location": "The Bell Foundry Ruins",
@@ -726,11 +838,16 @@
     ],
     "victoryTheory": "FM synthesis: a carrier oscillator's frequency is modulated by a modulator at audio rate. Sidebands appear at C ± M, C ± 2M, C ± 3M, etc. Integer C:M ratios produce harmonic spectra (musical). Non-integer ratios produce inharmonic spectra (bells, gongs). Modulation depth (index) controls sideband amplitude — more depth = richer spectrum. The Yamaha DX7's six operators, each a sine wave, can describe virtually any acoustic instrument in the right algorithm.",
     "params": {
-      "fm_carrier": { "name": "The Carrier Note",     "instruction": "Name the carrier — the bell's fundamental. Roll." },
-      "fm_ratio":   { "name": "The Operator Ratio",   "instruction": "The modulator-to-carrier ratio defines the timbre. Roll." }
+      "fm_carrier": {
+        "name": "The Carrier Note",
+        "instruction": "Name the carrier — the bell's fundamental. Roll."
+      },
+      "fm_ratio": {
+        "name": "The Operator Ratio",
+        "instruction": "The modulator-to-carrier ratio defines the timbre. Roll."
+      }
     }
   },
-
   "arpeggio": {
     "title": "The Cascading Falls",
     "location": "The Cascading Falls",
@@ -750,11 +867,16 @@
     ],
     "victoryTheory": "An arpeggiator steps through chord notes in sequence at a set tempo. Step interval determines harmonic quality. Speed determines whether the result sounds like melody (slow) or texture (fast). Classic arpeggios — Jarre's Oxygène, Tangerine Dream's Phaedra — defined electronic music by using limitation as structure.",
     "params": {
-      "arp_iv":  { "name": "The Step's Distance",  "instruction": "What interval separates each note in the cascade? Roll." },
-      "arp_bpm": { "name": "The Cascade's Speed",  "instruction": "How fast do the notes fall? Roll." }
+      "arp_iv": {
+        "name": "The Step's Distance",
+        "instruction": "What interval separates each note in the cascade? Roll."
+      },
+      "arp_bpm": {
+        "name": "The Cascade's Speed",
+        "instruction": "How fast do the notes fall? Roll."
+      }
     }
   },
-
   "quantize": {
     "title": "The Pitch Grid",
     "location": "The Pitch Grid",
@@ -774,11 +896,16 @@
     ],
     "victoryTheory": "A quantizer samples incoming CV and rounds it to the nearest semitone or scale degree. Scale modes: chromatic, major, minor, pentatonic. With a quantizer downstream of a random source, you get generative melody — random voltages, musical notes. The quantizer is what distinguishes \"random\" from \"random but in key.\"",
     "params": {
-      "q_root": { "name": "The Law's Root",  "instruction": "Which note anchors the scale? Roll." },
-      "q_step": { "name": "The Scale Step",  "instruction": "Which interval does the Warden enforce? Roll." }
+      "q_root": {
+        "name": "The Law's Root",
+        "instruction": "Which note anchors the scale? Roll."
+      },
+      "q_step": {
+        "name": "The Scale Step",
+        "instruction": "Which interval does the Warden enforce? Roll."
+      }
     }
   },
-
   "clock": {
     "title": "The Clockwork Ossuary",
     "location": "The Clockwork Ossuary",
@@ -798,11 +925,16 @@
     ],
     "victoryTheory": "The master clock outputs a pulse at BPM rate. Clock divisions: 1/1 = one pulse per beat; 1/4 = sixteenth notes; 1/16 = thirty-second notes. Multiplications run slower. In a modular system, the clock is the conductor. Every module that responds to gates waits for the clock's permission before it acts.",
     "params": {
-      "ck_bpm": { "name": "The Master Pulse",    "instruction": "The clock sets the law of time. Roll your tempo." },
-      "ck_div": { "name": "The Clock Division",  "instruction": "At what division of the master pulse does your module respond? Roll." }
+      "ck_bpm": {
+        "name": "The Master Pulse",
+        "instruction": "The clock sets the law of time. Roll your tempo."
+      },
+      "ck_div": {
+        "name": "The Clock Division",
+        "instruction": "At what division of the master pulse does your module respond? Roll."
+      }
     }
   },
-
   "chaos": {
     "title": "The Attractor Fields",
     "location": "The Attractor Fields",
@@ -822,11 +954,16 @@
     ],
     "victoryTheory": "Chaos synthesis uses the output of a chaotic differential equation (Lorenz, Rössler, Chua's circuit) as a control voltage. Unlike pseudo-random generators, chaotic signals are deterministic. But tiny changes in starting values produce wildly different trajectories. Applied to pitch: endlessly evolving melody. Applied to filter: breathing, living texture. Applied to amplitude: organic dynamics no LFO can fake.",
     "params": {
-      "ch_step": { "name": "The Attractor's Velocity", "instruction": "How far does the Swarm leap each event? Roll." },
-      "ch_rate": { "name": "The Swarm's Density",      "instruction": "How frequently does the chaos update? Roll." }
+      "ch_step": {
+        "name": "The Attractor's Velocity",
+        "instruction": "How far does the Swarm leap each event? Roll."
+      },
+      "ch_rate": {
+        "name": "The Swarm's Density",
+        "instruction": "How frequently does the chaos update? Roll."
+      }
     }
   },
-
   "samplehold": {
     "title": "The Frozen Moment Archive",
     "location": "The Frozen Moment Archive",
@@ -846,11 +983,16 @@
     ],
     "victoryTheory": "S&H samples an input voltage when triggered, holds it until the next gate. Typical use: noise → S&H → quantizer → VCO pitch = random melody in key. The step height is determined by input at trigger time; duration by clock rate. At slow rates: pitched random notes. At fast rates: tremolo-like rapid variation.",
     "params": {
-      "sh_seed": { "name": "The Sampled Moment", "instruction": "Roll — this is the value the Collector captures." },
-      "sh_rate": { "name": "The Trigger Rate",   "instruction": "How frequently does the Collector take a new sample? Roll." }
+      "sh_seed": {
+        "name": "The Sampled Moment",
+        "instruction": "Roll — this is the value the Collector captures."
+      },
+      "sh_rate": {
+        "name": "The Trigger Rate",
+        "instruction": "How frequently does the Collector take a new sample? Roll."
+      }
     }
   },
-
   "attenuvtr": {
     "title": "The Inversion Chamber",
     "location": "The Inversion Chamber",
@@ -870,11 +1012,16 @@
     ],
     "victoryTheory": "An attenuverter multiplies input signal by a factor from -1 to +1. Positive: attenuate without inverting. Zero: mute. Negative: invert and attenuate. Key uses: inverting LFO to make filter close instead of open; scaling mod wheel to control modulation amount; adding DC offset to shift parameter center. Without attenuverters, modular synthesis is half-dimensional — only positive control, only opening, only rising.",
     "params": {
-      "av_amt": { "name": "The Attenuation Factor",  "instruction": "How much signal passes through? Roll." },
-      "av_mod": { "name": "The Modulation Depth",    "instruction": "How far does the attenuated signal drive the destination? Roll." }
+      "av_amt": {
+        "name": "The Attenuation Factor",
+        "instruction": "How much signal passes through? Roll."
+      },
+      "av_mod": {
+        "name": "The Modulation Depth",
+        "instruction": "How far does the attenuated signal drive the destination? Roll."
+      }
     }
   },
-
   "mixer": {
     "title": "The Signal Confluence",
     "location": "The Signal Confluence",
@@ -894,11 +1041,16 @@
     ],
     "victoryTheory": "A mixer sums multiple inputs, each with independent level control. Gain staging prevents summing from exceeding headroom. In CV mixing: summing two modulation sources creates additive modulation. Subtractive mixing (one positive, one inverted) cancels components. A VCA is a one-channel mixer whose level is controlled by CV — the same concept at different scales.",
     "params": {
-      "mx_gain":  { "name": "The Channel Gain",      "instruction": "How loud does this signal arrive at the sum? Roll." },
-      "mx_blend": { "name": "The Wet/Dry Balance",   "instruction": "How much processed signal blends with the dry? Roll." }
+      "mx_gain": {
+        "name": "The Channel Gain",
+        "instruction": "How loud does this signal arrive at the sum? Roll."
+      },
+      "mx_blend": {
+        "name": "The Wet/Dry Balance",
+        "instruction": "How much processed signal blends with the dry? Roll."
+      }
     }
   },
-
   "xy": {
     "title": "The Parameter Plane",
     "location": "The Parameter Plane",
@@ -918,11 +1070,16 @@
     ],
     "victoryTheory": "An XY controller outputs two simultaneous CV signals, one per axis. Common pairings: filter cutoff/resonance; reverb/delay; LFO rate/depth. The XY pad enables playing synthesis parameters with the same nuance as a melodic instrument. In software, it allows morphing between patches by moving through the space between preset positions.",
     "params": {
-      "xy_x": { "name": "The X Axis — Filter",     "instruction": "Your horizontal position: filter cutoff. Roll." },
-      "xy_y": { "name": "The Y Axis — Modulation", "instruction": "Your vertical position: LFO rate. Roll." }
+      "xy_x": {
+        "name": "The X Axis — Filter",
+        "instruction": "Your horizontal position: filter cutoff. Roll."
+      },
+      "xy_y": {
+        "name": "The Y Axis — Modulation",
+        "instruction": "Your vertical position: LFO rate. Roll."
+      }
     }
   },
-
   "theremin": {
     "title": "The Contactless Cathedral",
     "location": "The Contactless Cathedral",
@@ -942,11 +1099,16 @@
     ],
     "victoryTheory": "The theremin produces pitch by heterodyning two radio-frequency oscillators: one fixed, one variable (affected by hand proximity). The audible frequency is the difference between them. Volume is controlled by a second antenna. Modern versions use capacitive sensing, ultrasonic distance, or optical tracking. Continuous pitch control teaches intonation that discrete keyboards cannot — mistakes are heard as glides, correctable in real time.",
     "params": {
-      "th_pitch": { "name": "Hand Distance from Pitch Antenna",  "instruction": "Your right hand position determines the pitch. Roll." },
-      "th_vol":   { "name": "Hand Distance from Volume Antenna", "instruction": "Your left hand controls volume. Roll — how far from the arc?" }
+      "th_pitch": {
+        "name": "Hand Distance from Pitch Antenna",
+        "instruction": "Your right hand position determines the pitch. Roll."
+      },
+      "th_vol": {
+        "name": "Hand Distance from Volume Antenna",
+        "instruction": "Your left hand controls volume. Roll — how far from the arc?"
+      }
     }
   },
-
   "poly": {
     "title": "The Voice Colony",
     "location": "The Voice Colony",
@@ -966,11 +1128,16 @@
     ],
     "victoryTheory": "Polyphonic synthesis assigns one complete signal chain per simultaneous note. Voice allocation: low-note, high-note, last-note, or round-robin priority. Unison mode stacks all voices on the same note with slight detuning for width. Detune amount controls the beating frequency between voices. The Juno-106 (6 voices), Oberheim Matrix-12 (12 voices), and Korg M1 (16 voices) each defined an era.",
     "params": {
-      "py_v": { "name": "The Colony's Voice Count", "instruction": "How many voices speak simultaneously? Roll." },
-      "py_d": { "name": "The Colony's Detuning",   "instruction": "How much do the voices drift from unison? Roll." }
+      "py_v": {
+        "name": "The Colony's Voice Count",
+        "instruction": "How many voices speak simultaneously? Roll."
+      },
+      "py_d": {
+        "name": "The Colony's Detuning",
+        "instruction": "How much do the voices drift from unison? Roll."
+      }
     }
   },
-
   "chord": {
     "title": "The Harmonic Archive",
     "location": "The Harmonic Archive",
@@ -990,11 +1157,16 @@
     ],
     "victoryTheory": "Chord synthesis stacks oscillators at interval ratios above a root. Major chord: 1, 5/4, 3/2 (root, major third, fifth). Minor: 1, 6/5, 3/2. These ratios align with the harmonic series — why chords sound consonant. Dissonance is misalignment with the harmonic series. Chord modules generate intervals internally from a single pitch input, allowing monophonic playing with harmonic output.",
     "params": {
-      "ch_root": { "name": "The Harmonic Root",  "instruction": "Which pitch anchors the construct? Roll." },
-      "ch_qual": { "name": "The Chord's Quality", "instruction": "Major, minor, or beyond? Roll." }
+      "ch_root": {
+        "name": "The Harmonic Root",
+        "instruction": "Which pitch anchors the construct? Roll."
+      },
+      "ch_qual": {
+        "name": "The Chord's Quality",
+        "instruction": "Major, minor, or beyond? Roll."
+      }
     }
   },
-
   "morph": {
     "title": "The Form Archive",
     "location": "The Form Archive",
@@ -1014,11 +1186,16 @@
     ],
     "victoryTheory": "Wavetable synthesis stores single-cycle waveforms in an array. A position parameter (0–127) selects between them with interpolation at fractional positions. The position can be modulated by LFO, envelope, or any CV — creating timbral animation. PPG Wave (1981) pioneered it; Serum popularised it. The waveform can evolve in sync with the envelope (bright attack, dark sustain) or LFO (oscillating between two timbres).",
     "params": {
-      "mo_wave": { "name": "The Starting Form", "instruction": "Where on the morphing axis do you begin? Roll." },
-      "mo_fold": { "name": "The Morph Depth",  "instruction": "How far across the wavetable does the morph sweep? Roll." }
+      "mo_wave": {
+        "name": "The Starting Form",
+        "instruction": "Where on the morphing axis do you begin? Roll."
+      },
+      "mo_fold": {
+        "name": "The Morph Depth",
+        "instruction": "How far across the wavetable does the morph sweep? Roll."
+      }
     }
   },
-
   "lissajous": {
     "title": "The Lissajous Observatory",
     "location": "The Lissajous Observatory",
@@ -1038,11 +1215,16 @@
     ],
     "victoryTheory": "A Lissajous figure plots two oscillators on XY axes. 1:1 = circle/line (depending on phase). 1:2 = figure-eight. 2:3 = three-lobed figure. The shape reveals frequency ratio and phase relationship. In synthesis, Lissajous patterns are generated by ring modulating two oscillators. Oscilloscope mode shows the pattern to reveal tuning: when oscillators are in harmonic ratio, the figure snaps to a stable, closed shape.",
     "params": {
-      "li_ratio": { "name": "The X:Y Frequency Ratio",  "instruction": "Set the ratio. The figure is already in the numbers. Roll." },
-      "li_phase": { "name": "The Phase Relationship",   "instruction": "The phase rotates the figure. Roll." }
+      "li_ratio": {
+        "name": "The X:Y Frequency Ratio",
+        "instruction": "Set the ratio. The figure is already in the numbers. Roll."
+      },
+      "li_phase": {
+        "name": "The Phase Relationship",
+        "instruction": "The phase rotates the figure. Roll."
+      }
     }
   },
-
   "affect": {
     "title": "The Affective Resonance",
     "location": "The Affective Resonance",
@@ -1062,11 +1244,16 @@
     ],
     "victoryTheory": "Affective synthesis: choosing parameters for emotional impact rather than technical correctness. Reliable correlations: high attack = aggression or surprise; long release = melancholy; high Q = anxiety; low frequencies + slow modulation = gravitas or dread; bright waveform + high formant = joy or alarm. These are tendencies shaped by culture and context. The synthesizer is the most direct instrument for testing them: a parameter change is immediate, isolated, and audible.",
     "params": {
-      "af_vowel": { "name": "The Affective Vowel",    "instruction": "Which formant cluster carries the emotional quality? Roll." },
-      "af_atk":   { "name": "The Emotional Attack",  "instruction": "How does the affect arrive? Roll." }
+      "af_vowel": {
+        "name": "The Affective Vowel",
+        "instruction": "Which formant cluster carries the emotional quality? Roll."
+      },
+      "af_atk": {
+        "name": "The Emotional Attack",
+        "instruction": "How does the affect arrive? Roll."
+      }
     }
   },
-
   "microcosm": {
     "title": "The Pthumerian Core",
     "location": "The Pthumerian Core",
