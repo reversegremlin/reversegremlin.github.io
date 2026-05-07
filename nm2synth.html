@@ -2658,27 +2658,36 @@ function makeReverb(instanceId = 1) {
     const sr = ctx.sampleRate, len = Math.floor(sr * size);
     const buf = ctx.createBuffer(2, len, sr);
 
-    // RT60 = how long (in seconds) to reach -60 dB.
-    // decay 0.1 → RT60 ≈ 2% of size (dead/anechoic)
-    // decay 0.5 → RT60 ≈ 38% of size (room)
-    // decay 0.98 → RT60 ≈ 95% of size (cathedral)
-    const rt60      = size * (0.02 + Math.pow(decay, 1.3) * 0.95);
-    const decayRate = Math.log(1000) / (rt60 * sr); // amplitude → 0.001 in rt60 samples
+    // Extreme spread: decay=0.1 → RT60 ≈ 0.3% of size (near-anechoic, inaudible tail)
+    //                decay=0.5 → RT60 ≈ 16% of size (lively small room)
+    //                decay=0.98 → RT60 ≈ 94% of size (cathedral)
+    const rt60      = size * Math.max(0.001, Math.pow(decay, 2.5) * 0.96);
+    const decayRate = Math.log(1000) / (rt60 * sr);
 
-    // Channels are independent (stereo decorrelation)
+    // Small rooms at high decay = bathroom brightness; large rooms = dark cathedrals
+    const lpAlpha = Math.max(0.10, 0.65 - decay * 0.50);
+
     for (let c = 0; c < 2; c++) {
       const d = buf.getChannelData(c);
-      // Two-stage LP to simulate air-absorption (highs decay faster in real rooms)
-      // lpAlpha: small rooms are brighter, large/long rooms are darker
-      const lpAlpha = Math.max(0.08, 0.50 - decay * 0.40);
-      let lp1 = 0, lp2 = 0;
+      let lp = 0;
       for (let i = 0; i < len; i++) {
         const noise = Math.random() * 2 - 1;
-        lp1 += lpAlpha * (noise - lp1);
-        lp2 += lpAlpha * (lp1  - lp2);
-        // Blend raw + filtered: low decay = brighter (more raw), high decay = warmer
-        const sample = noise * (1 - decay * 0.55) + lp2 * (decay * 0.55);
-        d[i] = sample * Math.exp(-decayRate * i);
+        lp += lpAlpha * (noise - lp);
+        d[i] = (noise * (1 - decay * 0.6) + lp * (decay * 0.6)) * Math.exp(-decayRate * i);
+      }
+      // Early reflections: the "tile slap" that makes bathrooms sound like bathrooms.
+      // Small rooms at high decay get bright discrete echoes; dead rooms get none.
+      const roomSmallness = Math.max(0, 1 - size / 3);
+      const erAmt = decay * roomSmallness;
+      if (erAmt > 0.15) {
+        [7, 13, 19, 29, 41, 53].forEach((ms, idx) => {
+          const off = Math.floor(ms * sr / 1000);
+          if (off >= len) return;
+          const sign = c === 0 ? 1 : -1; // L/R decorrelation
+          const amp  = erAmt * 0.7 * Math.exp(-idx * 0.45) * sign;
+          d[off]     += amp * (Math.random() * 2 - 1);
+          if (off + 1 < len) d[off + 1] += amp * 0.5 * (Math.random() * 2 - 1);
+        });
       }
     }
     return buf;
