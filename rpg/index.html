@@ -7171,6 +7171,451 @@ const PATCH_CHALLENGES = {
       return { pass: true };
     },
   },
+
+  // ── Wing II ──────────────────────────────────────────────────────────────────
+
+  withered: {
+    mods: ['vco', 'vcf', 'reverb'],
+    instruction: 'The Architect built with all three at once — Wound, Sieve, and Cathedral in a single chain. You have learned each alone. Now prove you can hold all three together.',
+    goal: 'Connect VCO OUT → VCF IN and VCF OUT → REVERB IN. Drag Cutoff below 800 Hz and Wet Mix above 30%.',
+    howto: 'Click VCO OUT → VCF IN, then VCF OUT → REVERB IN. Drag Cutoff left to darken the tone. Drag Wet Mix right to open the space.',
+    deathLore: 'The chain broke. The Architect crumbled into three unconnected pieces.',
+    successMsg: 'All three assembled. Wound through Sieve into Cathedral — one unbroken voice.',
+    prepare() {
+      Audio.enableVCF(false); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const sc = document.querySelector('input.ws-slider[data-key="cutoff"]');
+      if (sc) { sc.value = 8000; sc.dispatchEvent(new Event('input')); }
+      const sr = document.querySelector('input.ws-slider[data-key="reverb_mix"]');
+      if (sr) { sr.value = 0; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→vcf-in')) return { pass: false, failHint: 'VCO OUT → VCF IN not connected.' };
+      if (!Workshop.hasConnection('vcf-out→reverb-in')) return { pass: false, failHint: 'VCF OUT → REVERB IN not connected.' };
+      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 8000);
+      if (cutoff > 800) return { pass: false, failHint: `Cutoff is ${cutoff} Hz. Drag it below 800 Hz.` };
+      const mix = parseFloat(document.querySelector('input.ws-slider[data-key="reverb_mix"]')?.value || 0);
+      return { pass: mix > 0.3, failHint: `Reverb mix is ${Math.round(mix*100)}%. Bring it above 30%.` };
+    },
+  },
+
+  flanger: {
+    mods: ['vco', 'chorus'],
+    instruction: 'The Doppler Revenant sweeps through phase — a comb filter moving slowly, like the ghost of a jet. Flanging is chorus taken to an extreme: the copy runs almost in unison, then diverges. Route it and set the sweep glacially slow.',
+    goal: 'Connect VCO OUT → CHORUS IN. Set Rate below 0.8 Hz and Depth above 70%.',
+    howto: 'Click VCO OUT → CHORUS IN. Drag Rate left past 0.8 Hz — slow enough that the sweep is a long metallic wash. Drag Depth right above 70%.',
+    deathLore: 'The ghost found no signal to haunt. The Revenant passed through you without touching a wire.',
+    successMsg: 'The jet-plane wash begins. Phase notches sweep slowly through the spectrum — time itself flanging.',
+    prepare() {
+      Audio.setChorus(0); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="chorus_rate"]');
+      if (sr) { sr.value = 3; sr.dispatchEvent(new Event('input')); }
+      const sd = document.querySelector('input.ws-slider[data-key="chorus_depth"]');
+      if (sd) { sd.value = 0.3; sd.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→chorus-in')) return { pass: false, failHint: 'VCO OUT → CHORUS IN not connected.' };
+      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="chorus_rate"]')?.value || 3);
+      if (rate > 0.8) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Drag it below 0.8 Hz for the slow jet-plane sweep.` };
+      const depth = parseFloat(document.querySelector('input.ws-slider[data-key="chorus_depth"]')?.value || 0.3);
+      return { pass: depth > 0.7, failHint: `Depth is ${Math.round(depth*100)}%. Push it above 70%.` };
+    },
+  },
+
+  bitcrush: {
+    mods: ['vco', 'ladder'],
+    instruction: 'The Decimated Horror reduces the signal to its coarsest form — lo-fi grit through saturation and bandwidth restriction. The Ladder filter crushed hard is the closest thing to a real bitcrusher. Drive it past comfort.',
+    goal: 'Connect VCO OUT → LADDER IN. Push Drive above 3× and set Cutoff below 1500 Hz.',
+    howto: 'Click VCO OUT → LADDER IN. Drag Drive right past 3× — the tone will harden and grit. Then drag Cutoff left below 1500 Hz to restrict the bandwidth, like a lo-fi DAC.',
+    deathLore: 'The Horror consumed you cleanly. You left it untouched — no grit, no aliasing. Just silence.',
+    successMsg: 'The tone degrades beautifully. Saturation and bandwidth restriction — lo-fi by design.',
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes(); Audio.setDrive(1);
+      const sd = document.querySelector('input.ws-slider[data-key="ladder_drive"]');
+      if (sd) { sd.value = 1; sd.dispatchEvent(new Event('input')); }
+      const sc = document.querySelector('input.ws-slider[data-key="ladder_cutoff"]');
+      if (sc) { sc.value = 8000; sc.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→ladder-in')) return { pass: false, failHint: 'VCO OUT → LADDER IN not connected.' };
+      const drive = parseFloat(document.querySelector('input.ws-slider[data-key="ladder_drive"]')?.value || 1);
+      if (drive <= 3) return { pass: false, failHint: `Drive is ${drive.toFixed(1)}×. Push it above 3× for lo-fi saturation.` };
+      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="ladder_cutoff"]')?.value || 8000);
+      return { pass: cutoff <= 1500, failHint: `Cutoff is ${cutoff} Hz. Drag it below 1500 Hz to restrict bandwidth.` };
+    },
+  },
+
+  spectral: {
+    mods: ['vco', 'formant', 'lfo'],
+    instruction: 'The Spectral Weave drifts between vowel cavities — the machine is made of language, slowly forgetting words. Route the Wound through the Tongue and let the Shivering move it, slowly, through each resonance.',
+    goal: 'Connect VCO OUT → FORMANT IN and enable the LFO. Set Wet Mix above 50% and LFO Rate below 0.5 Hz.',
+    howto: 'Click VCO OUT → FORMANT IN. Press "~ Enable LFO" to start it. Drag Wet Mix on the Formant panel above 50%. Drag Rate on the LFO panel below 0.5 Hz.',
+    deathLore: 'The Weave found no voice to shift. The Tongue remained in one position — no spectral motion.',
+    successMsg: 'The vowels rotate. The machine breathes through each resonance — language reduced to timbre.',
+    prepare() {
+      Audio.stopLFO(); Audio.setFormant(0); Audio.clearPatchRoutes();
+      const sm = document.querySelector('input.ws-slider[data-key="formant_mix"]');
+      if (sm) { sm.value = 0.2; sm.dispatchEvent(new Event('input')); }
+      const sr = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (sr) { sr.value = 3; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→formant-in')) return { pass: false, failHint: 'VCO OUT → FORMANT IN not connected.' };
+      const mix = parseFloat(document.querySelector('input.ws-slider[data-key="formant_mix"]')?.value || 0);
+      if (mix <= 0.5) return { pass: false, failHint: `Formant mix is ${Math.round(mix*100)}%. Bring it above 50%.` };
+      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 3);
+      return { pass: rate <= 0.5, failHint: `LFO rate is ${rate.toFixed(1)} Hz. Slow it below 0.5 Hz for glacial vowel drift.` };
+    },
+  },
+
+  resonator: {
+    mods: ['vco', 'vcf'],
+    instruction: 'The Resonant Choir is not a filter at its limit — it is a filter that has become an instrument. Push Q until the cutoff frequency sings its own pitch. The filter no longer shapes the sound. It is the sound.',
+    goal: 'Connect VCO OUT → VCF IN. Push Resonance above Q 15 and set Cutoff to a musical pitch (between 200–1500 Hz).',
+    howto: 'Click VCO OUT → VCF IN. Drag Resonance right past Q 15 — the filter will begin to produce its own tone. Then set Cutoff to the note you want it to sing.',
+    deathLore: 'The Choir stayed silent. Q too low — the filter shaped but never sang.',
+    successMsg: 'The filter sings. Resonance taken past threshold — the Sieve has become the Wound.',
+    prepare() {
+      Audio.enableVCF(false); Audio.clearPatchRoutes(); Audio.setResonance(2);
+      const sr = document.querySelector('input.ws-slider[data-key="resonance"]');
+      if (sr) { sr.value = 2; sr.dispatchEvent(new Event('input')); }
+      const sc = document.querySelector('input.ws-slider[data-key="cutoff"]');
+      if (sc) { sc.value = 8000; sc.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→vcf-in')) return { pass: false, failHint: 'VCO OUT → VCF IN not connected.' };
+      const q = parseFloat(document.querySelector('input.ws-slider[data-key="resonance"]')?.value || 2);
+      if (q <= 15) return { pass: false, failHint: `Resonance is Q ${q.toFixed(1)}. Push it above Q 15 until the filter sings.` };
+      const cutoff = parseFloat(document.querySelector('input.ws-slider[data-key="cutoff"]')?.value || 8000);
+      return { pass: cutoff >= 200 && cutoff <= 1500, failHint: `Cutoff is ${cutoff} Hz. Set it between 200–1500 Hz — the pitch the filter will sing.` };
+    },
+  },
+
+  fm: {
+    mods: ['vco', 'ringmod'],
+    instruction: 'The Iron Bell Specter rings with inharmonic sidebands — sum and difference frequencies that share no integer relationship with the fundamental. This is FM in its rawest form. An operator ratio of 7:1 or higher breaks all harmonic relationship. The bell tone emerges.',
+    goal: 'Connect VCO OUT → RING IN. Set Ratio to 7.00× or above for deep inharmonic FM bell character.',
+    howto: 'Click VCO OUT → RING IN. Drag Ratio right past 7.00× — at exactly integer values you get rough harmonics; above 7 the sidebands become truly metallic. Listen for the bell quality.',
+    deathLore: 'The bell did not ring. Your ratio stayed too low — the sidebands remained harmonic, predictable. The Specter vanished.',
+    successMsg: 'The Iron Bell sounds. Inharmonic sidebands — no fundamental survives intact. This is FM synthesis.',
+    prepare() {
+      Audio.setRingMod(2, 0); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="ring_ratio"]');
+      if (sr) { sr.value = 2; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→ring-in')) return { pass: false, failHint: 'VCO OUT → RING IN not connected.' };
+      const ratio = parseFloat(document.querySelector('input.ws-slider[data-key="ring_ratio"]')?.value || 2);
+      return { pass: ratio >= 7, failHint: `Ratio is ${ratio.toFixed(2)}×. Push it to 7.00× or above for inharmonic bell tones.` };
+    },
+  },
+
+  arpeggio: {
+    mods: ['seq', 'vco', 'reverb'],
+    instruction: 'The Cascading Phantom does not hold notes — it climbs them. An arpeggio is a chord played one note at a time, ascending fast enough that the ear hears motion, not melody. Route the Ritual into the Wound, set a wide interval, and push the tempo until the notes blur into cascades.',
+    goal: 'Connect SEQ CV → VCO FREQ and VCO OUT → REVERB IN. Set Interval to a 5th (7 semitones) or wider. Set Tempo above 120 BPM.',
+    howto: 'Click SEQ CV → VCO FREQ, then VCO OUT → REVERB IN. Press ▶ Start. Drag Interval to 7+ semitones for wide leaps. Push Tempo above 120 BPM until the notes cascade.',
+    deathLore: 'The Phantom stopped on the first step. No cascade — just a single note repeating into silence.',
+    successMsg: 'The cascade begins. Wide interval at speed — chords dissolving into melodic motion.',
+    prepare() { Audio.clearPatchRoutes(); Audio.setReverb(0); Audio.stopSeq();
+      const st = document.querySelector('input.ws-slider[data-key="tempo"]');
+      if (st) { st.value = 80; st.dispatchEvent(new Event('input')); }
+      const si = document.querySelector('input.ws-slider[data-key="pattern"]');
+      if (si) { si.value = 0; si.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('seq-cv-out→vco-freq-in')) return { pass: false, failHint: 'SEQ CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      const iv = parseFloat(document.querySelector('input.ws-slider[data-key="pattern"]')?.value || 0);
+      if (iv < 7) return { pass: false, failHint: `Interval is ${iv} semitones. Set it to 7 (perfect 5th) or wider.` };
+      const bpm = parseFloat(document.querySelector('input.ws-slider[data-key="tempo"]')?.value || 80);
+      return { pass: bpm >= 120, failHint: `Tempo is ${bpm} BPM. Push it above 120 BPM until the notes cascade.` };
+    },
+  },
+
+  quantize: {
+    mods: ['turing', 'vco', 'reverb'],
+    instruction: 'The Pitch Warden permits only legal notes. A quantizer receives chaotic CV and snaps each voltage to the nearest scale degree — the machine disciplines randomness into melody. Prove it: lock the Dream Engine to a frozen loop. When drift is zero, the pattern repeats exactly. This is quantization.',
+    goal: 'Connect TURING CV → VCO FREQ and VCO OUT → REVERB IN. Set Drift to 0% — the pattern locks and the Warden approves.',
+    howto: 'Click TURING CV → VCO FREQ, then VCO OUT → REVERB IN. Press ▶ Run Engine. Drag Drift all the way to 0% — the pattern will repeat identically. A locked loop is a quantized melody.',
+    deathLore: 'The Warden rejected the signal. Drift was not zero — the pattern wandered outside the permitted scale.',
+    successMsg: 'The loop locks. Drift = 0 — every note legal, every step repeating. The Warden approves.',
+    prepare() { Audio.clearPatchRoutes(); Audio.setReverb(0); Audio.stopSeq();
+      const sd = document.querySelector('input.ws-slider[data-key="turing_prob"]');
+      if (sd) { sd.value = 0.5; sd.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('turing-cv-out→vco-freq-in')) return { pass: false, failHint: 'TURING CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      const prob = parseFloat(document.querySelector('input.ws-slider[data-key="turing_prob"]')?.value || 0.5);
+      return { pass: prob <= 0.05, failHint: `Drift is ${Math.round(prob*100)}%. Drag it all the way to 0% to lock the quantized loop.` };
+    },
+  },
+
+  clock: {
+    mods: ['seq', 'vco', 'delay'],
+    instruction: 'The Timekeeper\'s Marrow is the pulse everything else obeys. A master clock divides time into regular intervals that all other modules lock to. Prove it: drive the sequencer into the oscillator and echo it with delay — then set the tempo so the echoes land on the beat.',
+    goal: 'Connect SEQ CV → VCO FREQ and VCO OUT → DELAY IN. Set Tempo above 100 BPM and Feedback above 50%.',
+    howto: 'Click SEQ CV → VCO FREQ, then VCO OUT → DELAY IN. Press ▶ Start. Push Tempo above 100 BPM. Drag Feedback above 50% — listen for the echoes locking into the rhythm.',
+    deathLore: 'The clock stopped. The echoes fell between beats — no timing, no pulse, no pattern.',
+    successMsg: 'The clock drives everything. Sequencer, oscillator, delay — all locked to the same pulse.',
+    prepare() { Audio.clearPatchRoutes(); Audio.setDelay(0); Audio.stopSeq();
+      const st = document.querySelector('input.ws-slider[data-key="tempo"]');
+      if (st) { st.value = 60; st.dispatchEvent(new Event('input')); }
+      const sf = document.querySelector('input.ws-slider[data-key="delay_fb"]');
+      if (sf) { sf.value = 0.1; sf.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('seq-cv-out→vco-freq-in')) return { pass: false, failHint: 'SEQ CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→delay-in')) return { pass: false, failHint: 'VCO OUT → DELAY IN not connected.' };
+      const bpm = parseFloat(document.querySelector('input.ws-slider[data-key="tempo"]')?.value || 60);
+      if (bpm < 100) return { pass: false, failHint: `Tempo is ${bpm} BPM. Push it above 100 BPM.` };
+      const fb = parseFloat(document.querySelector('input.ws-slider[data-key="delay_fb"]')?.value || 0.1);
+      return { pass: fb > 0.5, failHint: `Feedback is ${Math.round(fb*100)}%. Drag it above 50% so the echoes multiply.` };
+    },
+  },
+
+  chaos: {
+    mods: ['drunk', 'vco', 'reverb'],
+    instruction: 'The Formless Swarm does not choose pitches — it wanders. The Drunk Walk takes random steps through pitch space: small steps sound like breathing, large steps sound like the signal is alive and afraid. Route it into the Wound and send it into the Cathedral.',
+    goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 4 semitones.',
+    howto: 'Click DRUNK OUT → VCO FREQ, then VCO OUT → REVERB IN. Drag Step Size above 4 — the pitch will begin to leap unpredictably. Listen to the chaos bloom in reverb.',
+    deathLore: 'The Swarm took no steps. It sat still — no chaos, no wandering. The pitch held and the Swarm dissolved.',
+    successMsg: 'The pitch wanders. Each step a new direction — the Swarm moves through pitch space with no destination.',
+    prepare() { Audio.stopDrunkWalk(); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const ss = document.querySelector('input.ws-slider[data-key="drunk_step"]');
+      if (ss) { ss.value = 1; ss.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      const steps = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_step"]')?.value || 1);
+      return { pass: steps > 4, failHint: `Step Size is ±${steps}. Push it above 4 semitones for chaotic leaps.` };
+    },
+  },
+
+  samplehold: {
+    mods: ['turing', 'vco', 'delay'],
+    instruction: 'The Moment Collector captures a voltage and holds it until the next clock pulse. Each trigger takes a new snapshot. The result: a stepped, frozen pitch that changes only on command. Freeze the Dream Engine\'s loop and echo each captured moment.',
+    goal: 'Connect TURING CV → VCO FREQ and VCO OUT → DELAY IN. Set Drift to 0% and Feedback above 40%.',
+    howto: 'Click TURING CV → VCO FREQ, then VCO OUT → DELAY IN. Press ▶ Run Engine. Drag Drift to 0% — the pattern becomes a fixed sequence of captured moments. Drag Feedback above 40% to echo each step.',
+    deathLore: 'The Collector kept no moments. Drift was not zero — every step changed before it could be captured.',
+    successMsg: 'The moments freeze. Each step captured, held, echoed — the sample-and-hold pattern repeats.',
+    prepare() { Audio.clearPatchRoutes(); Audio.setDelay(0); Audio.stopSeq();
+      const sp = document.querySelector('input.ws-slider[data-key="turing_prob"]');
+      if (sp) { sp.value = 0.4; sp.dispatchEvent(new Event('input')); }
+      const sf = document.querySelector('input.ws-slider[data-key="delay_fb"]');
+      if (sf) { sf.value = 0.1; sf.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('turing-cv-out→vco-freq-in')) return { pass: false, failHint: 'TURING CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→delay-in')) return { pass: false, failHint: 'VCO OUT → DELAY IN not connected.' };
+      const prob = parseFloat(document.querySelector('input.ws-slider[data-key="turing_prob"]')?.value || 0.4);
+      if (prob > 0.05) return { pass: false, failHint: `Drift is ${Math.round(prob*100)}%. Drag it to 0% — lock the captured sequence.` };
+      const fb = parseFloat(document.querySelector('input.ws-slider[data-key="delay_fb"]')?.value || 0.1);
+      return { pass: fb > 0.4, failHint: `Feedback is ${Math.round(fb*100)}%. Bring it above 40% to echo each moment.` };
+    },
+  },
+
+  attenuvtr: {
+    mods: ['lfo', 'vco', 'vcf'],
+    instruction: 'The Signal Inverter does not generate — it scales. An attenuverter sits between a modulation source and its destination, controlling how much of the signal arrives. Too much LFO is jarring; too little is invisible. Prove you can find the right amount.',
+    goal: 'Connect LFO OUT → VCF IN. Set LFO Rate between 0.3–1.5 Hz and Depth below 20% — gentle modulation, not extreme sweep.',
+    howto: 'Click LFO OUT → VCF IN. Press "~ Enable LFO". Drag Rate between 0.3 and 1.5 Hz. Then drag Depth below 20% — the filter should breathe, not thrash.',
+    deathLore: 'The signal arrived unattenuated. The filter swept too hard — no control, only chaos. The Inverter rejected your proof.',
+    successMsg: 'Controlled modulation. The filter breathes within a narrow window — attenuated to purpose.',
+    prepare() {
+      Audio.stopLFO(); Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (sr) { sr.value = 5; sr.dispatchEvent(new Event('input')); }
+      const sd = document.querySelector('input.ws-slider[data-key="lfo_depth"]');
+      if (sd) { sd.value = 0.8; sd.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO OUT → VCF IN not connected.' };
+      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 5);
+      if (rate < 0.3 || rate > 1.5) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Set it between 0.3 and 1.5 Hz.` };
+      const depth = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_depth"]')?.value || 0.8);
+      return { pass: depth <= 0.2, failHint: `Depth is ${Math.round(depth*100)}%. Drag it below 20% — attenuated, not extreme.` };
+    },
+  },
+
+  mixer: {
+    mods: ['vco', 'reverb', 'chorus'],
+    instruction: 'The Great Balancer holds multiple signals at once without any one overwhelming the others. Mixing is not routing — it is proportion. Prove it: send the Wound into both the Cathedral and the Choir simultaneously, then balance each wet mix so neither drowns the other.',
+    goal: 'Connect VCO OUT → REVERB IN and VCO OUT → CHORUS IN. Bring both Wet Mixes between 25–55%.',
+    howto: 'Click VCO OUT → REVERB IN. Then click VCO OUT again → CHORUS IN. One source, two sends — both cables from the same OUT jack. Drag each Wet Mix into the 25–55% range.',
+    deathLore: 'The Balancer found imbalance. One signal swallowed the other — or neither received anything at all.',
+    successMsg: 'Two sends, both alive. The Cathedral and the Choir receive the same source — balanced.',
+    prepare() { Audio.setReverb(0); Audio.setChorus(0); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="reverb_mix"]');
+      if (sr) { sr.value = 0; sr.dispatchEvent(new Event('input')); }
+      const sc = document.querySelector('input.ws-slider[data-key="chorus_mix"]');
+      if (sc) { sc.value = 0; sc.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      if (!Workshop.hasConnection('vco-out→chorus-in')) return { pass: false, failHint: 'VCO OUT → CHORUS IN not connected.' };
+      const rev = parseFloat(document.querySelector('input.ws-slider[data-key="reverb_mix"]')?.value || 0);
+      if (rev < 0.25 || rev > 0.55) return { pass: false, failHint: `Reverb mix is ${Math.round(rev*100)}%. Set it between 25–55%.` };
+      const ch = parseFloat(document.querySelector('input.ws-slider[data-key="chorus_mix"]')?.value || 0);
+      return { pass: ch >= 0.25 && ch <= 0.55, failHint: `Chorus mix is ${Math.round(ch*100)}%. Set it between 25–55%.` };
+    },
+  },
+
+  xy: {
+    mods: ['vco', 'vcf', 'lfo'],
+    instruction: 'The Dimensional Cartographer maps two axes of control onto two independent dimensions of sound. In a real XY pad, X might open the filter while Y speeds up the LFO. Prove you understand two-dimensional modulation: wire the filter AND modulate its speed at the same time.',
+    goal: 'Connect VCO OUT → VCF IN and LFO OUT → VCF IN. Set LFO Rate between 0.5–2 Hz.',
+    howto: 'Click VCO OUT → VCF IN. Then LFO OUT → VCF IN. Press "~ Enable LFO". Drag Rate between 0.5 and 2 Hz — the filter will breathe rhythmically. You have two modulation axes active at once.',
+    deathLore: 'The Cartographer found only one dimension. Two cables were needed — the map was incomplete.',
+    successMsg: 'Two axes, two dimensions. Signal through the filter; LFO sweeping the cutoff — the XY space is inhabited.',
+    prepare() {
+      Audio.stopLFO(); Audio.enableVCF(false); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (sr) { sr.value = 5; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→vcf-in')) return { pass: false, failHint: 'VCO OUT → VCF IN not connected.' };
+      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO OUT → VCF IN not connected.' };
+      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 5);
+      return { pass: rate >= 0.5 && rate <= 2, failHint: `LFO rate is ${rate.toFixed(1)} Hz. Set it between 0.5 and 2 Hz.` };
+    },
+  },
+
+  theremin: {
+    mods: ['vco', 'lfo', 'reverb'],
+    instruction: 'The Untouched Voice trembles. The theremin never rests completely — the hand\'s natural vibrato is part of the instrument. A sine wave, a slow LFO for subtle pitch wobble, and a large reverb to give the gesture space. Prove you can configure this without touching anything solid.',
+    goal: 'Connect LFO OUT → VCO FREQ and VCO OUT → REVERB IN. Set LFO Rate between 3–5 Hz and Depth below 3% — barely there, like the hand cannot quite hold still.',
+    howto: 'Click LFO OUT → VCO FREQ, then VCO OUT → REVERB IN. Press "~ Enable LFO". Set Rate to 3–5 Hz. Drag Depth below 3% — this is vibrato at the threshold of perception.',
+    deathLore: 'The Voice broke. LFO too deep — a siren, not a theremin. Or rate out of range. The gesture was wrong.',
+    successMsg: 'The voice trembles just enough. Subtle vibrato, open space — the theremin\'s signature control at the edge of touch.',
+    prepare() {
+      Audio.stopLFO(); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
+      if (sr) { sr.value = 0.5; sr.dispatchEvent(new Event('input')); }
+      const sd = document.querySelector('input.ws-slider[data-key="lfo_depth"]');
+      if (sd) { sd.value = 0.5; sd.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 0.5);
+      if (rate < 3 || rate > 5) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Set it between 3 and 5 Hz for natural vibrato.` };
+      const depth = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_depth"]')?.value || 0.5);
+      return { pass: depth <= 0.03, failHint: `Depth is ${Math.round(depth*100)}%. Drag it below 3% — barely perceptible, like natural tremor.` };
+    },
+  },
+
+  poly: {
+    mods: ['vco', 'chorus', 'reverb'],
+    instruction: 'The Polyphonic Hive is many voices from one source. Chorus, taken wide and deep, simulates multiple detuned oscillators playing the same note. Route the Choir into the Cathedral — shimmer meets space. This is the architecture of lush pads.',
+    goal: 'Connect VCO OUT → CHORUS IN and CHORUS OUT → REVERB IN. Set Depth above 60% and Wet Mix above 50%.',
+    howto: 'Click VCO OUT → CHORUS IN. Then CHORUS OUT → REVERB IN. Drag Depth above 60% on the Chorus panel. Drag Wet Mix above 50%. The shimmer should bloom into reverb.',
+    deathLore: 'The Hive collapsed to one voice. No width, no reverb, no depth — a monophonic ghost.',
+    successMsg: 'Many voices, one source. Chorus into reverb — the classic lush pad architecture.',
+    prepare() { Audio.setChorus(0); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const sd = document.querySelector('input.ws-slider[data-key="chorus_depth"]');
+      if (sd) { sd.value = 0.2; sd.dispatchEvent(new Event('input')); }
+      const sm = document.querySelector('input.ws-slider[data-key="chorus_mix"]');
+      if (sm) { sm.value = 0.2; sm.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→chorus-in')) return { pass: false, failHint: 'VCO OUT → CHORUS IN not connected.' };
+      if (!Workshop.hasConnection('chorus-out→reverb-in')) return { pass: false, failHint: 'CHORUS OUT → REVERB IN not connected.' };
+      const depth = parseFloat(document.querySelector('input.ws-slider[data-key="chorus_depth"]')?.value || 0.2);
+      if (depth <= 0.6) return { pass: false, failHint: `Depth is ${Math.round(depth*100)}%. Push it above 60% for wide polyphony.` };
+      const mix = parseFloat(document.querySelector('input.ws-slider[data-key="chorus_mix"]')?.value || 0.2);
+      return { pass: mix > 0.5, failHint: `Chorus mix is ${Math.round(mix*100)}%. Bring it above 50%.` };
+    },
+  },
+
+  chord: {
+    mods: ['seq', 'vco', 'reverb'],
+    instruction: 'The Harmonic Construct does not play chords — it implies them. A sequencer stepping through a major 3rd or 4th interval at moderate speed suggests the harmony rather than stating it. The Cathedral gives each note time to overlap. Prove it: set the right interval and let the reverb tail do the work.',
+    goal: 'Connect SEQ CV → VCO FREQ and VCO OUT → REVERB IN. Set Interval to a major 3rd (4 semitones) or perfect 4th (5 semitones). Set Wet Mix above 40%.',
+    howto: 'Click SEQ CV → VCO FREQ, then VCO OUT → REVERB IN. Press ▶ Start. Drag Interval to exactly 4 or 5 semitones. Drag Wet Mix above 40% — the reverb tail blurs each step into implied harmony.',
+    deathLore: 'The Construct collapsed. Interval outside the harmonic window — or the Cathedral was too dry to blur the steps.',
+    successMsg: 'The chord implied. Interval + reverb tail = harmony without polyphony. The Construct stands.',
+    prepare() { Audio.clearPatchRoutes(); Audio.setReverb(0); Audio.stopSeq();
+      const si = document.querySelector('input.ws-slider[data-key="pattern"]');
+      if (si) { si.value = 0; si.dispatchEvent(new Event('input')); }
+      const sr = document.querySelector('input.ws-slider[data-key="reverb_mix"]');
+      if (sr) { sr.value = 0; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('seq-cv-out→vco-freq-in')) return { pass: false, failHint: 'SEQ CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
+      const iv = parseFloat(document.querySelector('input.ws-slider[data-key="pattern"]')?.value || 0);
+      if (iv !== 4 && iv !== 5) return { pass: false, failHint: `Interval is ${iv} semitones. Set it to exactly 4 (major 3rd) or 5 (perfect 4th).` };
+      const mix = parseFloat(document.querySelector('input.ws-slider[data-key="reverb_mix"]')?.value || 0);
+      return { pass: mix > 0.4, failHint: `Reverb mix is ${Math.round(mix*100)}%. Bring it above 40% — the tails need to overlap.` };
+    },
+  },
+
+  morph: {
+    mods: ['vco', 'wavefolder', 'reverb'],
+    instruction: 'The Shape Between is never one waveform and never another — it moves through the space between them. Wavetable synthesis crosses that threshold. Route the Wound into the Folder, push the folds above 3× to access the most complex harmonic content, then bloom it in Cathedral space.',
+    goal: 'Connect VCO OUT → FOLD IN and FOLD OUT → REVERB IN. Set Folds above 3×.',
+    howto: 'Click VCO OUT → FOLD IN, then FOLD OUT → REVERB IN. Drag the Folds slider above 3×. Listen to the harmonic content multiply — this is the Shape Between.',
+    deathLore: 'The Shape stayed still. Folds too low — the waveform passed through unchanged. Nothing new emerged.',
+    successMsg: 'The shape morphs. High fold count — complex harmonic texture blooming into the Cathedral. The between-space opens.',
+    prepare() { Audio.setFold(1); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const sf = document.querySelector('input.ws-slider[data-key="fold_amount"]');
+      if (sf) { sf.value = 1; sf.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→fold-in')) return { pass: false, failHint: 'VCO OUT → FOLD IN not connected.' };
+      if (!Workshop.hasConnection('fold-out→reverb-in')) return { pass: false, failHint: 'FOLD OUT → REVERB IN not connected.' };
+      const folds = parseFloat(document.querySelector('input.ws-slider[data-key="fold_amount"]')?.value || 1);
+      return { pass: folds > 3, failHint: `Folds is at ${folds.toFixed(1)}×. Push above 3× to access complex wavetable content.` };
+    },
+  },
+
+  lissajous: {
+    mods: ['vco', 'ringmod', 'reverb'],
+    instruction: 'The Pattern Eater traces closed geometric figures when two frequencies are in exact ratio. A 2:1 ratio draws a figure-eight. An integer ratio produces a closed, repeating shape — non-integer produces a figure that never closes, spinning forever. Route through the Ring Mod and set ratio to 2.00× exactly.',
+    goal: 'Connect VCO OUT → RING IN and RING OUT → REVERB IN. Set Ratio to exactly 2.00× (±0.10) for the classic figure-eight Lissajous.',
+    howto: 'Click VCO OUT → RING IN, then RING OUT → REVERB IN. Drag Ratio precisely to 2.00× — close but not quite produces beating; exactly 2.00 produces a locked, metallic octave.',
+    deathLore: 'The figure never closed. Ratio off-target — the Lissajous spun open, never repeating. The Pattern Eater consumed you.',
+    successMsg: 'The figure-eight locks. Ratio 2:1 — the shape closes, repeats, holds. The Lissajous is complete.',
+    prepare() { Audio.setRingMod(2, 0); Audio.setReverb(0); Audio.clearPatchRoutes();
+      const sr = document.querySelector('input.ws-slider[data-key="ring_ratio"]');
+      if (sr) { sr.value = 3.5; sr.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→ring-in')) return { pass: false, failHint: 'VCO OUT → RING IN not connected.' };
+      if (!Workshop.hasConnection('ring-out→reverb-in')) return { pass: false, failHint: 'RING OUT → REVERB IN not connected.' };
+      const ratio = parseFloat(document.querySelector('input.ws-slider[data-key="ring_ratio"]')?.value || 3.5);
+      return { pass: Math.abs(ratio - 2.0) <= 0.10, failHint: `Ratio is ${ratio.toFixed(2)}×. Set it to exactly 2.00× (within ±0.10) for the figure-eight.` };
+    },
+  },
+
+  affect: {
+    mods: ['vco', 'formant', 'adsr'],
+    instruction: 'The Affect Specter does not speak — it means. The vowel shape determines which emotion arrives before any note is played. A long attack makes the entrance reverent, not abrupt. Route the Wound through the Tongue and let the Hollow give it time to bloom.',
+    goal: 'Connect VCO OUT → FORMANT IN. Set Attack above 300 ms and Release above 1.5 s. Set Wet Mix above 40%.',
+    howto: 'Click VCO OUT → FORMANT IN. Drag Attack above 300 ms — the sound swells slowly. Drag Release above 1.5 s — the vowel fades long after you let go. Drag Wet Mix above 40%.',
+    deathLore: 'The Specter spoke too quickly. Attack was too short — the affect arrived before the listener was ready.',
+    successMsg: 'The meaning arrives slowly. Long attack, long release — the affect blooms and lingers. Emotion as synthesis parameter.',
+    prepare() {
+      Audio.setFormant(0); Audio.clearPatchRoutes();
+      const sa = document.querySelector('input.ws-slider[data-key="attack"]');
+      if (sa) { sa.value = 0.01; sa.dispatchEvent(new Event('input')); }
+      const sr = document.querySelector('input.ws-slider[data-key="release"]');
+      if (sr) { sr.value = 0.5; sr.dispatchEvent(new Event('input')); }
+      const sm = document.querySelector('input.ws-slider[data-key="formant_mix"]');
+      if (sm) { sm.value = 0.1; sm.dispatchEvent(new Event('input')); }
+    },
+    check() {
+      if (!Workshop.hasConnection('vco-out→formant-in')) return { pass: false, failHint: 'VCO OUT → FORMANT IN not connected.' };
+      const attack = parseFloat(document.querySelector('input.ws-slider[data-key="attack"]')?.value || 0.01);
+      if (attack <= 0.3) return { pass: false, failHint: `Attack is ${(attack*1000).toFixed(0)} ms. Drag it above 300 ms — slow bloom.` };
+      const release = parseFloat(document.querySelector('input.ws-slider[data-key="release"]')?.value || 0.5);
+      if (release <= 1.5) return { pass: false, failHint: `Release is ${release.toFixed(1)} s. Drag it above 1.5 s — the vowel must linger.` };
+      const mix = parseFloat(document.querySelector('input.ws-slider[data-key="formant_mix"]')?.value || 0.1);
+      return { pass: mix > 0.4, failHint: `Formant mix is ${Math.round(mix*100)}%. Bring it above 40%.` };
+    },
+  },
 };
 
 /* ============================================================
