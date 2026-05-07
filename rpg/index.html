@@ -4759,6 +4759,9 @@ const Audio = (() => {
   // Silence the VCO — call when leaving an encounter
   function stopVoice(fadeTime = 0.8) {
     if (!envGain) return;
+    // Cancel any queued ADSR events (attack ramp, decay, sustain hold) that
+    // would override the fade and bring the level back up after we silence it.
+    envGain.gain.cancelScheduledValues(ctx.currentTime);
     envGain.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 4);
     noteOn = false;
   }
@@ -9661,7 +9664,7 @@ const UI = {
 
   showVictory(quest) {
     this._victoryQuestId = quest.id;
-    Audio.stopVoice(2.0);
+    Audio.stopVoice(0.5);
     Viz.stop();
 
     // Splash first
