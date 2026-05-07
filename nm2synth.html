@@ -2657,10 +2657,28 @@ function makeReverb(instanceId = 1) {
   function buildIR(size, decay) {
     const sr = ctx.sampleRate, len = Math.floor(sr * size);
     const buf = ctx.createBuffer(2, len, sr);
+
+    // RT60 = how long (in seconds) to reach -60 dB.
+    // decay 0.1 → RT60 ≈ 2% of size (dead/anechoic)
+    // decay 0.5 → RT60 ≈ 38% of size (room)
+    // decay 0.98 → RT60 ≈ 95% of size (cathedral)
+    const rt60      = size * (0.02 + Math.pow(decay, 1.3) * 0.95);
+    const decayRate = Math.log(1000) / (rt60 * sr); // amplitude → 0.001 in rt60 samples
+
+    // Channels are independent (stereo decorrelation)
     for (let c = 0; c < 2; c++) {
       const d = buf.getChannelData(c);
+      // Two-stage LP to simulate air-absorption (highs decay faster in real rooms)
+      // lpAlpha: small rooms are brighter, large/long rooms are darker
+      const lpAlpha = Math.max(0.08, 0.50 - decay * 0.40);
+      let lp1 = 0, lp2 = 0;
       for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/len, decay * 3 + 0.5);
+        const noise = Math.random() * 2 - 1;
+        lp1 += lpAlpha * (noise - lp1);
+        lp2 += lpAlpha * (lp1  - lp2);
+        // Blend raw + filtered: low decay = brighter (more raw), high decay = warmer
+        const sample = noise * (1 - decay * 0.55) + lp2 * (decay * 0.55);
+        d[i] = sample * Math.exp(-decayRate * i);
       }
     }
     return buf;
