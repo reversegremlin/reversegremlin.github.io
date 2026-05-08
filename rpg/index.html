@@ -7402,10 +7402,13 @@ const PATCH_CHALLENGES = {
     successMsg: 'Each voltage captured and held. Slow trigger, small steps — the Wanderer becomes a sample-and-hold clock.',
     prepare() {
       Audio.stopDrunkWalk(); Audio.setDelay(0); Audio.clearPatchRoutes();
+      // Set tempo DOM only — dispatching both sliders causes the second to
+      // reset the first's parameter to undefined inside setDrunkWalk.
+      const st = document.querySelector('input.ws-slider[data-key="drunk_tempo"]');
+      if (st) st.value = 120;
+      // Dispatch step last so the walk starts at step=5 (large leaps, audible).
       const ss = document.querySelector('input.ws-slider[data-key="drunk_step"]');
       if (ss) { ss.value = 5; ss.dispatchEvent(new Event('input')); }
-      const st = document.querySelector('input.ws-slider[data-key="drunk_tempo"]');
-      if (st) { st.value = 120; st.dispatchEvent(new Event('input')); }
     },
     check() {
       if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
