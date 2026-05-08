@@ -7394,25 +7394,26 @@ const PATCH_CHALLENGES = {
   },
 
   samplehold: {
-    mods: ['turing', 'vco', 'delay'],
-    instruction: 'The Moment Collector captures a voltage and holds it until the next clock pulse. Each trigger takes a new snapshot. The result: a stepped, frozen pitch that changes only on command. Freeze the Dream Engine\'s loop and echo each captured moment.',
-    goal: 'Connect TURING CV → VCO FREQ and VCO OUT → DELAY IN. Set Drift to 0% and Feedback above 40%.',
-    howto: 'Click TURING CV → VCO FREQ, then VCO OUT → DELAY IN. Press ▶ Run Engine. Drag Drift to 0% — the pattern becomes a fixed sequence of captured moments. Drag Feedback above 40% to echo each step.',
-    deathLore: 'The Collector kept no moments. Drift was not zero — every step changed before it could be captured.',
-    successMsg: 'The moments freeze. Each step captured, held, echoed — the sample-and-hold pattern repeats.',
-    prepare() { Audio.clearPatchRoutes(); Audio.setDelay(0); Audio.stopSeq();
-      const sp = document.querySelector('input.ws-slider[data-key="turing_prob"]');
-      if (sp) { sp.value = 0.4; sp.dispatchEvent(new Event('input')); }
-      const sf = document.querySelector('input.ws-slider[data-key="delay_fb"]');
-      if (sf) { sf.value = 0.1; sf.dispatchEvent(new Event('input')); }
+    mods: ['drunk', 'vco', 'delay'],
+    instruction: 'The Moment Collector captures a voltage at each clock pulse and holds it exactly — no drift, no smoothing, just the snapshot. Each trigger takes a new reading. Route the Wanderer into the Wound: slow it until each step holds long enough to hear, then echo each captured pitch.',
+    goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → DELAY IN. Set Tempo below 60 BPM and Step Size to ±1 or ±2 semitones.',
+    howto: 'Click DRUNK OUT → VCO FREQ, then VCO OUT → DELAY IN. Drag Tempo left below 60 BPM — the pitch holds each step long enough to hear it land. Drag Step Size to ±1 or ±2 — small precise captures, not chaotic leaps.',
+    deathLore: 'The Collector took no precise snapshots. Steps too large, tempo too fast — nothing was held long enough to be captured.',
+    successMsg: 'Each voltage captured and held. Slow trigger, small steps — the Wanderer becomes a sample-and-hold clock.',
+    prepare() {
+      Audio.stopDrunkWalk(); Audio.setDelay(0); Audio.clearPatchRoutes();
+      const ss = document.querySelector('input.ws-slider[data-key="drunk_step"]');
+      if (ss) { ss.value = 5; ss.dispatchEvent(new Event('input')); }
+      const st = document.querySelector('input.ws-slider[data-key="drunk_tempo"]');
+      if (st) { st.value = 120; st.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('turing-cv-out→vco-freq-in')) return { pass: false, failHint: 'TURING CV → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
       if (!Workshop.hasConnection('vco-out→delay-in')) return { pass: false, failHint: 'VCO OUT → DELAY IN not connected.' };
-      const prob = parseFloat(document.querySelector('input.ws-slider[data-key="turing_prob"]')?.value || 0.4);
-      if (prob > 0.05) return { pass: false, failHint: `Drift is ${Math.round(prob*100)}%. Drag it to 0% — lock the captured sequence.` };
-      const fb = parseFloat(document.querySelector('input.ws-slider[data-key="delay_fb"]')?.value || 0.1);
-      return { pass: fb > 0.4, failHint: `Feedback is ${Math.round(fb*100)}%. Bring it above 40% to echo each moment.` };
+      const tempo = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_tempo"]')?.value || 120);
+      if (tempo >= 60) return { pass: false, failHint: `Tempo is ${tempo} BPM. Slow it below 60 BPM — each step needs time to be heard.` };
+      const steps = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_step"]')?.value || 5);
+      return { pass: steps <= 2, failHint: `Step Size is ±${steps}. Set it to ±1 or ±2 — small, precise captures.` };
     },
   },
 
@@ -7420,7 +7421,7 @@ const PATCH_CHALLENGES = {
     mods: ['lfo', 'vco', 'vcf'],
     instruction: 'The Signal Inverter does not generate — it scales. An attenuverter sits between a modulation source and its destination, controlling how much of the signal arrives. Too much LFO is jarring; too little is invisible. Prove you can find the right amount.',
     goal: 'Connect LFO OUT → VCF IN. Set LFO Rate between 0.3–1.5 Hz and Depth below 20% — gentle modulation, not extreme sweep.',
-    howto: 'Click LFO OUT → VCF IN. Press "~ Enable LFO". Drag Rate between 0.3 and 1.5 Hz. Then drag Depth below 20% — the filter should breathe, not thrash.',
+    howto: 'Click LFO OUT → VCF IN — the LFO starts automatically. Drag Rate between 0.3 and 1.5 Hz. Then drag Depth below 20% — the filter should breathe, not thrash.',
     deathLore: 'The signal arrived unattenuated. The filter swept too hard — no control, only chaos. The Inverter rejected your proof.',
     successMsg: 'Controlled modulation. The filter breathes within a narrow window — attenuated to purpose.',
     prepare() {
