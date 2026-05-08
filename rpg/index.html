@@ -4531,7 +4531,7 @@ const Audio = (() => {
   let _foldShaper, _foldInGain, _foldOutGain;
   let _noiseGain, _noiseSrc;
   let _rmOsc, _rmOutGain, _rmInGain, _rmMult;
-  let _drunkTimer = null, _drunkFreq = 220;
+  let _drunkTimer = null, _drunkFreq = 220, _drunkStep = 2, _drunkBPM = 90;
   let _scOsc, _scOscGain;
   let _patchRoutes = new Map();
   let worklotsLoaded = false;
@@ -5414,14 +5414,16 @@ const Audio = (() => {
 
   // ── DRUNK WALK (random melodic step walk) ────────────────────
   function setDrunkWalk(stepSemitones, bpm) {
+    if (stepSemitones !== undefined) _drunkStep = stepSemitones;
+    if (bpm           !== undefined) _drunkBPM  = bpm;
     if (_drunkTimer) { clearTimeout(_drunkTimer); _drunkTimer = null; }
     if (!ctx || !vco || !envGain) return;
     const scale = [65.41,82.41,98.0,110.0,130.81,146.83,164.81,196,220,246.94,261.63,293.66,329.63,392,440];
     let idx = scale.findIndex(f => Math.abs(f - _drunkFreq) < 10); if (idx < 0) idx = 7;
-    const stepS = 60 / Math.max(40, bpm || 90) * 0.5;
+    const stepS = 60 / Math.max(40, _drunkBPM) * 0.5;
     function _step() {
       _ensureRunning();
-      const jump = Math.ceil(Math.random() * Math.max(1, stepSemitones || 2));
+      const jump = Math.ceil(Math.random() * Math.max(1, _drunkStep));
       idx = Math.max(0, Math.min(scale.length-1, idx + (Math.random()<0.5?jump:-jump)));
       _drunkFreq = scale[idx];
       vco.parameters.get('frequency').cancelScheduledValues(0);
@@ -6842,8 +6844,8 @@ const PATCH_CHALLENGES = {
   lfo: {
     mods: ['lfo', 'vco'],
     instruction: 'The Shivering moves in slow cycles. The Wound holds one pitch. You know how to wire one to the other — now do it. Route the modulation into the oscillator\'s pitch and bring it to life.',
-    goal: 'Connect LFO OUT → VCO FREQ. Then enable the LFO and set Rate between 2–8 Hz for audible vibrato.',
-    howto: 'Click the OUT jack on the LFO panel, then click the FREQ jack on the VCO panel. Then press the LFO toggle to start it, and drag Rate until the pitch wobbles noticeably.',
+    goal: 'Connect LFO MOD → VCO FREQ and set Rate between 2–8 Hz for audible vibrato.',
+    howto: 'Click the MOD jack on the LFO panel, then click the FREQ jack on the VCO panel — the LFO starts automatically. Drag Rate until the pitch wobbles noticeably.',
     deathLore: 'The Shivering recoiled. You fed it the wrong mouth — no trembling arrived.',
     successMsg: 'The pitch trembles. Vibrato woven from slow oscillation into the signal.',
     prepare() {
@@ -6852,7 +6854,7 @@ const PATCH_CHALLENGES = {
       if (s) { s.value = 0.2; s.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO MOD → VCO FREQ not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 0);
       return { pass: rate >= 2 && rate <= 8, failHint: `LFO rate is ${rate.toFixed(1)} Hz. Set it between 2 and 8 Hz.` };
     },
@@ -6918,8 +6920,8 @@ const PATCH_CHALLENGES = {
   ladder: {
     mods: ['vco', 'ladder', 'lfo'],
     instruction: 'The Ladder looms — four poles of warm, saturated filtering. Drive the Wound through it. Then wire the Shivering into the pitch. Weight and trembling together.',
-    goal: 'Connect VCO OUT → LADDER IN and LFO OUT → VCO FREQ. Set Drive above 1.5×.',
-    howto: 'Click VCO OUT → LADDER IN for the first cable. Then LFO OUT → VCO FREQ for the second. Drag Drive on the Ladder panel right past 1.5×.',
+    goal: 'Connect VCO OUT → LADDER IN and LFO MOD → VCO FREQ. Set Drive above 1.5×.',
+    howto: 'Click VCO OUT → LADDER IN for the first cable. Then LFO MOD → VCO FREQ for the second. Drag Drive on the Ladder panel right past 1.5×.',
     deathLore: 'The Ladder rejected your signal. The four poles crumbled beneath you.',
     successMsg: 'The signal descends the Ladder. The pitch trembles through saturation — warm, heavy, alive.',
     prepare() {
@@ -6931,7 +6933,7 @@ const PATCH_CHALLENGES = {
       const has1 = Workshop.hasConnection('vco-out→ladder-in');
       const has2 = Workshop.hasConnection('lfo-out→vco-freq-in');
       if (!has1) return { pass: false, failHint: 'VCO OUT → LADDER IN not connected.' };
-      if (!has2) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
+      if (!has2) return { pass: false, failHint: 'LFO MOD → VCO FREQ not connected.' };
       const drive = parseFloat(document.querySelector('input.ws-slider[data-key="ladder_drive"]')?.value || 1);
       return { pass: drive > 1.5, failHint: `Drive is ${drive.toFixed(1)}×. Push it above 1.5×.` };
     },
@@ -7015,8 +7017,8 @@ const PATCH_CHALLENGES = {
   tape: {
     mods: ['vco', 'vcf', 'lfo'],
     instruction: 'Tape is saturation and flutter together. Route the oscillator through the filter for warmth — then wire the LFO into the pitch at a very slow rate to simulate the wow of a tape transport.',
-    goal: 'Connect VCO OUT → VCF IN and LFO OUT → VCO FREQ. Set LFO Rate below 0.3 Hz.',
-    howto: 'Click VCO OUT → VCF IN. Then LFO OUT → VCO FREQ. Drag Rate on the LFO panel all the way left — below 0.3 Hz — until the pitch drifts very slowly.',
+    goal: 'Connect VCO OUT → VCF IN and LFO MOD → VCO FREQ. Set LFO Rate below 0.3 Hz.',
+    howto: 'Click VCO OUT → VCF IN. Then LFO MOD → VCO FREQ. Drag Rate on the LFO panel all the way left — below 0.3 Hz — until the pitch drifts very slowly.',
     deathLore: 'The tape snapped. You fed saturation with no flutter — or flutter with no signal.',
     successMsg: 'Warmth and wobble together. The pitch drifts like magnetic oxide — slow, organic, aged.',
     prepare() {
@@ -7028,7 +7030,7 @@ const PATCH_CHALLENGES = {
       const has1 = Workshop.hasConnection('vco-out→vcf-in');
       const has2 = Workshop.hasConnection('lfo-out→vco-freq-in');
       if (!has1) return { pass: false, failHint: 'VCO OUT → VCF IN not connected.' };
-      if (!has2) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
+      if (!has2) return { pass: false, failHint: 'LFO MOD → VCO FREQ not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 1);
       return { pass: rate <= 0.3, failHint: `LFO rate is ${rate.toFixed(2)} Hz. Slow it below 0.3 Hz for tape flutter.` };
     },
@@ -7100,8 +7102,8 @@ const PATCH_CHALLENGES = {
   drunk: {
     mods: ['drunk', 'vco', 'reverb'],
     instruction: 'The Wanderer drifts without purpose through pitch space. Wire its walk into the Wound\'s frequency — then send the result into the Cathedral. The pitch should wander, never landing twice.',
-    goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 3.',
-    howto: 'Click DRUNK OUT → VCO FREQ. Then VCO OUT → REVERB IN. Drag Step Size right past 3 — the pitch will leap between notes rather than creeping.',
+    goal: 'Connect DRUNK CV → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 3.',
+    howto: 'Click DRUNK CV → VCO FREQ. Then VCO OUT → REVERB IN. Drag Step Size right past 3 — the pitch will leap between notes rather than creeping.',
     deathLore: 'The wanderer walked off the edge. You sent it nowhere — the pitch sat still.',
     successMsg: 'The pitch drifts. Each step leads somewhere else — directionless, wandering, alive.',
     prepare() {
@@ -7112,7 +7114,7 @@ const PATCH_CHALLENGES = {
     check() {
       const has1 = Workshop.hasConnection('drunk-out→vco-freq-in');
       const has2 = Workshop.hasConnection('vco-out→reverb-in');
-      if (!has1) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
+      if (!has1) return { pass: false, failHint: 'DRUNK CV → VCO FREQ not connected.' };
       if (!has2) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
       const steps = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_step"]')?.value || 1);
       return { pass: steps > 3, failHint: `Step Size is ${steps}. Push it above 3 for wider wandering.` };
@@ -7245,25 +7247,25 @@ const PATCH_CHALLENGES = {
   },
 
   spectral: {
-    mods: ['vco', 'formant', 'lfo'],
-    instruction: 'The Spectral Weave drifts between vowel cavities — the machine is made of language, slowly forgetting words. Route the Wound through the Tongue and let the Shivering move it, slowly, through each resonance.',
-    goal: 'Connect VCO OUT → FORMANT IN. Set Wet Mix above 50% and LFO Rate below 0.5 Hz.',
-    howto: 'Click VCO OUT → FORMANT IN. Drag Wet Mix on the Formant panel above 50%. Drag Rate on the LFO panel below 0.5 Hz — slow enough that the vowel drift is barely perceptible.',
-    deathLore: 'The Weave found no voice to shift. The Tongue remained in one position — no spectral motion.',
-    successMsg: 'The vowels rotate. The machine breathes through each resonance — language reduced to timbre.',
+    mods: ['vco', 'formant'],
+    instruction: 'The Spectral Weave drifts between vowel cavities — the machine is made of language, slowly forgetting words. Route the Wound through the Tongue. Open the wet mix until the vowel character dominates, then push Resonance high — the peaks should sing their own narrow shape.',
+    goal: 'Connect VCO OUT → FORMANT IN. Set Wet Mix above 60% and Resonance above Q 12.',
+    howto: 'Click VCO OUT → FORMANT IN. Drag Wet Mix on the Formant panel above 60% — the vowel colouring should dominate the dry tone. Then drag Resonance above Q 12 until each formant peak sharpens into a narrow singing band.',
+    deathLore: 'The Weave found no voice to shift. The Tongue remained flat — no resonance, no vowel character, no spectral identity.',
+    successMsg: 'The vowels crystallise. High resonance, high mix — the formant peaks carve language from noise.',
     prepare() {
-      Audio.stopLFO(); Audio.setFormant(0); Audio.clearPatchRoutes();
+      Audio.setFormant(0); Audio.clearPatchRoutes();
       const sm = document.querySelector('input.ws-slider[data-key="formant_mix"]');
       if (sm) { sm.value = 0.2; sm.dispatchEvent(new Event('input')); }
-      const sr = document.querySelector('input.ws-slider[data-key="lfo_rate"]');
-      if (sr) { sr.value = 3; sr.dispatchEvent(new Event('input')); }
+      const sq = document.querySelector('input.ws-slider[data-key="formant_q"]');
+      if (sq) { sq.value = 4; sq.dispatchEvent(new Event('input')); }
     },
     check() {
       if (!Workshop.hasConnection('vco-out→formant-in')) return { pass: false, failHint: 'VCO OUT → FORMANT IN not connected.' };
       const mix = parseFloat(document.querySelector('input.ws-slider[data-key="formant_mix"]')?.value || 0);
-      if (mix <= 0.5) return { pass: false, failHint: `Formant mix is ${Math.round(mix*100)}%. Bring it above 50%.` };
-      const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 3);
-      return { pass: rate <= 0.5, failHint: `LFO rate is ${rate.toFixed(1)} Hz. Slow it below 0.5 Hz for glacial vowel drift.` };
+      if (mix <= 0.6) return { pass: false, failHint: `Wet Mix is ${Math.round(mix*100)}%. Bring it above 60% — the vowel should dominate.` };
+      const q = parseFloat(document.querySelector('input.ws-slider[data-key="formant_q"]')?.value || 4);
+      return { pass: q > 12, failHint: `Resonance is Q ${q.toFixed(0)}. Push it above Q 12 — the formant peaks should narrow and sing.` };
     },
   },
 
@@ -7377,8 +7379,8 @@ const PATCH_CHALLENGES = {
   chaos: {
     mods: ['drunk', 'vco', 'reverb'],
     instruction: 'The Formless Swarm does not choose pitches — it wanders. The Drunk Walk takes random steps through pitch space: small steps sound like breathing, large steps sound like the signal is alive and afraid. Route it into the Wound and send it into the Cathedral.',
-    goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 4 semitones.',
-    howto: 'Click DRUNK OUT → VCO FREQ, then VCO OUT → REVERB IN. Drag Step Size above 4 — the pitch will begin to leap unpredictably. Listen to the chaos bloom in reverb.',
+    goal: 'Connect DRUNK CV → VCO FREQ and VCO OUT → REVERB IN. Set Step Size above 4 semitones.',
+    howto: 'Click DRUNK CV → VCO FREQ, then VCO OUT → REVERB IN. Drag Step Size above 4 — the pitch will begin to leap unpredictably. Listen to the chaos bloom in reverb.',
     deathLore: 'The Swarm took no steps. It sat still — no chaos, no wandering. The pitch held and the Swarm dissolved.',
     successMsg: 'The pitch wanders. Each step a new direction — the Swarm moves through pitch space with no destination.',
     prepare() { Audio.stopDrunkWalk(); Audio.setReverb(0); Audio.clearPatchRoutes();
@@ -7386,7 +7388,7 @@ const PATCH_CHALLENGES = {
       if (ss) { ss.value = 1; ss.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK CV → VCO FREQ not connected.' };
       if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
       const steps = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_step"]')?.value || 1);
       return { pass: steps > 4, failHint: `Step Size is ±${steps}. Push it above 4 semitones for chaotic leaps.` };
@@ -7396,8 +7398,8 @@ const PATCH_CHALLENGES = {
   samplehold: {
     mods: ['drunk', 'vco', 'delay'],
     instruction: 'The Moment Collector captures a voltage at each clock pulse and holds it exactly — no drift, no smoothing, just the snapshot. Each trigger takes a new reading. Route the Wanderer into the Wound: slow it until each step holds long enough to hear, then echo each captured pitch.',
-    goal: 'Connect DRUNK OUT → VCO FREQ and VCO OUT → DELAY IN. Set Tempo below 60 BPM and Step Size to ±1 or ±2 semitones.',
-    howto: 'Click DRUNK OUT → VCO FREQ, then VCO OUT → DELAY IN. Drag Tempo left below 60 BPM — the pitch holds each step long enough to hear it land. Drag Step Size to ±1 or ±2 — small precise captures, not chaotic leaps.',
+    goal: 'Connect DRUNK CV → VCO FREQ and VCO OUT → DELAY IN. Set Tempo below 60 BPM and Step Size to ±1 or ±2 semitones.',
+    howto: 'Click DRUNK CV → VCO FREQ, then VCO OUT → DELAY IN. Drag Tempo left below 60 BPM — the pitch holds each step long enough to hear it land. Drag Step Size to ±1 or ±2 — small precise captures, not chaotic leaps.',
     deathLore: 'The Collector took no precise snapshots. Steps too large, tempo too fast — nothing was held long enough to be captured.',
     successMsg: 'Each voltage captured and held. Slow trigger, small steps — the Wanderer becomes a sample-and-hold clock.',
     prepare() {
@@ -7411,7 +7413,7 @@ const PATCH_CHALLENGES = {
       if (ss) { ss.value = 5; ss.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('drunk-out→vco-freq-in')) return { pass: false, failHint: 'DRUNK CV → VCO FREQ not connected.' };
       if (!Workshop.hasConnection('vco-out→delay-in')) return { pass: false, failHint: 'VCO OUT → DELAY IN not connected.' };
       const tempo = parseFloat(document.querySelector('input.ws-slider[data-key="drunk_tempo"]')?.value || 120);
       if (tempo >= 60) return { pass: false, failHint: `Tempo is ${tempo} BPM. Slow it below 60 BPM — each step needs time to be heard.` };
@@ -7423,8 +7425,8 @@ const PATCH_CHALLENGES = {
   attenuvtr: {
     mods: ['lfo', 'vco', 'vcf'],
     instruction: 'The Signal Inverter does not generate — it scales. An attenuverter sits between a modulation source and its destination, controlling how much of the signal arrives. Too much LFO is jarring; too little is invisible. Prove you can find the right amount.',
-    goal: 'Connect LFO OUT → VCF IN. Set LFO Rate between 0.3–1.5 Hz and Depth below 20% — gentle modulation, not extreme sweep.',
-    howto: 'Click LFO OUT → VCF IN — the LFO starts automatically. Drag Rate between 0.3 and 1.5 Hz. Then drag Depth below 20% — the filter should breathe, not thrash.',
+    goal: 'Connect LFO MOD → VCF IN. Set LFO Rate between 0.3–1.5 Hz and Depth below 20% — gentle modulation, not extreme sweep.',
+    howto: 'Click LFO MOD → VCF IN — the LFO starts automatically. Drag Rate between 0.3 and 1.5 Hz. Then drag Depth below 20% — the filter should breathe, not thrash.',
     deathLore: 'The signal arrived unattenuated. The filter swept too hard — no control, only chaos. The Inverter rejected your proof.',
     successMsg: 'Controlled modulation. The filter breathes within a narrow window — attenuated to purpose.',
     prepare() {
@@ -7435,7 +7437,7 @@ const PATCH_CHALLENGES = {
       if (sd) { sd.value = 0.8; sd.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO OUT → VCF IN not connected.' };
+      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO MOD → VCF IN not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 5);
       if (rate < 0.3 || rate > 1.5) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Set it between 0.3 and 1.5 Hz.` };
       const depth = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_depth"]')?.value || 0.8);
@@ -7469,8 +7471,8 @@ const PATCH_CHALLENGES = {
   xy: {
     mods: ['vco', 'vcf', 'lfo'],
     instruction: 'The Dimensional Cartographer maps two axes of control onto two independent dimensions of sound. In a real XY pad, X might open the filter while Y speeds up the LFO. Prove you understand two-dimensional modulation: wire the filter AND modulate its speed at the same time.',
-    goal: 'Connect VCO OUT → VCF IN and LFO OUT → VCF IN. Set LFO Rate between 0.5–2 Hz.',
-    howto: 'Click VCO OUT → VCF IN. Then LFO OUT → VCF IN. Press "~ Enable LFO". Drag Rate between 0.5 and 2 Hz — the filter will breathe rhythmically. You have two modulation axes active at once.',
+    goal: 'Connect VCO OUT → VCF IN and LFO MOD → VCF IN. Set LFO Rate between 0.5–2 Hz.',
+    howto: 'Click VCO OUT → VCF IN. Then LFO MOD → VCF IN — the LFO starts automatically. Drag Rate between 0.5 and 2 Hz — the filter will breathe rhythmically. You have two modulation axes active at once.',
     deathLore: 'The Cartographer found only one dimension. Two cables were needed — the map was incomplete.',
     successMsg: 'Two axes, two dimensions. Signal through the filter; LFO sweeping the cutoff — the XY space is inhabited.',
     prepare() {
@@ -7480,7 +7482,7 @@ const PATCH_CHALLENGES = {
     },
     check() {
       if (!Workshop.hasConnection('vco-out→vcf-in')) return { pass: false, failHint: 'VCO OUT → VCF IN not connected.' };
-      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO OUT → VCF IN not connected.' };
+      if (!Workshop.hasConnection('lfo-out→vcf-in')) return { pass: false, failHint: 'LFO MOD → VCF IN not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 5);
       return { pass: rate >= 0.5 && rate <= 2, failHint: `LFO rate is ${rate.toFixed(1)} Hz. Set it between 0.5 and 2 Hz.` };
     },
@@ -7489,8 +7491,8 @@ const PATCH_CHALLENGES = {
   theremin: {
     mods: ['vco', 'lfo', 'reverb'],
     instruction: 'The Untouched Voice trembles. The theremin never rests completely — the hand\'s natural vibrato is part of the instrument. A sine wave, a slow LFO for subtle pitch wobble, and a large reverb to give the gesture space. Prove you can configure this without touching anything solid.',
-    goal: 'Connect LFO OUT → VCO FREQ and VCO OUT → REVERB IN. Set LFO Rate between 3–5 Hz and Depth below 5% — barely there, like the hand cannot quite hold still.',
-    howto: 'Click LFO OUT → VCO FREQ, then VCO OUT → REVERB IN. Press "~ Enable LFO". Set Rate to 3–5 Hz. Drag Depth below 5% — this is vibrato at the threshold of perception.',
+    goal: 'Connect LFO MOD → VCO FREQ and VCO OUT → REVERB IN. Set LFO Rate between 3–5 Hz and Depth below 5% — barely there, like the hand cannot quite hold still.',
+    howto: 'Click LFO MOD → VCO FREQ, then VCO OUT → REVERB IN — the LFO starts automatically. Set Rate to 3–5 Hz. Drag Depth below 5% — this is vibrato at the threshold of perception.',
     deathLore: 'The Voice broke. LFO too deep — a siren, not a theremin. Or rate out of range. The gesture was wrong.',
     successMsg: 'The voice trembles just enough. Subtle vibrato, open space — the theremin\'s signature control at the edge of touch.',
     prepare() {
@@ -7501,7 +7503,7 @@ const PATCH_CHALLENGES = {
       if (sd) { sd.value = 0.5; sd.dispatchEvent(new Event('input')); }
     },
     check() {
-      if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO OUT → VCO FREQ not connected.' };
+      if (!Workshop.hasConnection('lfo-out→vco-freq-in')) return { pass: false, failHint: 'LFO MOD → VCO FREQ not connected.' };
       if (!Workshop.hasConnection('vco-out→reverb-in')) return { pass: false, failHint: 'VCO OUT → REVERB IN not connected.' };
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 0.5);
       if (rate < 3 || rate > 5) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Set it between 3 and 5 Hz for natural vibrato.` };
@@ -8524,7 +8526,7 @@ const STUDY_HINTS = {
     steps: [
       { num: '①', html: 'Press <strong style="color:var(--gold)">▶ Start</strong> in the SEQ panel. The sequencer begins cycling through its 8 steps automatically.' },
       { num: '②', html: 'Click any of the step buttons to change which note plays on that step. The pattern updates in real time.' },
-      { num: '③', html: 'Adjust the <strong style="color:var(--gold)">TEMPO</strong> knob to make the sequence run faster or slower. Try connecting SEQ OUT → VCO FREQ for pitch sequencing.' },
+      { num: '③', html: 'Adjust the <strong style="color:var(--gold)">TEMPO</strong> knob to make the sequence run faster or slower. Try connecting SEQ CV → VCO FREQ for pitch sequencing.' },
     ]
   },
   ladder: {
@@ -10888,7 +10890,7 @@ const WS_PARAMS = {
   euclid_hits:   { label:'Hits',     tip:'Number of active pulses distributed across the pattern.',
                    min:1,    max:8,    step:1,    def:5,    fmt:v=>`${Math.round(v)} hits`,       fn:v=>{ Audio.setEuclid(Math.round(v),8); } },
   euclid_steps:  { label:'Steps',    tip:'Total number of steps in the Euclidean pattern.',
-                   choices:['4','6','8','10','12','16','24'], def:2, fmt:(i,ch)=>ch[i]+' steps', fn:(i,ch)=>Audio.setEuclid(5,parseInt(ch[i])) },
+                   choices:['4','6','8','10','12','16','24'], def:2, fmt:(i,ch)=>ch[i]+' steps', fn:(i,ch)=>{ const h=Math.round(parseFloat(document.querySelector('input.ws-slider[data-key="euclid_hits"]')?.value||5)); Audio.setEuclid(h,parseInt(ch[i])); } },
   euclid_tempo:  { label:'Tempo',    tip:'Tempo of the Euclidean pattern playback.',
                    min:40,   max:200,  step:1,    def:100,  fmt:v=>`${v} BPM`,                    fn:v=>Audio.setSeqTempo(v) },
   sc_rate:       { label:'Rate',     tip:'How fast the sidechain pump cycles. Hz = pumps per second.',
