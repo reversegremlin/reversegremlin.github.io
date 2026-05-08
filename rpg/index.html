@@ -7485,8 +7485,8 @@ const PATCH_CHALLENGES = {
   theremin: {
     mods: ['vco', 'lfo', 'reverb'],
     instruction: 'The Untouched Voice trembles. The theremin never rests completely — the hand\'s natural vibrato is part of the instrument. A sine wave, a slow LFO for subtle pitch wobble, and a large reverb to give the gesture space. Prove you can configure this without touching anything solid.',
-    goal: 'Connect LFO OUT → VCO FREQ and VCO OUT → REVERB IN. Set LFO Rate between 3–5 Hz and Depth below 3% — barely there, like the hand cannot quite hold still.',
-    howto: 'Click LFO OUT → VCO FREQ, then VCO OUT → REVERB IN. Press "~ Enable LFO". Set Rate to 3–5 Hz. Drag Depth below 3% — this is vibrato at the threshold of perception.',
+    goal: 'Connect LFO OUT → VCO FREQ and VCO OUT → REVERB IN. Set LFO Rate between 3–5 Hz and Depth below 5% — barely there, like the hand cannot quite hold still.',
+    howto: 'Click LFO OUT → VCO FREQ, then VCO OUT → REVERB IN. Press "~ Enable LFO". Set Rate to 3–5 Hz. Drag Depth below 5% — this is vibrato at the threshold of perception.',
     deathLore: 'The Voice broke. LFO too deep — a siren, not a theremin. Or rate out of range. The gesture was wrong.',
     successMsg: 'The voice trembles just enough. Subtle vibrato, open space — the theremin\'s signature control at the edge of touch.',
     prepare() {
@@ -7502,7 +7502,7 @@ const PATCH_CHALLENGES = {
       const rate = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_rate"]')?.value || 0.5);
       if (rate < 3 || rate > 5) return { pass: false, failHint: `Rate is ${rate.toFixed(1)} Hz. Set it between 3 and 5 Hz for natural vibrato.` };
       const depth = parseFloat(document.querySelector('input.ws-slider[data-key="lfo_depth"]')?.value || 0.5);
-      return { pass: depth <= 0.03, failHint: `Depth is ${Math.round(depth*100)}%. Drag it below 3% — barely perceptible, like natural tremor.` };
+      return { pass: depth <= 0.05, failHint: `Depth is ${Math.round(depth*100)}%. Drag it below 5% — barely perceptible, like natural tremor.` };
     },
   },
 
