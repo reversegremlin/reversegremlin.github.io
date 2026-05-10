@@ -3354,80 +3354,219 @@ canvas { display: block; }
    WORKLET SOURCES (inlined for file:// + http:// compat)
    ============================================================ */
 const WORKLET_POLY_BLEP = `
+// AudioWorklet processor: PolyBLEP anti-aliased oscillator
+// Replaces OscillatorNode on the primary VCO voice path.
+//
+// PolyBLEP eliminates the harmonic aliasing that native OscillatorNode
+// produces at high frequencies (especially sawtooth above ~2kHz).
+// Sine has no aliasing, so it passes through without correction.
+//
+// API surface matches OscillatorNode:
+//   - AudioParam 'frequency' (a-rate, Hz)
+//   - AudioParam 'detune' (a-rate, cents)
+//   - Waveform type via port message: { type: 'sawtooth'|'square'|'triangle'|'sine' }
+
 class PolyBlepOscProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      { name:'frequency', defaultValue:440, minValue:0, maxValue:20000, automationRate:'a-rate' },
-      { name:'detune',    defaultValue:0,   minValue:-2400, maxValue:2400, automationRate:'a-rate' },
+      {
+        name: 'frequency',
+        defaultValue: 440,
+        minValue: 0,
+        maxValue: 20000,
+        automationRate: 'a-rate',
+      },
+      {
+        name: 'detune',
+        defaultValue: 0,
+        minValue: -2400,
+        maxValue: 2400,
+        automationRate: 'a-rate',
+      },
     ];
   }
+
   constructor() {
     super();
-    this.phase = 0; this.type = 'sawtooth'; this._tri = -1;
-    this.port.onmessage = ({data}) => {
-      if (data.type !== undefined) { this.type = data.type; if (data.type==='triangle') this._tri=-1; }
+    this.phase = 0;
+    this.type = 'sawtooth';
+    // Triangle integrator state — initialized to -1 so the first half-cycle
+    // rises cleanly from -1 to +1 (triangle at phase 0 = minimum)
+    this._tri = -1;
+    this.port.onmessage = ({ data }) => {
+      if (data.type !== undefined) {
+        this.type = data.type;
+        // Reset integrator when switching to/from triangle to avoid a DC pop
+        if (data.type === 'triangle') this._tri = -1;
+      }
     };
   }
+
+  /**
+   * PolyBLEP residual — the anti-aliasing correction applied at a
+   * phase discontinuity.  t is the current phase, dt is the phase increment.
+   * Returns a value to add/subtract at the discontinuity point.
+   */
   polyBlep(t, dt) {
-    if (t < dt) { const t2=t/dt; return t2+t2-t2*t2-1; }
-    if (t > 1-dt) { const t2=(t-1)/dt; return t2*t2+t2+t2+1; }
+    if (t < dt) {
+      const t2 = t / dt;
+      return t2 + t2 - t2 * t2 - 1;
+    } else if (t > 1 - dt) {
+      const t2 = (t - 1) / dt;
+      return t2 * t2 + t2 + t2 + 1;
+    }
     return 0;
   }
+
   process(inputs, outputs, params) {
-    const out=outputs[0][0], freqs=params.frequency, detunes=params.detune, sr=sampleRate;
-    for (let i=0; i<out.length; i++) {
-      const freq=Math.max(0, freqs.length>1?freqs[i]:freqs[0]);
-      const det=detunes.length>1?detunes[i]:detunes[0];
-      const dt=(freq*(det!==0?Math.pow(2,det/1200):1))/sr;
-      const t=this.phase; let v;
-      switch(this.type){
-        case 'sawtooth': v=2*t-1; v-=this.polyBlep(t,dt); break;
-        case 'square': v=t<0.5?1:-1; v+=this.polyBlep(t,dt); v-=this.polyBlep((t+0.5)%1,dt); break;
-        case 'triangle': { let sq=t<0.5?1:-1; sq+=this.polyBlep(t,dt); sq-=this.polyBlep((t+0.5)%1,dt); this._tri+=2*dt*sq; v=this._tri; break; }
-        default: v=Math.sin(2*Math.PI*t); break;
+    const out = outputs[0][0];
+    const freqs = params.frequency;
+    const detunes = params.detune;
+    const sr = sampleRate;
+
+    for (let i = 0; i < out.length; i++) {
+      const freq = Math.max(0, freqs.length > 1 ? freqs[i] : freqs[0]);
+      const det  = detunes.length > 1 ? detunes[i] : detunes[0];
+      // Convert detune (cents) to frequency multiplier
+      const dt = (freq * (det !== 0 ? Math.pow(2, det / 1200) : 1)) / sr;
+      const t = this.phase;
+      let value;
+
+      switch (this.type) {
+        case 'sawtooth': {
+          // Naive sawtooth: y = 2t - 1. Discontinuity at t=0 (wrap).
+          value = 2 * t - 1;
+          value -= this.polyBlep(t, dt);
+          break;
+        }
+        case 'square': {
+          // Naive square: +1 for t < 0.5, -1 otherwise.
+          // Discontinuities at t=0 (−1→+1) and t=0.5 (+1→−1).
+          value = t < 0.5 ? 1 : -1;
+          value += this.polyBlep(t, dt);
+          value -= this.polyBlep((t + 0.5) % 1, dt);
+          break;
+        }
+        case 'triangle': {
+          // Band-limited triangle via integrating a PolyBLEP square.
+          // Integration step 4*dt normalizes amplitude to ±1:
+          // over T/2 samples the sum is (sr/(2f)) * 4*(f/sr) = 2, so _tri swings ±1.
+          let sq = t < 0.5 ? 1 : -1;
+          sq += this.polyBlep(t, dt);
+          sq -= this.polyBlep((t + 0.5) % 1, dt);
+          this._tri += 4 * dt * sq;
+          value = this._tri;
+          break;
+        }
+        case 'sine':
+        default: {
+          // Sine has no aliasing — compute directly.
+          value = Math.sin(2 * Math.PI * t);
+          break;
+        }
       }
-      out[i]=v; this.phase=(this.phase+dt)%1;
+
+      out[i] = value;
+      this.phase = (this.phase + dt) % 1;
     }
     return true;
   }
 }
+
 registerProcessor('poly-blep-osc', PolyBlepOscProcessor);
 `;
 
 const WORKLET_VCF_TPT = `
+// AudioWorklet processor: TPT state-variable filter (zero-delay feedback)
+// Replaces BiquadFilterNode on the primary VCF voice path.
+//
+// Based on Andy Simper's "Solving the Continuous SVF Equations Using
+// Trapezoidal Integration" (Cytomic).  Key improvements over BiquadFilterNode:
+//
+//   - Stable under a-rate (sample-by-sample) cutoff modulation
+//   - LP / HP / BP outputs from the same topology
+//   - Correct resonance behavior including self-oscillation
+//   - Nonlinear feedback saturation prevents state blow-up
+//
+// AudioParams:
+//   cutoff     (a-rate, Hz, default 800)   — base cutoff, CV adds on top
+//   resonance  (a-rate, Q units, default 2) — stored in Q for preset compat
+//   drive      (k-rate, 1–4, default 1)    — pre-saturation gain
+//
+// Message port:
+//   { ftype: 'lowpass'|'highpass'|'bandpass' }
+
 class VcfTptProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      { name:'cutoff',    defaultValue:800,  minValue:1,   maxValue:20000, automationRate:'a-rate' },
-      { name:'resonance', defaultValue:2,    minValue:0.1, maxValue:100,   automationRate:'a-rate' },
-      { name:'drive',     defaultValue:1,    minValue:0,   maxValue:4,     automationRate:'k-rate' },
+      { name: 'cutoff',    defaultValue: 800,  minValue: 1,   maxValue: 20000, automationRate: 'a-rate' },
+      { name: 'resonance', defaultValue: 2,    minValue: 0.1, maxValue: 100,   automationRate: 'a-rate' },
+      { name: 'drive',     defaultValue: 1,    minValue: 0,   maxValue: 4,     automationRate: 'k-rate' },
     ];
   }
-  constructor() { super(); this.ic1eq=0; this.ic2eq=0; this.ftype='lowpass';
-    this.port.onmessage=({data})=>{ if(data.ftype!==undefined) this.ftype=data.ftype; }; }
+
+  constructor() {
+    super();
+    // Integrator state variables (trapezoidal integration)
+    this.ic1eq = 0;
+    this.ic2eq = 0;
+    this.ftype = 'lowpass';
+    this.port.onmessage = ({ data }) => {
+      if (data.ftype !== undefined) this.ftype = data.ftype;
+    };
+  }
+
   process(inputs, outputs, params) {
-    const input=inputs[0]?.[0], out=outputs[0][0];
-    const cutoffs=params.cutoff, resonances=params.resonance, drive=params.drive[0], sr=sampleRate;
-    for (let i=0; i<out.length; i++) {
-      const x_raw=input?input[i]:0;
-      const x=drive>1.001?Math.tanh(x_raw*drive)/Math.tanh(drive):x_raw;
-      const fc=Math.min(cutoffs.length>1?cutoffs[i]:cutoffs[0], sr*0.49);
-      const q=Math.max(0.1, resonances.length>1?resonances[i]:resonances[0]);
-      const g=Math.tan(Math.PI*fc/sr), k=Math.max(0.005,1/q);
-      const a1=1/(1+g*(g+k)), a2=g*a1, a3=g*a2;
-      const v3=x-this.ic2eq, v1=a1*this.ic1eq+a2*v3, v2=this.ic2eq+a2*this.ic1eq+a3*v3;
-      this.ic1eq=Math.tanh(2*v1-this.ic1eq); this.ic2eq=2*v2-this.ic2eq;
-      if(!isFinite(this.ic1eq)) this.ic1eq=0;
-      if(!isFinite(this.ic2eq)) this.ic2eq=0;
-      switch(this.ftype){
-        case 'highpass': out[i]=x-k*v1-v2; break;
-        case 'bandpass': out[i]=v1; break;
-        default: out[i]=v2; break;
+    const input = inputs[0]?.[0];
+    const out   = outputs[0][0];
+    const cutoffs    = params.cutoff;
+    const resonances = params.resonance;
+    const drive      = params.drive[0];
+    const sr = sampleRate;
+
+    for (let i = 0; i < out.length; i++) {
+      const x_raw = input ? input[i] : 0;
+
+      // Pre-saturation drive: tanh(x * drive)
+      const x = drive > 1.001 ? Math.tanh(x_raw * drive) / Math.tanh(drive) : x_raw;
+
+      // Per-sample parameters (a-rate cutoff and resonance)
+      const fc = Math.min(cutoffs.length > 1 ? cutoffs[i] : cutoffs[0], sr * 0.49);
+      const q  = Math.max(0.1, resonances.length > 1 ? resonances[i] : resonances[0]);
+
+      // ZDF coefficients
+      const g  = Math.tan(Math.PI * fc / sr);
+      // k = 1/Q (damping). Floor prevents blow-up; 0.005 ≈ Q=200 (near self-osc).
+      const k  = Math.max(0.005, 1 / q);
+      const a1 = 1 / (1 + g * (g + k));
+      const a2 = g * a1;
+      const a3 = g * a2;
+
+      // TPT update
+      const v3 = x - this.ic2eq;
+      const v1 = a1 * this.ic1eq + a2 * v3;
+      const v2 = this.ic2eq + a2 * this.ic1eq + a3 * v3;
+
+      // Nonlinear state update: tanh prevents unbounded growth at high resonance
+      this.ic1eq = Math.tanh(2 * v1 - this.ic1eq);
+      this.ic2eq = 2 * v2 - this.ic2eq;
+
+      // Protect against NaN/Inf (can occur on extreme parameter jumps)
+      if (!isFinite(this.ic1eq)) this.ic1eq = 0;
+      if (!isFinite(this.ic2eq)) this.ic2eq = 0;
+
+      // Select output
+      switch (this.ftype) {
+        case 'highpass': out[i] = x - k * v1 - v2; break;
+        case 'bandpass': out[i] = v1; break;
+        case 'notch':    out[i] = x - k * v1; break;
+        default:         out[i] = v2; break; // lowpass
       }
     }
     return true;
   }
 }
+
 registerProcessor('vcf-tpt', VcfTptProcessor);
 `;
 
