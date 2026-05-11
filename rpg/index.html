@@ -395,6 +395,9 @@ canvas { display: block; }
   background: var(--bg);
   gap: 1.5rem;
   padding: 2rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
 }
 
 .char-header { text-align: center; }
@@ -1225,8 +1228,8 @@ canvas { display: block; }
    ============================================================ */
 #screen-victory {
   background: #000;
-  position: relative;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0;
   align-items: stretch;
   justify-content: flex-start;
@@ -1307,6 +1310,7 @@ canvas { display: block; }
 #screen-codex {
   background: #000;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   align-items: stretch;
   justify-content: flex-start;
   flex-direction: column;
@@ -2938,8 +2942,9 @@ canvas { display: block; }
   position: relative; z-index: 10;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  min-height: 100vh; padding: 2rem;
+  min-height: 100%; padding: 2rem;
   text-align: center; gap: 1.2rem;
+  width: 100%;
 }
 .finale-entity { font-size: 4rem; line-height: 1; image-rendering: pixelated; }
 .finale-title {
@@ -4112,8 +4117,8 @@ canvas { display: block; }
 <!-- ============================================================
      FINALE SCREEN
      ============================================================ -->
-<div id="screen-finale" class="screen" style="background:#000;position:relative;">
-  <canvas id="finale-canvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+<div id="screen-finale" class="screen" style="background:#000;overflow-y:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start;align-items:center;">
+  <canvas id="finale-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
   <div class="finale-content" id="finale-content">
     <div class="finale-entity" id="finale-entity"></div>
     <h1 class="finale-title" id="finale-title">The Final Frequency</h1>
