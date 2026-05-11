@@ -10664,6 +10664,80 @@ function buildTitleDecos() {
 }
 
 /* ============================================================
+   CINEMATIC SCENE AUDIO — shared by both cutscenes
+   Brief one-shot sound cue when a pixel art vision materialises.
+   ============================================================ */
+function _ciSceneStrike(ictx, type) {
+  if (!ictx) return;
+  try {
+    const t = ictx.currentTime;
+
+    if (type === 'socket') {
+      // Metallic thud — low sine with fast pitch fall, like a heavy jack being seated
+      const osc = ictx.createOscillator();
+      const env = ictx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(88, t);
+      osc.frequency.exponentialRampToValueAtTime(26, t + 0.38);
+      env.gain.setValueAtTime(0.001, t);
+      env.gain.linearRampToValueAtTime(0.22, t + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+      osc.connect(env); env.connect(ictx.destination);
+      osc.start(t); osc.stop(t + 0.6);
+
+    } else if (type === 'spectrum') {
+      // Rising harmonic shimmer — three partials stagger in
+      [[220, 0.09], [440, 0.045], [660, 0.028]].forEach(([freq, amp], i) => {
+        const osc = ictx.createOscillator();
+        const env = ictx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        env.gain.setValueAtTime(0.001, t + i * 0.07);
+        env.gain.linearRampToValueAtTime(amp, t + 0.14 + i * 0.07);
+        env.gain.setValueAtTime(amp, t + 0.5);
+        env.gain.exponentialRampToValueAtTime(0.001, t + 1.2 + i * 0.14);
+        osc.connect(env); env.connect(ictx.destination);
+        osc.start(t); osc.stop(t + 1.5);
+      });
+
+    } else if (type === 'depth') {
+      // Deep organ rumble with descending pitch — like a vast door swinging open
+      [[44, 0.24, 0.95], [88, 0.09, 0.6]].forEach(([freq, amp, dur]) => {
+        const osc = ictx.createOscillator();
+        const env = ictx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.52, t + dur);
+        env.gain.setValueAtTime(0.001, t);
+        env.gain.linearRampToValueAtTime(amp, t + 0.05);
+        env.gain.setValueAtTime(amp * 0.85, t + 0.25);
+        env.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.22);
+        osc.connect(env); env.connect(ictx.destination);
+        osc.start(t); osc.stop(t + dur + 0.3);
+      });
+
+    } else if (type === 'sidebands') {
+      // FM ping — carrier with exponentially-decaying modulation index
+      const mod = ictx.createOscillator();
+      const modG = ictx.createGain();
+      const car = ictx.createOscillator();
+      const env = ictx.createGain();
+      mod.type = 'sine'; mod.frequency.value = 220;
+      modG.gain.setValueAtTime(580, t);
+      modG.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+      mod.connect(modG); modG.connect(car.frequency);
+      car.type = 'sine'; car.frequency.value = 330;
+      env.gain.setValueAtTime(0.001, t);
+      env.gain.linearRampToValueAtTime(0.15, t + 0.015);
+      env.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+      car.connect(env); env.connect(ictx.destination);
+      mod.start(t); car.start(t);
+      mod.stop(t + 0.85); car.stop(t + 0.95);
+    }
+  } catch(e) {}
+}
+
+/* ============================================================
    CINEMATIC INTRO
    Bloodborne-style opening cut scene — plays once per session.
    ============================================================ */
@@ -10713,7 +10787,7 @@ const introSequence = (() => {
     });
   }
 
-  function _scene(rows, scale, fadeInAt, fadeOutAt) {
+  function _scene(rows, scale, fadeInAt, fadeOutAt, soundType) {
     _t(fadeInAt, () => {
       const layer = document.getElementById('ci-scene-layer');
       if (!layer) return;
@@ -10723,6 +10797,7 @@ const introSequence = (() => {
       layer.innerHTML = '';
       layer.appendChild(wrap);
       requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('ci-scene-in')));
+      if (soundType) _ciSceneStrike(_ictx, soundType);
     });
     _t(fadeOutAt, () => {
       const wrap = document.getElementById('ci-scene-layer')?.firstElementChild;
@@ -10824,8 +10899,8 @@ const introSequence = (() => {
         _t(900,  () => document.getElementById('ci-skip')?.classList.add('ci-skip-visible'));
 
         // ── Scenes ───────────────────────────────────────────────
-        _scene(SPRITES.ci_socket,   14, 2800, 14500);
-        _scene(SPRITES.ci_spectrum, 14, 16200, 27500);
+        _scene(SPRITES.ci_socket,   14, 2800,  14500, 'socket');
+        _scene(SPRITES.ci_spectrum, 14, 16200, 27500, 'spectrum');
 
         // ── Narration ────────────────────────────────────────────
         _line('Ahh… good patcher…',                           2000);
@@ -10930,7 +11005,7 @@ const wing2Cutscene = (() => {
     });
   }
 
-  function _scene(rows, scale, fadeInAt, fadeOutAt) {
+  function _scene(rows, scale, fadeInAt, fadeOutAt, soundType) {
     _t(fadeInAt, () => {
       const layer = document.getElementById('ci-scene-layer');
       if (!layer) return;
@@ -10940,6 +11015,7 @@ const wing2Cutscene = (() => {
       layer.innerHTML = '';
       layer.appendChild(wrap);
       requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('ci-scene-in')));
+      if (soundType) _ciSceneStrike(_ictx, soundType);
     });
     _t(fadeOutAt, () => {
       const wrap = document.getElementById('ci-scene-layer')?.firstElementChild;
@@ -11056,8 +11132,8 @@ const wing2Cutscene = (() => {
         _t(700,  () => document.getElementById('ci-skip')?.classList.add('ci-skip-visible'));
 
         // ── Scenes ───────────────────────────────────────────────
-        _scene(SPRITES.ci_depth,     14, 1000, 10000);
-        _scene(SPRITES.ci_sidebands, 14, 11300, 17500);
+        _scene(SPRITES.ci_depth,     14, 1000,  10000, 'depth');
+        _scene(SPRITES.ci_sidebands, 14, 11300, 17500, 'sidebands');
 
         // ── Narration ────────────────────────────────────────────
         _line('Oh.',                                              1400);
