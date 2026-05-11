@@ -1507,21 +1507,42 @@ canvas { display: block; }
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     overflow-y: auto;
+    position: relative; /* new containing block for #enc-listen-phase on mobile */
   }
 
-  /* Dice column moves to top */
+  /* Dice column moves to top.
+     position:static lets #enc-listen-phase escape to .enc-hud as its containing block,
+     so the overlay covers the full HUD area instead of a height:auto collapsed cell. */
   .enc-hud-dice {
     order: -1;
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 0.9rem 1rem;
+    position: static;
+  }
+
+  /* Listen/teach phase: now anchors to .enc-hud, covers the whole column.
+     flex-start avoids a large dead zone at top; padding keeps it from hugging the edge. */
+  #enc-listen-phase {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    padding-top: 1.4rem;
+  }
+
+  /* Lore: truncate to 3 lines — enough for context, not overwhelming */
+  .enc-lore-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Lore goes last */
   .enc-hud-lore {
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 30vh;
+    max-height: none;
   }
 
   .enc-hud-params {
