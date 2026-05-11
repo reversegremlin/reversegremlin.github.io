@@ -5444,6 +5444,25 @@ const SPRITES = {
     'ggggGGGGGGGGgggg',
     'GGGGGGGGGGGGGGGG',
   ],
+  // One full sine-wave cycle — the signal at peace
+  ci_complete: [
+    '............G...',
+    '...........GGG..',
+    '..........GG.GG.',
+    '..........G...G.',
+    '.........G.....G',
+    '.........G.....G',
+    '................',
+    'G.......G.......',
+    'G.......G.......',
+    '................',
+    '.G.....G........',
+    '.G.....G........',
+    '..G...G.........',
+    '..GG.GG.........',
+    '...GGG..........',
+    '....G...........',
+  ],
 };
 
 /* ============================================================
@@ -16386,6 +16405,193 @@ const Finale = (() => {
 })();
 
 /* ============================================================
+   ENDGAME CUTSCENE — plays once between Microcosm resolution
+   and the credits screen.
+   ============================================================ */
+const endgameCutscene = (() => {
+  let _done = false;
+  let _active = false;
+  let _ectx = null;
+  let _timers = [];
+  let _resolve = null;
+
+  function _t(ms, fn) { const id = setTimeout(fn, ms); _timers.push(id); }
+  function _clear() { _timers.forEach(clearTimeout); _timers = []; }
+
+  function _line(text, delay) {
+    _t(delay, () => {
+      const layer = document.getElementById('ci-text-layer');
+      if (!layer) return;
+      layer.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'ci-line';
+      p.textContent = text;
+      layer.appendChild(p);
+      requestAnimationFrame(() => requestAnimationFrame(() => p.classList.add('ci-in')));
+    });
+  }
+
+  function _messenger(delay, pct, sc, variant, flip, celebrate) {
+    _t(delay, () => {
+      const layer = document.getElementById('ci-msg-layer');
+      if (!layer) return;
+      const w = document.createElement('div');
+      const key = variant === 'cable' ? 'messenger_cable' : 'messenger';
+      let cls = 'ci-msg';
+      if (flip) cls += ' ci-msg-flip';
+      if (celebrate) cls += ' ci-msg-celebrate';
+      w.className = cls;
+      w.style.left = pct + '%';
+      w.style.bottom = (sc * -12) + 'px';
+      w.innerHTML = renderSprite(SPRITES[key], sc);
+      layer.appendChild(w);
+      requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('ci-msg-in')));
+    });
+  }
+
+  function _scene(rows, scale, fadeInAt, fadeOutAt, soundType) {
+    _t(fadeInAt, () => {
+      const layer = document.getElementById('ci-scene-layer');
+      if (!layer) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'ci-scene';
+      wrap.innerHTML = renderSprite(rows, scale);
+      layer.innerHTML = '';
+      layer.appendChild(wrap);
+      requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('ci-scene-in')));
+      if (soundType) _ciSceneStrike(_ectx, soundType);
+    });
+    _t(fadeOutAt, () => {
+      const wrap = document.getElementById('ci-scene-layer')?.firstElementChild;
+      if (wrap) wrap.classList.remove('ci-scene-in');
+    });
+  }
+
+  function _buildAudio() {
+    try {
+      _ectx = new AudioContext();
+      const t = _ectx.currentTime;
+      const master = _ectx.createGain(); master.gain.value = 0.13;
+      const lim = _ectx.createDynamicsCompressor();
+      lim.threshold.value = -16; lim.ratio.value = 4; lim.attack.value = 0.01; lim.release.value = 0.3;
+      master.connect(lim); lim.connect(_ectx.destination);
+
+      // Long reverb tail
+      const irBuf = _ectx.createBuffer(1, Math.ceil(_ectx.sampleRate * 3.5), _ectx.sampleRate);
+      const d = irBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 0.85);
+      const rev = _ectx.createConvolver(); rev.buffer = irBuf;
+      const revG = _ectx.createGain(); revG.gain.value = 0.72;
+      rev.connect(revG); revG.connect(lim);
+
+      // Ascending A minor resolution: A3 → E4 → A4 — the signal coming home
+      [[220, 0.4, 4.5], [330, 3.2, 4.8], [440, 6.5, 6.0]].forEach(([freq, startT, dur]) => {
+        const osc = _ectx.createOscillator();
+        const env = _ectx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        env.gain.setValueAtTime(0, t + startT);
+        env.gain.linearRampToValueAtTime(0.2, t + startT + 0.45);
+        env.gain.setValueAtTime(0.2, t + startT + dur - 1.0);
+        env.gain.exponentialRampToValueAtTime(0.001, t + startT + dur);
+        osc.connect(env); env.connect(master); env.connect(rev);
+        osc.start(t + startT); osc.stop(t + startT + dur + 0.2);
+      });
+    } catch(e) {}
+  }
+
+  function _finish() {
+    const overlay = document.getElementById('cinematic-intro');
+    if (overlay) overlay.classList.add('ci-out');
+    setTimeout(() => {
+      if (overlay) overlay.remove();
+      try { if (_ectx) { _ectx.close(); _ectx = null; } } catch(e) {}
+      _active = false;
+      if (_resolve) { _resolve(); _resolve = null; }
+    }, 1100);
+  }
+
+  return {
+    play() {
+      return new Promise(res => {
+        if (_done) { res(); return; }
+        _done = true;
+        _active = true;
+        _resolve = res;
+
+        BGMusic.fadeOut(0.6);
+        _buildAudio();
+
+        const el = document.createElement('div');
+        el.id = 'cinematic-intro';
+        el.innerHTML = `
+          <div id="ci-scene-layer"></div>
+          <div id="ci-msg-layer"></div>
+          <div id="ci-text-layer"></div>
+          <div id="ci-title-layer">
+            <div class="ci-glyph">✦</div>
+            <div class="ci-word" style="font-size:clamp(1.4rem,5vw,2.6rem);letter-spacing:0.28em;">THE COMPOSER</div>
+            <div class="ci-tagline">The Hunt Is Complete</div>
+          </div>
+          <button id="ci-skip" type="button">[ skip ]</button>
+        `;
+        document.body.appendChild(el);
+        document.getElementById('ci-skip').addEventListener('click', e => { e.stopPropagation(); this.skip(); });
+        el.addEventListener('click', () => this.skip());
+
+        _t(500, () => document.getElementById('ci-skip')?.classList.add('ci-skip-visible'));
+
+        // ── Scene ────────────────────────────────────────────────
+        _scene(SPRITES.ci_complete, 14, 700, 10800, 'spectrum');
+
+        // ── Narration ────────────────────────────────────────────
+        _line('The signal holds.',          1000);
+        _line('Every route. Every wound.',  4200);
+        _line('The patch resolves.',        7800);
+
+        // ── Title card ───────────────────────────────────────────
+        _t(10000, () => {
+          const layer = document.getElementById('ci-text-layer');
+          if (layer) layer.innerHTML = '';
+          const tc = document.getElementById('ci-title-layer');
+          if (tc) requestAnimationFrame(() => requestAnimationFrame(() => tc.classList.add('ci-in')));
+        });
+
+        // ── Done ─────────────────────────────────────────────────
+        _t(13500, () => _finish());
+
+        // ── Messengers — all celebrating, flooding in ─────────────
+        [
+          [1200,  14, 4, 'cable',  false, true],
+          [1700,  80, 3, 'normal', true,  true],
+          [2300,  48, 5, 'cable',  false, true],
+          [2800,   4, 3, 'normal', false, true],
+          [3100,  92, 3, 'normal', true,  true],
+          [3600,  30, 4, 'cable',  true,  true],
+          [4000,  65, 4, 'normal', false, true],
+          [4500,  20, 3, 'normal', false, true],
+          [4900,  76, 5, 'cable',  true,  true],
+          [5300,  42, 3, 'normal', false, true],
+          [5700,  58, 4, 'cable',  true,  true],
+          [6100,   9, 3, 'normal', true,  true],
+          [6500,  87, 4, 'normal', false, true],
+          [7000,  35, 5, 'cable',  false, true],
+          [7400,  70, 3, 'normal', true,  true],
+          [7900,  52, 4, 'cable',  false, true],
+        ].forEach(([delay, pct, sc, variant, flip, celebrate]) =>
+          _messenger(delay, pct, sc, variant, flip, celebrate));
+      });
+    },
+
+    skip() {
+      if (!_active) return;
+      _clear();
+      _finish();
+    },
+  };
+})();
+
+/* ============================================================
    MICROCOSM — TRUE FINAL BOSS (Wing 2 finale)
    ============================================================ */
 const Microcosm = (() => {
@@ -16700,7 +16906,8 @@ const Microcosm = (() => {
     State.startQuest('microcosm');
     State.completeQuest();
     Audio.stopVoice(3.0);
-    await _sleep(1000);
+    await _sleep(800);
+    await endgameCutscene.play();
     _showCredits();
   }
 
