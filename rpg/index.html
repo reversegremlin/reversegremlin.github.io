@@ -2327,6 +2327,13 @@ canvas { display: block; }
 #screen-workshop.ws-mobile-active #ws-rpg-mobile-shell { display: flex; }
 #screen-workshop.ws-mobile-active .ws-layout            { display: none !important; }
 #screen-workshop.ws-mobile-active #ws-cables            { display: none; }
+/* When mastery-overlay fires on mobile, expand to full width so the fixed sprite panel
+   (z-index:11) is buried under the workshop (z-index:12) instead of bleeding through */
+#screen-workshop.ws-mobile-active.mastery-overlay {
+  width: 100% !important;
+  border-right: none !important;
+  animation: none !important;
+}
 
 /* ── Top bar ─────────────────────────────────────────────── */
 #wsm-topbar {
@@ -2530,6 +2537,100 @@ canvas { display: block; }
   border-color: var(--danger) !important;
   background: var(--danger) !important;
 }
+
+/* ── Module param controls (inside cards) ───────────────── */
+.wsm-card-params {
+  padding: 0.5rem 0.65rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-bottom: 1px solid var(--wsm-border);
+}
+.wsm-param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.wsm-param-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--wsm-dim);
+}
+.wsm-param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.wsm-param-val {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--wsm-gold);
+  letter-spacing: 0.05em;
+}
+.wsm-param-slider {
+  width: 100%;
+  height: 28px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+}
+.wsm-param-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--wsm-border);
+  border-radius: 2px;
+}
+.wsm-param-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--wsm-gold);
+  margin-top: -7px;
+  border: 2px solid #0c0805;
+}
+.wsm-param-slider::-moz-range-track {
+  height: 3px;
+  background: var(--wsm-border);
+  border-radius: 2px;
+}
+.wsm-param-slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--wsm-gold);
+  border: 2px solid #0c0805;
+}
+/* Wave/choice buttons inside cards */
+.wsm-card-choice-btns {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.wsm-card-choice-btn {
+  flex: 1;
+  min-width: 36px;
+  background: #0c0905;
+  border: 1px solid var(--wsm-border);
+  border-radius: 3px;
+  color: var(--wsm-dim);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 0.45rem 0.2rem;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+}
+.wsm-card-choice-btn.active {
+  border-color: var(--wsm-gold);
+  color: var(--wsm-gold);
+  background: rgba(201,168,76,0.1);
+}
+.wsm-card-choice-btn:active { opacity: 0.7; }
 
 /* ── Suggestion sheet ───────────────────────────────────── */
 .wsm-suggestion-backdrop {
@@ -2738,11 +2839,17 @@ canvas { display: block; }
 .wsm-hunt-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 0.9rem 1rem;
+  height: 100%;
+  overflow: hidden;
+}
+.wsm-hunt-scroll {
+  flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  height: 100%;
+  padding: 0.9rem 1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
   box-sizing: border-box;
 }
 .wsm-hunt-freeplay {
@@ -2816,8 +2923,11 @@ canvas { display: block; }
 .wsm-hunt-actions {
   display: flex;
   gap: 0.6rem;
-  padding-top: 0.3rem;
   flex-shrink: 0;
+  padding: 0.65rem 0.85rem;
+  padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  background: #0a0704;
+  border-top: 1px solid var(--wsm-border);
 }
 .wsm-hunt-submit {
   flex: 1;
@@ -2846,6 +2956,22 @@ canvas { display: block; }
   touch-action: manipulation;
 }
 .wsm-hunt-forfeit:active { border-color: var(--wsm-dim); color: var(--text-main, #c8b99a); }
+.wsm-hunt-feedback {
+  flex-shrink: 0;
+  padding: 0.55rem 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  min-height: 1.8rem;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--wsm-border);
+  background: #080604;
+}
+.wsm-hunt-submit:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
 
 /* Required connections list in HUNT tab */
 .wsm-hunt-routes {
@@ -14538,6 +14664,7 @@ const Workshop = (() => {
   }
 
   function _onChallengePass() {
+    if (!_challengeMode) return; // guard against double-fire (auto-detect + mobile submit)
     const quest = _challengeQuest;
     _exitChallengeMode();
     closeGrimoire();
@@ -14607,6 +14734,8 @@ const Workshop = (() => {
     _buildKeyboard();
     _buildSignalStrip();
     _startWaveViz();
+    // prepare() must run before _onWorkshopOpen so mobile cards read reset values
+    try { challenge.prepare(); } catch(e) { console.warn('challenge prepare', e); }
     if (wsRpgMobile?.active) wsRpgMobile._onWorkshopOpen(_challenge, _challengeQuest);
     if (_masteryMode) {
       // Slide in from left over the encounter screen — sprites panel stays on right
@@ -14624,7 +14753,8 @@ const Workshop = (() => {
         if (badgeEl) badgeEl.textContent = document.getElementById('enc-module-badge')?.textContent || '';
         if (monEl)   monEl.innerHTML   = (quest?.spriteKey && SPRITES[quest.spriteKey])   ? renderSprite(SPRITES[quest.spriteKey], 4)  : '';
         if (heroEl)  heroEl.innerHTML  = (cls?.spriteKey  && SPRITES[cls.spriteKey])      ? renderSprite(SPRITES[cls.spriteKey],  3)   : '';
-        sp.style.display = 'flex';
+        // On mobile the workshop is full-width — sprite panel stays hidden behind it
+        if (!wsRpgMobile?.active) sp.style.display = 'flex';
       }
       // Wire battle animation listeners
       const bodyWrap = document.getElementById('ws-body-wrap');
@@ -14646,8 +14776,6 @@ const Workshop = (() => {
       scrollArea.removeEventListener('scroll', _redrawCables);
       scrollArea.addEventListener('scroll', _redrawCables);
     }
-
-    try { challenge.prepare(); } catch(e) { console.warn('challenge prepare', e); }
 
     const savedNote = parseFloat(State.questParams['vco']?.note?.value) || 220;
     setTimeout(() => {
@@ -15837,6 +15965,14 @@ const wsRpgMobile = (() => {
     _shell = shell;
   }
 
+  // ── Sync helpers — keep hidden desktop controls in sync so check() still works ──
+  function _syncDesktopSlider(key, value) {
+    const el = document.querySelector(`input.ws-slider[data-key="${key}"]`);
+    if (!el) return;
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   // ── Card builder ─────────────────────────────────────────────
   function _buildCard(modId) {
     const loreDef  = MINI_MODULE_DEFS[modId];
@@ -15849,12 +15985,88 @@ const wsRpgMobile = (() => {
     card.className = 'wsm-card';
     card.style.setProperty('--wsm-card-color', color);
 
+    // Header
     const header = document.createElement('div');
     header.className = 'wsm-card-header';
     header.innerHTML = `<div class="wsm-card-lore">${loreName}</div>
                         <div class="wsm-card-tech">${modId.toUpperCase()}</div>`;
     card.appendChild(header);
 
+    // Params section — renders actual controls from quest.params + WS_PARAMS config
+    if (quest?.params?.length) {
+      const paramsDiv = document.createElement('div');
+      paramsDiv.className = 'wsm-card-params';
+
+      quest.params.forEach(param => {
+        const cfg = WS_PARAMS[param.key];
+        if (!cfg) return;
+        const row = document.createElement('div');
+        row.className = 'wsm-param-row';
+
+        if (cfg.choices) {
+          // Choice-button row (waveform, filter type, etc.)
+          const hdr = document.createElement('div');
+          hdr.className = 'wsm-param-label';
+          hdr.textContent = cfg.label;
+          const btns = document.createElement('div');
+          btns.className = 'wsm-card-choice-btns';
+
+          // Read current selection from hidden desktop btn or use default
+          const activeDesktopBtn = document.querySelector(`.ws-choice-btn[data-key="${param.key}"].active`);
+          const initIdx = activeDesktopBtn ? parseInt(activeDesktopBtn.dataset.idx) : cfg.def;
+
+          cfg.choices.forEach((c, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'wsm-card-choice-btn' + (i === initIdx ? ' active' : '');
+            btn.type = 'button';
+            btn.textContent = c.slice(0, 3).toUpperCase();
+            btn.addEventListener('click', () => {
+              btns.querySelectorAll('.wsm-card-choice-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              cfg.fn(i, cfg.choices);
+              // Sync desktop visual state (class toggle only, no click — avoids double fn call)
+              document.querySelectorAll(`.ws-choice-btn[data-key="${param.key}"]`).forEach((b,bi) => {
+                b.classList.toggle('active', bi === i);
+              });
+            });
+            btns.appendChild(btn);
+          });
+          row.append(hdr, btns);
+        } else {
+          // Slider row
+          const savedEl = document.querySelector(`input.ws-slider[data-key="${param.key}"]`);
+          const initVal = savedEl ? parseFloat(savedEl.value) : cfg.def;
+
+          const hdr = document.createElement('div');
+          hdr.className = 'wsm-param-header';
+          const lbl = document.createElement('span');
+          lbl.className = 'wsm-param-label';
+          lbl.textContent = cfg.label;
+          const valEl = document.createElement('span');
+          valEl.className = 'wsm-param-val';
+          valEl.textContent = cfg.fmt(initVal);
+          hdr.append(lbl, valEl);
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.className = 'wsm-param-slider';
+          slider.min = cfg.min; slider.max = cfg.max; slider.step = cfg.step;
+          slider.value = initVal;
+          slider.addEventListener('input', () => {
+            const v = parseFloat(slider.value);
+            valEl.textContent = cfg.fmt(v);
+            cfg.fn(v);
+            _syncDesktopSlider(param.key, v);
+          });
+          row.append(hdr, slider);
+        }
+
+        paramsDiv.appendChild(row);
+      });
+      card.appendChild(paramsDiv);
+    }
+
+    // Jacks row
     if (jacks.length > 0) {
       const row = document.createElement('div');
       row.className = 'wsm-jacks-row';
@@ -15866,7 +16078,6 @@ const wsRpgMobile = (() => {
                          <span class="wsm-jack-label">${jDef.label}</span>`;
         btn.addEventListener('click', () => _onJackTap(jDef.id, jDef.dir));
         row.appendChild(btn);
-        // Register in Workshop._jackEls so CSS state updates flow automatically
         Workshop.registerJackEl(jDef.id, btn);
       });
       card.appendChild(row);
@@ -15929,6 +16140,9 @@ const wsRpgMobile = (() => {
     modIds.forEach(id => cardList.appendChild(_buildCard(id)));
     workshopTab.appendChild(cardList);
 
+    // challenge.prepare() runs after this call — sync choice buttons once it has settled
+    setTimeout(_syncCardChoiceButtons, 80);
+
     // Adopt the keyboard (already built by Workshop._buildKeyboard)
     _adoptKeyboard(workshopTab);
 
@@ -15967,14 +16181,21 @@ const wsRpgMobile = (() => {
     wrap.className = 'wsm-hunt-content';
 
     if (!challenge) {
+      const scroll = document.createElement('div');
+      scroll.className = 'wsm-hunt-scroll';
       const freePlay = document.createElement('div');
       freePlay.className = 'wsm-hunt-freeplay';
       freePlay.innerHTML = '<p>Free Play — no challenge active.<br>Wire any modules and experiment.</p>';
-      wrap.appendChild(freePlay);
+      scroll.appendChild(freePlay);
+      wrap.appendChild(scroll);
       return wrap;
     }
 
-    // Sprite row
+    // ── Scrollable content ─────────────────────────────────
+    const scroll = document.createElement('div');
+    scroll.className = 'wsm-hunt-scroll';
+
+    // Sprite + entity name
     if (quest?.spriteKey && SPRITES[quest.spriteKey]) {
       const spriteRow = document.createElement('div');
       spriteRow.className = 'wsm-hunt-sprite-row';
@@ -15985,7 +16206,7 @@ const wsRpgMobile = (() => {
       nameEl.className = 'wsm-hunt-entity-name';
       nameEl.textContent = quest.entityName || '';
       spriteRow.append(spriteEl, nameEl);
-      wrap.appendChild(spriteRow);
+      scroll.appendChild(spriteRow);
     }
 
     // GOAL — lead with this, it's the clearest summary
@@ -15999,7 +16220,7 @@ const wsRpgMobile = (() => {
       goal.className = 'wsm-hunt-goal';
       goal.textContent = challenge.goal;
       goalWrap.append(goalLabel, goal);
-      wrap.appendChild(goalWrap);
+      scroll.appendChild(goalWrap);
     }
 
     // Required connections — visual cable list with live tick status
@@ -16019,7 +16240,7 @@ const wsRpgMobile = (() => {
         row.innerHTML = `<span class="wsm-route-from">${from}</span><span class="wsm-route-arrow">→</span><span class="wsm-route-to">${to}</span><span class="wsm-route-tick">${done ? '✓' : '○'}</span>`;
         routesBox.appendChild(row);
       });
-      wrap.appendChild(routesBox);
+      scroll.appendChild(routesBox);
     }
 
     // Instruction (lore context, below the clear mission)
@@ -16027,24 +16248,49 @@ const wsRpgMobile = (() => {
       const instr = document.createElement('p');
       instr.className = 'wsm-hunt-instruction';
       instr.textContent = challenge.instruction;
-      wrap.appendChild(instr);
+      scroll.appendChild(instr);
     }
 
-    // Actions — PATCH IT (go to workshop) + Submit + Retreat
+    wrap.appendChild(scroll);
+
+    // ── Feedback bar — result of submit shown here ──
+    const feedbackBar = document.createElement('div');
+    feedbackBar.className = 'wsm-hunt-feedback';
+    feedbackBar.id = 'wsm-hunt-feedback';
+    wrap.appendChild(feedbackBar);
+
+    // ── Sticky action bar — always visible, never buried by scroll ──
     const actions = document.createElement('div');
     actions.className = 'wsm-hunt-actions';
 
     const patchBtn = document.createElement('button');
     patchBtn.className = 'wsm-hunt-patch-cta';
     patchBtn.type = 'button';
-    patchBtn.textContent = 'Patch It →';
+    patchBtn.textContent = 'Workshop →';
     patchBtn.addEventListener('click', () => switchTab('workshop'));
 
     const submitBtn = document.createElement('button');
     submitBtn.className = 'wsm-hunt-submit';
     submitBtn.type = 'button';
     submitBtn.textContent = 'Submit ✓';
-    submitBtn.addEventListener('click', () => Workshop.submitChallenge());
+    submitBtn.addEventListener('click', () => {
+      let result;
+      try { result = challenge.check(); } catch(e) { return; }
+      if (result.pass) {
+        feedbackBar.innerHTML = `<span style="color:var(--gold)">✦ ${challenge.successMsg || 'Proof accepted.'}</span>`;
+        submitBtn.disabled = true;
+        patchBtn.style.display = 'none';
+        forfeitBtn.style.display = 'none';
+        setTimeout(() => Workshop._onChallengePass(), 1300);
+      } else {
+        feedbackBar.innerHTML = `<span style="color:var(--danger)">✗ ${result.failHint || challenge.deathLore}</span>`;
+        submitBtn.disabled = true;
+        setTimeout(() => {
+          Workshop.forfeitChallenge();
+          Game.youDied(challenge.deathLore);
+        }, 1000);
+      }
+    });
 
     const forfeitBtn = document.createElement('button');
     forfeitBtn.className = 'wsm-hunt-forfeit';
@@ -16272,6 +16518,47 @@ const wsRpgMobile = (() => {
     }
 
     tab.appendChild(wrap);
+
+    // Also update HUNT tab route ticks to reflect live connection state
+    _refreshHuntRoutes();
+  }
+
+  function _refreshHuntRoutes() {
+    if (!_currentChallenge?.requiredRoutes) return;
+    document.querySelectorAll('#wsm-tab-hunt .wsm-hunt-route-row').forEach((row, i) => {
+      const rk   = _currentChallenge.requiredRoutes[i];
+      if (!rk) return;
+      const done = Workshop.hasConnection(rk);
+      row.classList.toggle('done', done);
+      const tick = row.querySelector('.wsm-route-tick');
+      if (tick) tick.textContent = done ? '✓' : '○';
+    });
+  }
+
+  // Sync mobile card choice-button active states to match desktop (called after prepare())
+  function _syncCardChoiceButtons() {
+    document.querySelectorAll('#wsm-tab-workshop .wsm-card-choice-btns').forEach(btnsEl => {
+      const firstBtn = btnsEl.querySelector('.wsm-card-choice-btn');
+      if (!firstBtn) return;
+      // Derive key from the first button's click-adjacent desktop button
+      // Use parent param row to find which param key this is for
+      const row = btnsEl.closest('.wsm-param-row');
+      if (!row) return;
+      // Find the matching desktop active button for this param block
+      // We'll look at all choice-btn groups on desktop and match by position
+      const allDesktopGroups = document.querySelectorAll('.ws-choice-btns');
+      const allMobileGroups  = document.querySelectorAll('#wsm-tab-workshop .wsm-card-choice-btns');
+      allMobileGroups.forEach((mGroup, gi) => {
+        const dGroup = allDesktopGroups[gi];
+        if (!dGroup) return;
+        const activeD = dGroup.querySelector('.ws-choice-btn.active');
+        if (!activeD) return;
+        const activeIdx = parseInt(activeD.dataset.idx);
+        mGroup.querySelectorAll('.wsm-card-choice-btn').forEach((btn, bi) => {
+          btn.classList.toggle('active', bi === activeIdx);
+        });
+      });
+    });
   }
 
   // ── Tab switching ────────────────────────────────────────────
