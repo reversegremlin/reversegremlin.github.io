@@ -2847,6 +2847,79 @@ canvas { display: block; }
 }
 .wsm-hunt-forfeit:active { border-color: var(--wsm-dim); color: var(--text-main, #c8b99a); }
 
+/* Required connections list in HUNT tab */
+.wsm-hunt-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  background: #0d0905;
+  border: 1px solid var(--wsm-border);
+  border-radius: 4px;
+}
+.wsm-hunt-routes-label {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--wsm-dim);
+  margin-bottom: 0.1rem;
+}
+.wsm-hunt-route-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+}
+.wsm-hunt-route-row.done .wsm-route-arrow { color: #4d7; }
+.wsm-hunt-route-row.done .wsm-route-from,
+.wsm-hunt-route-row.done .wsm-route-to   { color: #4d7; opacity: 0.8; }
+.wsm-route-from { color: #c9a84c; font-family: var(--font-mono); font-size: 0.72rem; }
+.wsm-route-arrow { color: var(--wsm-dim); font-size: 1rem; line-height: 1; }
+.wsm-route-to   { color: #3dd; font-family: var(--font-mono); font-size: 0.72rem; }
+.wsm-route-tick { margin-left: auto; font-size: 0.9rem; }
+
+/* "PATCH IT" CTA button in HUNT tab */
+.wsm-hunt-patch-cta {
+  flex: 2;
+  background: #1a0d06;
+  border: 1px solid var(--wsm-gold);
+  color: var(--wsm-gold);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.7rem 0.5rem;
+  border-radius: 3px;
+  touch-action: manipulation;
+}
+.wsm-hunt-patch-cta:active { background: #2a1508; }
+
+/* Sticky mini-banner at top of WORKSHOP tab with current mission */
+.wsm-ws-mission {
+  background: #100c07;
+  border-bottom: 1px solid var(--wsm-border);
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.wsm-ws-mission-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  color: var(--wsm-blood);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.wsm-ws-mission-text {
+  font-size: 0.72rem;
+  color: var(--wsm-gold);
+  line-height: 1.35;
+  flex: 1;
+}
+
 /* ── RITUAL tab ──────────────────────────────────────────── */
 .wsm-ritual-content {
   display: flex;
@@ -3211,6 +3284,18 @@ canvas { display: block; }
 }
 .map-choice-btns {
   display: flex; gap: 0.4rem; justify-content: center;
+}
+/* On touch screens: slide up as a bottom sheet, not a floating tooltip */
+@media (pointer: coarse) {
+  #map-npc-tip { display: none !important; }
+  #map-choice-overlay {
+    left: 0 !important; right: 0 !important;
+    bottom: 0 !important; top: auto !important;
+    width: 100%; min-width: 0; min-height: 0;
+    border-radius: 10px 10px 0 0;
+    border-left: none; border-right: none; border-bottom: none;
+    padding: 1.2rem 1.2rem env(safe-area-inset-bottom, 12px);
+  }
 }
 
 /* ── Wing tabs ───────────────────────────────────────────── */
@@ -15850,11 +15935,33 @@ const wsRpgMobile = (() => {
     // Initialise RITUAL tab (connections cleared by challenge.prepare before this call)
     _refreshRitual();
 
-    // Land on WORKSHOP tab
-    switchTab('workshop');
+    // Mission banner at top of WORKSHOP tab (so the goal is always visible while patching)
+    if (challenge?.goal) {
+      const banner = document.createElement('div');
+      banner.className = 'wsm-ws-mission';
+      banner.innerHTML = `<span class="wsm-ws-mission-label">MISSION</span><span class="wsm-ws-mission-text">${challenge.goal}</span>`;
+      workshopTab.insertBefore(banner, workshopTab.firstChild);
+    }
+
+    // In challenge mode, land on HUNT tab so the player sees instructions first.
+    // In free-play mode, land on WORKSHOP.
+    switchTab(challenge ? 'hunt' : 'workshop');
   }
 
   // ── HUNT tab content ──────────────────────────────────────
+  // Converts a routeKey like 'vco-out→vcf-in' to human-readable parts.
+  function _routeLabel(routeKey) {
+    const [fromId, toId] = routeKey.split('→');
+    let fromLore = fromId, fromJack = '', toLore = toId, toJack = '';
+    for (const [mod, jacks] of Object.entries(JACK_DEFS)) {
+      for (const j of jacks) {
+        if (j.id === fromId) { fromLore = MINI_MODULE_DEFS[mod]?.loreName || mod.toUpperCase(); fromJack = j.label; }
+        if (j.id === toId)   { toLore   = MINI_MODULE_DEFS[mod]?.loreName || mod.toUpperCase(); toJack   = j.label; }
+      }
+    }
+    return { from: `${fromLore} · ${fromJack}`, to: `${toLore} · ${toJack}` };
+  }
+
   function _buildHuntContent(challenge, quest) {
     const wrap = document.createElement('div');
     wrap.className = 'wsm-hunt-content';
@@ -15881,36 +15988,13 @@ const wsRpgMobile = (() => {
       wrap.appendChild(spriteRow);
     }
 
-    // Mastery progress dots (mods already beaten)
-    if (challenge.mods?.length > 1) {
-      const prog = document.createElement('div');
-      prog.className = 'wsm-hunt-progress';
-      challenge.mods.forEach((modId, i) => {
-        const dot = document.createElement('span');
-        const isCurrent = i === challenge.mods.length - 1;
-        const isMastered = !!State.progress[modId];
-        dot.className = 'wsm-hunt-dot' +
-          (isMastered ? ' mastered' : '') +
-          (isCurrent  ? ' current'  : '');
-        dot.title = modId.toUpperCase();
-        prog.appendChild(dot);
-      });
-      wrap.appendChild(prog);
-    }
-
-    // Instruction
-    const instr = document.createElement('p');
-    instr.className = 'wsm-hunt-instruction';
-    instr.textContent = challenge.instruction || '';
-    wrap.appendChild(instr);
-
-    // Goal
+    // GOAL — lead with this, it's the clearest summary
     if (challenge.goal) {
       const goalWrap = document.createElement('div');
       goalWrap.className = 'wsm-hunt-goal-wrap';
       const goalLabel = document.createElement('div');
       goalLabel.className = 'wsm-hunt-label';
-      goalLabel.textContent = 'OBJECTIVE';
+      goalLabel.textContent = 'WHAT TO DO';
       const goal = document.createElement('p');
       goal.className = 'wsm-hunt-goal';
       goal.textContent = challenge.goal;
@@ -15918,34 +16002,57 @@ const wsRpgMobile = (() => {
       wrap.appendChild(goalWrap);
     }
 
-    // Howto
-    if (challenge.howto) {
-      const howtoWrap = document.createElement('div');
-      howtoWrap.className = 'wsm-hunt-howto-wrap';
-      const howtoLabel = document.createElement('div');
-      howtoLabel.className = 'wsm-hunt-label';
-      howtoLabel.textContent = 'HOW TO PATCH';
-      const howto = document.createElement('p');
-      howto.className = 'wsm-hunt-howto';
-      howto.textContent = challenge.howto;
-      howtoWrap.append(howtoLabel, howto);
-      wrap.appendChild(howtoWrap);
+    // Required connections — visual cable list with live tick status
+    if (challenge.requiredRoutes?.length) {
+      const routesBox = document.createElement('div');
+      routesBox.className = 'wsm-hunt-routes';
+      const routesLabel = document.createElement('div');
+      routesLabel.className = 'wsm-hunt-routes-label';
+      routesLabel.textContent = 'CABLES TO CONNECT';
+      routesBox.appendChild(routesLabel);
+
+      challenge.requiredRoutes.forEach(rk => {
+        const { from, to } = _routeLabel(rk);
+        const done = Workshop.hasConnection(rk);
+        const row = document.createElement('div');
+        row.className = 'wsm-hunt-route-row' + (done ? ' done' : '');
+        row.innerHTML = `<span class="wsm-route-from">${from}</span><span class="wsm-route-arrow">→</span><span class="wsm-route-to">${to}</span><span class="wsm-route-tick">${done ? '✓' : '○'}</span>`;
+        routesBox.appendChild(row);
+      });
+      wrap.appendChild(routesBox);
     }
 
-    // Actions
+    // Instruction (lore context, below the clear mission)
+    if (challenge.instruction) {
+      const instr = document.createElement('p');
+      instr.className = 'wsm-hunt-instruction';
+      instr.textContent = challenge.instruction;
+      wrap.appendChild(instr);
+    }
+
+    // Actions — PATCH IT (go to workshop) + Submit + Retreat
     const actions = document.createElement('div');
     actions.className = 'wsm-hunt-actions';
+
+    const patchBtn = document.createElement('button');
+    patchBtn.className = 'wsm-hunt-patch-cta';
+    patchBtn.type = 'button';
+    patchBtn.textContent = 'Patch It →';
+    patchBtn.addEventListener('click', () => switchTab('workshop'));
+
     const submitBtn = document.createElement('button');
     submitBtn.className = 'wsm-hunt-submit';
     submitBtn.type = 'button';
-    submitBtn.textContent = 'Submit Proof';
+    submitBtn.textContent = 'Submit ✓';
     submitBtn.addEventListener('click', () => Workshop.submitChallenge());
+
     const forfeitBtn = document.createElement('button');
     forfeitBtn.className = 'wsm-hunt-forfeit';
     forfeitBtn.type = 'button';
     forfeitBtn.textContent = 'Retreat';
     forfeitBtn.addEventListener('click', () => Workshop.forfeitChallenge());
-    actions.append(submitBtn, forfeitBtn);
+
+    actions.append(patchBtn, submitBtn, forfeitBtn);
     wrap.appendChild(actions);
 
     return wrap;
