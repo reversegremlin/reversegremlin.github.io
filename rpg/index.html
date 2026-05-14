@@ -2443,6 +2443,7 @@ canvas { display: block; }
   gap: 0.5rem;
 }
 .wsm-card {
+  flex-shrink: 0;  /* prevent flex column from collapsing card height */
   border: 1px solid var(--wsm-border);
   border-top: 2px solid var(--wsm-card-color, var(--wsm-border));
   border-radius: 3px;
@@ -2468,11 +2469,32 @@ canvas { display: block; }
   color: var(--wsm-dim);
   margin-top: 0.12rem;
 }
+.wsm-jacks-wrap {
+  border-top: 1px solid var(--wsm-border);
+}
+.wsm-jacks-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wsm-dim);
+  padding: 0.25rem 0.6rem 0;
+  user-select: none;
+  pointer-events: none;
+}
 .wsm-jacks-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0;
-  padding: 0.2rem 0.25rem;
+  padding: 0.3rem 0.25rem 0.45rem;
+  background: rgba(0,0,0,0.12);
+}
+.wsm-jack-dir {
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+  color: var(--wsm-dim);
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 /* ── Jack rune circles ───────────────────────────────────── */
@@ -2481,34 +2503,34 @@ canvas { display: block; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   background: transparent;
   border: none;
-  min-width: 52px;
-  min-height: 52px;
-  padding: 0.2rem;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0.35rem 0.4rem;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 .wsm-jack-dot {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--wsm-border);
-  background: #0a0806;
+  border: 2.5px solid var(--wsm-border);
+  background: #0e0a07;
   transition: all 0.12s;
   pointer-events: none;
   flex-shrink: 0;
 }
-.wsm-jack-out .wsm-jack-dot { border-color: var(--wsm-gold); }
-.wsm-jack-in  .wsm-jack-dot { border-color: var(--wsm-dim); }
+.wsm-jack-out .wsm-jack-dot { border-color: var(--wsm-gold); background: rgba(201,168,76,0.08); }
+.wsm-jack-in  .wsm-jack-dot { border-color: rgba(210,190,160,0.55); }
 .wsm-jack-label {
   font-family: var(--font-mono);
-  font-size: 0.52rem;
+  font-size: 0.6rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--wsm-dim);
+  color: rgba(180,160,130,0.7);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -2766,6 +2788,19 @@ canvas { display: block; }
   touch-action: manipulation;
 }
 
+/* ── Keyboard pinning: workshop tab doesn't scroll as a whole;
+      only the card list scrolls; keyboard is always visible ── */
+#wsm-tab-workshop {
+  overflow-y: hidden;
+}
+#wsm-tab-workshop .wsm-cards {
+  min-height: 0;   /* allow flex child to shrink below content height */
+}
+.wsm-keyboard-slot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--wsm-border);
+}
+
 /* ── Phase 6 styling refinements ────────────────────────── */
 
 /* Top bar: gold underlighting + brand mark */
@@ -2814,8 +2849,8 @@ canvas { display: block; }
   border: 1px solid rgba(201,168,76,0.2);
   pointer-events: none;
 }
-/* IN jack: subtly lighter border at rest */
-.wsm-jack-in .wsm-jack-dot { border-color: #4a6a5a; }
+/* IN jack: visible at rest */
+.wsm-jack-in .wsm-jack-dot { border-color: rgba(210,190,160,0.55); }
 
 /* Connected jack: slow blood pulse */
 @keyframes wsm-blood-pulse {
@@ -2853,9 +2888,9 @@ canvas { display: block; }
   box-sizing: border-box;
 }
 .wsm-hunt-freeplay {
-  color: var(--wsm-dim);
-  font-size: 0.8rem;
-  line-height: 1.6;
+  color: var(--text-dim, #9a7d6b);
+  font-size: 0.82rem;
+  line-height: 1.7;
   text-align: center;
   padding-top: 2rem;
 }
@@ -3060,9 +3095,9 @@ canvas { display: block; }
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   letter-spacing: 0.12em;
-  color: var(--wsm-dim);
+  color: var(--text-dim, #9a7d6b);
   text-align: center;
   padding: 2rem;
 }
@@ -8090,24 +8125,49 @@ const QUESTS = [
    MINI-MODULE DEFINITIONS — lore names + jack layouts for patch bay
    ============================================================ */
 const MINI_MODULE_DEFS = {
-  vco:     { loreName:'The Wound',      color:'#c45040', jacks:{ 'vco-out':{ dir:'out', label:'OUT' }, 'vco-freq-in':{ dir:'in', label:'FREQ' } } },
-  vcf:     { loreName:'The Sieve',      color:'#3a93a8', jacks:{ 'vcf-in':{ dir:'in', label:'IN' }, 'vcf-out':{ dir:'out', label:'OUT' }, 'vcf-cutoff-in':{ dir:'in', label:'CUT' } } },
-  adsr:    { loreName:'The Hollow',     color:'#c89040', jacks:{ 'adsr-env-out':{ dir:'out', label:'ENV' } } },
-  lfo:     { loreName:'The Shivering',  color:'#3d93d9', jacks:{ 'lfo-out':{ dir:'out', label:'OUT' } } },
-  reverb:  { loreName:'The Cathedral',  color:'#7a5ea8', jacks:{ 'reverb-in':{ dir:'in', label:'IN' } } },
-  delay:   { loreName:'Memory Chamber', color:'#3d9070', jacks:{ 'delay-in':{ dir:'in', label:'IN' } } },
-  seq:     { loreName:'The Ritual',     color:'#c84848', jacks:{ 'seq-cv-out':{ dir:'out', label:'CV' } } },
-  ladder:  { loreName:'The Ladder',     color:'#8a5028', jacks:{ 'ladder-in':{ dir:'in', label:'IN' } } },
-  chorus:  { loreName:'The Choir',      color:'#3888a8', jacks:{ 'chorus-in':{ dir:'in', label:'IN' } } },
-  phaser:  { loreName:'The Sweep',      color:'#507878', jacks:{ 'phaser-in':{ dir:'in', label:'IN' } } },
-  formant: { loreName:'The Tongue',     color:'#a05830', jacks:{ 'formant-in':{ dir:'in', label:'IN' } } },
-  turing:  { loreName:'Dream Engine',   color:'#4858a0', jacks:{ 'turing-cv-out':{ dir:'out', label:'CV' } } },
-  fold:    { loreName:'The Folder',     color:'#a07840', jacks:{ 'fold-in':{ dir:'in', label:'IN' }, 'fold-out':{ dir:'out', label:'OUT' } } },
-  noise:   { loreName:'The Static',     color:'#606060', jacks:{ 'noise-out':{ dir:'out', label:'OUT' } } },
-  ring:    { loreName:'The Ring',       color:'#a04878', jacks:{ 'ring-in':{ dir:'in', label:'IN' }, 'ring-out':{ dir:'out', label:'OUT' } } },
-  drunk:   { loreName:'The Wanderer',   color:'#6888a8', jacks:{ 'drunk-out':{ dir:'out', label:'OUT' } } },
-  stutter: { loreName:'The Stutter',    color:'#b04030', jacks:{ 'stutter-out':{ dir:'out', label:'OUT' } } },
-  euclid:  { loreName:'Eucl. Clock',    color:'#305878', jacks:{ 'euclid-out':{ dir:'out', label:'OUT' } } },
+  // Wing I
+  vco:        { loreName:'The Wound',               color:'#c45040', jacks:{ 'vco-out':{ dir:'out', label:'OUT' }, 'vco-freq-in':{ dir:'in', label:'FREQ' } } },
+  vcf:        { loreName:'The Sieve',               color:'#3a93a8', jacks:{ 'vcf-in':{ dir:'in', label:'IN' }, 'vcf-out':{ dir:'out', label:'OUT' }, 'vcf-cutoff-in':{ dir:'in', label:'CUT' } } },
+  adsr:       { loreName:'The Hollow',              color:'#c89040', jacks:{ 'adsr-env-out':{ dir:'out', label:'ENV' } } },
+  lfo:        { loreName:'The Shivering',           color:'#3d93d9', jacks:{ 'lfo-out':{ dir:'out', label:'OUT' } } },
+  reverb:     { loreName:'The Cathedral',           color:'#7a5ea8', jacks:{ 'reverb-in':{ dir:'in', label:'IN' }, 'reverb-out':{ dir:'out', label:'OUT' } } },
+  delay:      { loreName:'Memory Chamber',          color:'#3d9070', jacks:{ 'delay-in':{ dir:'in', label:'IN' }, 'delay-out':{ dir:'out', label:'OUT' } } },
+  seq:        { loreName:'The Ritual',              color:'#c84848', jacks:{ 'seq-cv-out':{ dir:'out', label:'CV' } } },
+  ladder:     { loreName:'The Ladder',              color:'#8a5028', jacks:{ 'ladder-in':{ dir:'in', label:'IN' }, 'ladder-out':{ dir:'out', label:'OUT' } } },
+  chorus:     { loreName:'The Choir',               color:'#3888a8', jacks:{ 'chorus-in':{ dir:'in', label:'IN' }, 'chorus-out':{ dir:'out', label:'OUT' } } },
+  phaser:     { loreName:'The Sweep',               color:'#507878', jacks:{ 'phaser-in':{ dir:'in', label:'IN' }, 'phaser-out':{ dir:'out', label:'OUT' } } },
+  formant:    { loreName:'The Tongue',              color:'#a05830', jacks:{ 'formant-in':{ dir:'in', label:'IN' }, 'formant-out':{ dir:'out', label:'OUT' } } },
+  turing:     { loreName:'Dream Engine',            color:'#4858a0', jacks:{ 'turing-cv-out':{ dir:'out', label:'CV' } } },
+  tape:       { loreName:'The Burning Reel',        color:'#b87840', jacks:{ 'tape-in':{ dir:'in', label:'IN' }, 'tape-out':{ dir:'out', label:'OUT' } } },
+  wavefolder: { loreName:'The Harmonic Abyss',      color:'#507888', jacks:{ 'fold-in':{ dir:'in', label:'IN' }, 'fold-out':{ dir:'out', label:'OUT' } } },
+  noise:      { loreName:'The Static Oracle',       color:'#606878', jacks:{ 'noise-out':{ dir:'out', label:'OUT' } } },
+  ringmod:    { loreName:'The Bell of Unreality',   color:'#aa7730', jacks:{ 'ring-in':{ dir:'in', label:'IN' }, 'ring-out':{ dir:'out', label:'OUT' } } },
+  drunk:      { loreName:'The Wandering Tone',      color:'#6888a8', jacks:{ 'drunk-out':{ dir:'out', label:'OUT' } } },
+  stutter:    { loreName:'The Glitch Revenant',     color:'#b04030', jacks:{ 'stutter-out':{ dir:'out', label:'OUT' } } },
+  euclid:     { loreName:'The Geometric Pulse',     color:'#305878', jacks:{ 'euclid-out':{ dir:'out', label:'OUT' } } },
+  sidechain:  { loreName:'The Pumping Specter',     color:'#783878', jacks:{ 'sidechain-in':{ dir:'in', label:'IN' }, 'sidechain-out':{ dir:'out', label:'PUMP' } } },
+  // Wing II
+  withered:   { loreName:'The Withered Architect',  color:'#607888', jacks:{} },
+  flanger:    { loreName:'The Doppler Revenant',    color:'#3a7888', jacks:{} },
+  bitcrush:   { loreName:'The Decimated Horror',    color:'#882020', jacks:{} },
+  spectral:   { loreName:'The Spectral Weave',      color:'#7a5898', jacks:{} },
+  resonator:  { loreName:'The Resonant Choir',      color:'#8a5870', jacks:{} },
+  fm:         { loreName:'The Iron Bell Specter',   color:'#a87830', jacks:{} },
+  arpeggio:   { loreName:'The Cascading Phantom',   color:'#506888', jacks:{} },
+  quantize:   { loreName:'The Pitch Warden',        color:'#5a6878', jacks:{} },
+  clock:      { loreName:"The Timekeeper's Marrow", color:'#a87030', jacks:{} },
+  chaos:      { loreName:'The Formless Swarm',      color:'#5a4a70', jacks:{} },
+  samplehold: { loreName:'The Moment Collector',    color:'#487868', jacks:{} },
+  attenuvtr:  { loreName:'The Signal Inverter',     color:'#685888', jacks:{} },
+  mixer:      { loreName:'The Great Balancer',      color:'#908060', jacks:{} },
+  xy:         { loreName:"The Cartographer's Ghost",color:'#487880', jacks:{} },
+  theremin:   { loreName:'The Untouched Voice',     color:'#7878a8', jacks:{} },
+  poly:       { loreName:'The Polyphonic Hive',     color:'#987840', jacks:{} },
+  chord:      { loreName:'The Harmonic Construct',  color:'#a09050', jacks:{} },
+  morph:      { loreName:'The Shape Between',       color:'#908080', jacks:{} },
+  lissajous:  { loreName:'The Pattern-Eater',       color:'#5878a0', jacks:{} },
+  affect:     { loreName:'The Affect Specter',      color:'#7058a0', jacks:{} },
+  microcosm:  { loreName:'The Microcosm',           color:'#c9a84c', jacks:{} },
 };
 
 /* ============================================================
@@ -16068,19 +16128,28 @@ const wsRpgMobile = (() => {
 
     // Jacks row
     if (jacks.length > 0) {
+      const jacksWrap = document.createElement('div');
+      jacksWrap.className = 'wsm-jacks-wrap';
+      const jacksLabel = document.createElement('div');
+      jacksLabel.className = 'wsm-jacks-label';
+      jacksLabel.textContent = '◈ PATCH POINTS';
+      jacksWrap.appendChild(jacksLabel);
       const row = document.createElement('div');
       row.className = 'wsm-jacks-row';
       jacks.forEach(jDef => {
         const btn = document.createElement('button');
         btn.className = `wsm-jack wsm-jack-${jDef.dir}`;
         btn.title = jDef.tip || jDef.label;
+        const dirMark = jDef.dir === 'out' ? '↑' : '↓';
         btn.innerHTML = `<span class="wsm-jack-dot"></span>
-                         <span class="wsm-jack-label">${jDef.label}</span>`;
+                         <span class="wsm-jack-label">${jDef.label}</span>
+                         <span class="wsm-jack-dir">${dirMark}</span>`;
         btn.addEventListener('click', () => _onJackTap(jDef.id, jDef.dir));
         row.appendChild(btn);
         Workshop.registerJackEl(jDef.id, btn);
       });
-      card.appendChild(row);
+      jacksWrap.appendChild(row);
+      card.appendChild(jacksWrap);
     }
 
     return card;
@@ -16117,6 +16186,9 @@ const wsRpgMobile = (() => {
       huntTab.innerHTML = '';
       huntTab.appendChild(_buildHuntContent(challenge, quest));
     }
+
+    // Restore keyboard to desktop layout before innerHTML clear so it stays in the DOM
+    _restoreKeyboard();
 
     // ── WORKSHOP tab ─────────────────────────────────────────
     const workshopTab = document.getElementById('wsm-tab-workshop');
@@ -16185,7 +16257,11 @@ const wsRpgMobile = (() => {
       scroll.className = 'wsm-hunt-scroll';
       const freePlay = document.createElement('div');
       freePlay.className = 'wsm-hunt-freeplay';
-      freePlay.innerHTML = '<p>Free Play — no challenge active.<br>Wire any modules and experiment.</p>';
+      freePlay.innerHTML = `
+        <p style="color:var(--wsm-gold);font-family:var(--font-mono);font-size:0.65rem;letter-spacing:0.2em;margin-bottom:1rem;">⚔ FREE PLAY ⚔</p>
+        <p>Tap any jack circle to see what it connects to — compatible jacks will glow gold.</p>
+        <p style="margin-top:0.8rem;font-size:0.72rem;">Start with<br><strong style="color:var(--wsm-gold)">Wound OUT → Sieve IN</strong><br>then send to<br><strong style="color:var(--wsm-gold)">Cathedral</strong> or <strong style="color:var(--wsm-gold)">Memory Chamber</strong>.</p>
+        <p style="margin-top:0.8rem;color:var(--wsm-dim);font-size:0.7rem;">Active cables show in the<br>RITUAL tab.</p>`;
       scroll.appendChild(freePlay);
       wrap.appendChild(scroll);
       return wrap;
