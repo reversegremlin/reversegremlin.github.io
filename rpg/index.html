@@ -2347,10 +2347,54 @@ canvas { display: block; }
 }
 
 /* ============================================================
-   LANDSCAPE TOUCH HELPERS — make jacks a touch easier to hit
+   LANDSCAPE SMALL SCREEN — keyboard collapse + touch helpers
    ============================================================ */
 @media (orientation: landscape) and (max-height: 500px) {
   .ws-jack-dot { min-width: 28px; min-height: 28px; }
+
+  /* Keyboard: collapsed to label-bar by default; toggled open via .kb-open */
+  .ws-keyboard-wrap {
+    padding: 0.28rem 0.6rem;
+    cursor: pointer;
+  }
+  .ws-keyboard-wrap.kb-open {
+    padding: 0.45rem 0.6rem 0.6rem;
+    cursor: default;
+  }
+  .ws-keyboard-wrap:not(.kb-open) .ws-keyboard {
+    display: none;
+  }
+  .ws-keyboard-label {
+    margin-bottom: 0;
+    font-size: 0.72rem;
+    user-select: none;
+    cursor: pointer;
+  }
+  .ws-keyboard-wrap.kb-open .ws-keyboard-label {
+    margin-bottom: 0.5rem;
+    cursor: default;
+  }
+  /* Show expand/collapse caret in the label */
+  .ws-keyboard-label::after {
+    content: '  ▲ TAP TO PLAY';
+    font-size: 0.55rem;
+    opacity: 0.55;
+    letter-spacing: 0.12em;
+  }
+  .ws-keyboard-wrap.kb-open .ws-keyboard-label::after {
+    content: '  ▼ HIDE';
+    font-size: 0.55rem;
+    opacity: 0.55;
+  }
+
+  /* Challenge bar: tighten padding so it doesn't eat all remaining height */
+  .ws-challenge-bar {
+    padding: 0.4rem 0.6rem !important;
+  }
+  .ws-challenge-instruction {
+    font-size: 0.78rem !important;
+    padding: 0.4rem 0.5rem !important;
+  }
 }
 
 
@@ -15022,6 +15066,25 @@ const Workshop = (() => {
     const kb = document.getElementById('ws-keyboard');
     if (!kb) return;
     kb.innerHTML = '';
+
+    // In landscape on small screens, collapse keyboard to a tap-to-open strip
+    const wrap = kb.closest('.ws-keyboard-wrap');
+    const label = wrap?.querySelector('.ws-keyboard-label');
+    if (wrap && label) {
+      const isSmallLandscape = () =>
+        window.innerWidth > window.innerHeight && window.innerHeight <= 500;
+      if (isSmallLandscape()) {
+        wrap.classList.remove('kb-open');
+        label.onclick = (e) => {
+          e.stopPropagation();
+          wrap.classList.toggle('kb-open');
+        };
+      } else {
+        wrap.classList.remove('kb-open');
+        label.onclick = null;
+      }
+    }
+
     Theory.notes.forEach(note => {
       const key = document.createElement('button');
       key.className = 'ws-key';
